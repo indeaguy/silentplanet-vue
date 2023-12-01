@@ -1,0 +1,54 @@
+{
+  "SCENE": {
+      "WIDTH_PERCENTAGE": 1,
+      "HEIGHT_PERCENTAGE": 1
+  },
+  "CAMERA": {
+      "FOV": 75,
+      "MAX_VISIBLE": 1000,
+      "MIN_VISIBLE": 0.1,
+      "DEFAULT_POINT_X": 1,
+      "DEFAULT_POINT_Y": 3,
+      "DEFAULT_POINT_Z": 10
+  },
+  "SPHERE": {
+      "RADIUS": 1,
+      "FILL_COLOUR": "0x000000",
+      "WIDTH_SEGMENTS": 20,
+      "HEIGHT_SEGMENTS": 20,
+      "MIN_DISTANCE": 0.1,
+      "MAX_DISTANCE": 20,
+      "WIREFRAME": false,
+      "TRANSPARENT": true,
+      "OPACITY": 0.35,
+      "GRIDS": {
+          "O": {
+              "COLOR": "0xffffff",
+              "COLOR_FINAL": "0x000000",
+              "LAT_DENSITY": 10,
+              "LON_DENSITY": 10,
+              "FADE_START": 0.1,
+              "FADE_END": 1.0,
+              "FADE_SPEED": 0.01
+          },
+          "1": {
+              "COLOR": "0x808080",
+              "COLOR_FINAL": "0x000000",
+              "LAT_DENSITY": 5,
+              "LON_DENSITY": 5,
+              "FADE_START": 0.2,
+              "FADE_END": 0.8,
+              "FADE_SPEED": 0.02
+          }
+      }
+  },
+  "POLYGONS": {
+      "RISE": 0,
+      "COLOR": "0xff0000",
+      "SUBDIVIDE_DEPTH": 3,
+      "MIN_EDGE_LENGTH": 0.05,
+      "LAYER_OVERRIDES": {
+          "O": {}
+      }
+  }
+}
