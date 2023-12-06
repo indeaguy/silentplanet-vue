@@ -2,10 +2,14 @@
 
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import * as THREE from 'three'
 import BaseGlobe from './components/BaseGlobe.vue'
+import RegionContent from './components/RegionContent.vue'
+import { ref, provide } from 'vue'
 
-// evaluate using QUASAR here
+const polygonContent = ref('');
+provide('polygonContent', polygonContent);
+
+// @TODO evaluate using QUASAR here
 </script>
 
 <template>
@@ -13,13 +17,14 @@ import BaseGlobe from './components/BaseGlobe.vue'
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
     <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
       <nav>
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/about">About</RouterLink>
       </nav>
+
+      <RegionContent />
     </div>
+
   </header>
 
   <BaseGlobe />

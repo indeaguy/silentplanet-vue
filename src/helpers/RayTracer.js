@@ -30,7 +30,7 @@ export class RayTracer {
   checkIntersections() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    console.log(this.scene.children);
+    //console.log(this.scene.children);
 
     const intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
