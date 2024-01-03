@@ -6,8 +6,8 @@ import BaseGlobe from './components/BaseGlobe.vue'
 import RegionContent from './components/RegionContent.vue'
 import { ref, provide } from 'vue'
 
-const polygonContent = ref('');
-provide('polygonContent', polygonContent);
+const polygonContent = ref('')
+provide('polygonContent', polygonContent)
 
 // @TODO evaluate using QUASAR here
 </script>
@@ -24,7 +24,6 @@ provide('polygonContent', polygonContent);
 
       <RegionContent />
     </div>
-
   </header>
 
   <BaseGlobe />

@@ -1,64 +1,70 @@
 import * as THREE from 'three'; // Import the earcut library for triangulation.
 
 export class RayTracer {
-  constructor(scene, camera, hoverColor = 0xFFC0CB, originalColor = 0x00ff00) {
-    this.scene = scene;
-    this.camera = camera;
-    this.hoverColor = new THREE.Color(hoverColor);
-    this.originalColor = new THREE.Color(originalColor);
+  constructor(stage, originalColour = 0x00ff00, eventColour = 0xFFC0CB) {
+    this.scene = stage.scene;
+    this.camera = stage.camera;
+    this.clientHeight = stage.clientHeight;
+    this.clientWidth = stage.clientWidth;
+    this.originalColour = new THREE.Color(originalColour);
+    this.eventColour = new THREE.Color(eventColour);
     this.mouse = new THREE.Vector2();
     this.raycaster = new THREE.Raycaster();
+    this.plane = new THREE.Plane();
+    this.planeNormal = new THREE.Vector3();
     this.intersected = null;
-
-    // @TODO should only do this when the appropriate debugging is enabled
-    const circleGeometry = new THREE.CircleGeometry(0.5, 32); // Small circle with a radius of 0.5
-    const circleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
-    this.indicator = new THREE.Mesh(circleGeometry, circleMaterial);
-    this.indicator.visible = false; // Initially hidden
-    scene.add(this.indicator);
   }
 
-  onMouseMove(event) {
-    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+  handleRayEvent(event) {
+    this.mouse.x = (event.offsetX / this.clientWidth) * 2 - 1;
+    this.mouse.y = - (event.offsetY / this.clientHeight) * 2 + 1;
     this.checkIntersections();
 
-    // @TODO should only do this when the appropriate debugging is enabled
-    this.updateIndicatorPosition();
+  }
+
+  onResize(newSize) {
+    console.log(newSize);
+    this.clientHeight = newSize.y
+    this.clientWidth = newSize.x
   }
 
   checkIntersections() {
-    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const ray = this.createRayFromCamera();
 
-    //console.log(this.scene.children);
+    // Perform the raycasting
+    const intersects = ray.intersectObjects(this.scene.children, true);
 
-    const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+    // Find the first intersected object with a non-empty name attribute
+    const firstNamedIntersect = intersects.find(intersect => intersect.object.name);
 
-    if (intersects.length > 0) {
-      if (this.intersected != intersects[0].object) {
-        if (this.intersected) this.intersected.material.color.set(this.originalColor);
-        this.intersected = intersects[0].object;
-        this.intersected.material.color.set(this.hoverColor);
-      }
+    if (firstNamedIntersect) {
+        // Log the name of the intersected object
+        console.log('Intersected object name:', firstNamedIntersect.object.name);
+
+        if (this.intersected !== firstNamedIntersect.object) {
+            if (this.intersected) this.intersected.material.color.set(this.originalColour);
+            this.intersected = firstNamedIntersect.object;
+            this.intersected.material.color.set(this.eventColour);
+        }
     } else {
-      if (this.intersected) this.intersected.material.color.set(this.originalColor);
-      this.intersected = null;
+        if (this.intersected) this.intersected.material.color.set(this.originalColour);
+
+        this.intersected = null;
     }
   }
 
-  updateIndicatorPosition() {
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    // Assuming you want to place the indicator on a specific plane for demonstration
-    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // Adjust as needed
-    const target = new THREE.Vector3();
-    this.raycaster.ray.intersectPlane(plane, target);
+  createRayFromCamera() {
+      const raycaster = new THREE.Raycaster();
+      const direction = new THREE.Vector3();
+      
+      // Get the direction in which the camera is looking
+      this.camera.getWorldDirection(direction);
 
-    if (target) {
-      this.indicator.position.copy(target);
-      this.indicator.visible = true;
-    } else {
-      this.indicator.visible = false;
-    }
+      // Set the raycaster with the camera's position and direction
+      //raycaster.set(this.mouse, direction);
+      raycaster.setFromCamera(this.mouse, this.camera);
+
+      return raycaster; // This is the ray that moves directly away from the camera
   }
 
 }
