@@ -1,12 +1,12 @@
 <script setup>
 import { inject } from 'vue'
 
-const polygonContent = inject('polygonContent')
+const regionId = inject('regionId')
 </script>
 
 <template>
   <div id="region-content">
-    <p class="content-message">The value: {{ polygonContent }}</p>
+    <p class="content-message">Selected Region Content value: {{ regionId }}</p>
   </div>
 </template>
 

@@ -4,8 +4,8 @@ export class RayTracer {
   constructor(stage, originalColour = 0x00ff00, eventColour = 0xFFC0CB) {
     this.scene = stage.scene;
     this.camera = stage.camera;
-    this.clientHeight = stage.clientHeight;
-    this.clientWidth = stage.clientWidth;
+    this.clientHeight = stage.clientHeight; // @TODO need a very good reason to do this
+    this.clientWidth = stage.clientWidth; // @TODO need a very good reason to do this
     this.originalColour = new THREE.Color(originalColour);
     this.eventColour = new THREE.Color(eventColour);
     this.mouse = new THREE.Vector2();
@@ -15,15 +15,16 @@ export class RayTracer {
     this.intersected = null;
   }
 
-  handleRayEvent(event) {
+  handleRayEvent(event, callback) {
     this.mouse.x = (event.offsetX / this.clientWidth) * 2 - 1;
     this.mouse.y = - (event.offsetY / this.clientHeight) * 2 + 1;
     this.checkIntersections();
-
+    if (typeof callback === 'function') {
+      callback(this.intersected);
+    }
   }
 
   onResize(newSize) {
-    console.log(newSize);
     this.clientHeight = newSize.y
     this.clientWidth = newSize.x
   }

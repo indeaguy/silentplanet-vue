@@ -29,7 +29,14 @@ a,
 
   #app {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     padding: 0rem;
   }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 10fr;
+    padding: 0rem;
+  }
+
 }

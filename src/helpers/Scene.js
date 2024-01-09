@@ -58,8 +58,8 @@ export class Scene {
       this.clientWidth * sceneConfig.WIDTH_PERCENTAGE,
       this.clientHeight * sceneConfig.HEIGHT_PERCENTAGE
     )
-    this.onWindowResize = this.onWindowResize.bind(this)
-    window.addEventListener('resize', this.onWindowResize, false)
+    // this.onWindowResize = this.onWindowResize.bind(this)
+    // window.addEventListener('resize', this.onWindowResize, false)
   }
 
   // allow other objects to subscribe to resize events

@@ -4,7 +4,8 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Elysium"
+        "name": "Elysium",
+        "id": 1
       },
       "geometry": {
         "coordinates": [
