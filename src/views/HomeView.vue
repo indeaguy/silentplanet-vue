@@ -4,59 +4,53 @@ import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
 import { ref, provide } from 'vue'
 
-const regionId = ref('')
-provide('regionId', regionId)
+const selectedRegion = ref('')
+provide('selectedRegion', selectedRegion)
 
 // @TODO get the geotree from a backend source
 const regionOptions = {
-  "regions": [
+  regions: [
     {
-      "id": 1,
-      "name": "Elysium",
-      "children": [
+      id: 1,
+      name: 'Elysium',
+      children: [
         {
-          "id": 101,
-          "name": "Elysium Jr."
+          id: 101,
+          name: 'Elysium Jr.'
         },
         {
-          "id": 102,
-          "name": "Elysium Sr."
+          id: 102,
+          name: 'Elysium Sr.'
         }
       ]
     },
     {
-      "id": 2,
-      "name": "Not Elysium",
-      "children": []
+      id: 2,
+      name: 'Not Elysium',
+      children: []
     }
   ]
 }
 provide('regionOptions', regionOptions)
 
-
 // Event handler for the 'update-region-id' emit
-const setSelectedRegionId = (newRegionId) => {
-  regionId.value = newRegionId
+const setSelectedRegion = (newRegion) => {
+  selectedRegion.value = newRegion
 }
-
 </script>
 
 <template>
   <main>
-    
     <RegionContent />
     <div id="world-container">
       <FilterNav />
-      <BaseGlobe @update-region-id="setSelectedRegionId" />
+      <BaseGlobe @update-region-id="setSelectedRegion" />
     </div>
-
   </main>
 </template>
 
 <style scoped>
-
 #world-container {
   color: white;
 }
-
 </style>

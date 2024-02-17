@@ -28,7 +28,6 @@ export class Scene {
     )
     this.camera.updateProjectionMatrix()
 
-    
     this.renderer = new THREE.WebGLRenderer()
     this.renderer.setSize(
       this.clientWidth * sceneConfig.WIDTH_PERCENTAGE,
@@ -88,7 +87,6 @@ export class Scene {
    */
 
   onWindowResize() {
-
     this.updateSize()
     const newSize = new THREE.Vector2(
       this.clientWidth * this.sceneConfig.WIDTH_PERCENTAGE,
@@ -112,7 +110,7 @@ export class Scene {
   }
 
   updateSize() {
-    this.clientWidth = this.targetElement.clientWidth;
-    this.clientHeight = this.targetElement.clientHeight;
+    this.clientWidth = this.targetElement.clientWidth
+    this.clientHeight = this.targetElement.clientHeight
   }
 }

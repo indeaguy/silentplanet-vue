@@ -28,7 +28,7 @@ export class Globe {
       color: parseInt(this.config.FILL_COLOUR, 16),
       side: THREE.DoubleSide,
       wireframe: parseInt(this.config.FILL_COLOUR, 16),
-      wireframe: this.config.WIREFRAME,
+      //wireframe: this.config.WIREFRAME,
       transparent: this.config.TRANSPARENT,
       opacity: this.config.OPACITY
     })
@@ -218,14 +218,19 @@ export class Globe {
    * @param {number} rise - The rise of the sphere from the radius.
    * @param {number} subdivisionDepth - The depth of subdivision for the triangles.
    * @param {number} minEdgeLength - The minimum length of the triangle edges.
-   * @return {object} An object containing the generated meshes and polygonMeshes.
+   * @return {object} || false An object containing the generated meshes and polygonMeshes.
    */
-  mapDataToSphere(data, radius, color, rise = 0, subdivisionDepth = 3, minEdgeLength = 0.05) {
+  mapDataToSphere(data, radius, color, rise = 0, subdivisionDepth = 3, minEdgeLength = 0.05, visible = true) {
+
+    // need features and a name
+    // @TODO revisit validataion and error handling
+    if (!data || !data.features || !data.properties.name || !data.properties.id) return false;
+
     // Calculate the altitude from the radius and rise.
     let altitude = radius + rise
 
     // Create an empty array to store mesh objects.
-    let geoJsonFeatureMeshes = []
+    let totalCombinedGeometry = []
 
     // Loop through features in the data.
     for (let feature of data.features) {
@@ -290,23 +295,47 @@ export class Globe {
 
         // Create a single mesh with the combined geometry
         // @TODO make it configurable whether the mesh is double sided
-        let combinedMesh = new THREE.Mesh(
-          combinedGeometry,
-          new THREE.MeshBasicMaterial({ 
-            color: color,
-            side: THREE.DoubleSide })
-        )
+        // let combinedMesh = new THREE.Mesh(
+        //   combinedGeometry,
+        //   new THREE.MeshBasicMaterial({
+        //     color: color,
+        //     side: THREE.DoubleSide
+        //   })
+        // )
 
         // Assign the properties from the geojson to the mesh
-        if (feature.properties.name) {
-          combinedMesh.name = feature.properties.name
-        }
+        // if (feature.properties.name) {
+        //   combinedMesh.name = feature.properties.name
+        // }
 
-        geoJsonFeatureMeshes.push(combinedMesh)
+        totalCombinedGeometry.push(combinedGeometry)
       }
     }
 
-    return { meshes: geoJsonFeatureMeshes }
+    // @todo add abstraction for combining meshes and cache this for later use don't process in runtime
+    let mergedGoJsonFeatureMeshes = mergeBufferGeometries(totalCombinedGeometry, false)
+
+    let totalCombinedMeshes = new THREE.Mesh(
+      mergedGoJsonFeatureMeshes,
+      new THREE.MeshBasicMaterial({
+        color: color,
+        side: THREE.DoubleSide
+      })
+    )
+    totalCombinedMeshes.visible = visible
+
+    totalCombinedMeshes.name = data.properties.name
+    totalCombinedMeshes.regionId = data.properties.id
+
+    if (data.properties.parentId) {
+      totalCombinedMeshes.parentId = data.properties.parentId
+    }
+
+    if (data.properties.hasChild) {
+      totalCombinedMeshes.hasChild = data.properties.hasChild
+    }
+
+    return { meshes: totalCombinedMeshes }
   }
 
   // Helper function to ensure CCW order for a given triangle.

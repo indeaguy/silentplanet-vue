@@ -1,12 +1,14 @@
 <script setup>
 import { inject } from 'vue'
 
-const regionId = inject('regionId')
+const selectedRegion = inject('selectedRegion')
+
+// @TODO add validation for the existence of selectedRegion.name
 </script>
 
 <template>
   <div id="region-content">
-    <p class="content-message">Selected Region Content value: {{ regionId }}</p>
+    <p class="content-message">Selected Region Content value: {{ selectedRegion.name }}</p>
   </div>
 </template>
 
