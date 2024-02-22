@@ -2,10 +2,13 @@
 import FilterNav from '../components/FilterNav.vue'
 import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
-import { ref, provide } from 'vue'
+import { useThreePolysStore } from '../stores/polys.js'
+import { computed, provide } from 'vue'
 
-const selectedRegion = ref('')
-provide('selectedRegion', selectedRegion)
+//const selectedRegion = ref('')
+const threePolysStore = useThreePolysStore();
+provide('selectedRegion', computed(() => threePolysStore.selectedMesh)); // @TODO what is vue computed?
+//provide('selectedRegion', selectedRegion)
 
 // @TODO get the geotree from a backend source
 const regionOptions = {
@@ -35,7 +38,7 @@ provide('regionOptions', regionOptions)
 
 // Event handler for the 'update-region-id' emit
 const setSelectedRegion = (newRegion) => {
-  selectedRegion.value = newRegion
+  threePolysStore.setSelectedMeshByRegionId(newRegion);
 }
 </script>
 

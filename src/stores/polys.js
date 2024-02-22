@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia';
+import { MeshModifier } from "../helpers/MeshModifier"
 
 export const useThreePolysStore = defineStore('three', {
   state: () => ({
     meshes: new Map(), // Using a Map instead of an array
-    selectedMesh: null,
+    meshModifier: new MeshModifier(),
+    selectedMesh: '',
   }),
   actions: {
     addMesh(mesh) {
@@ -21,10 +23,12 @@ export const useThreePolysStore = defineStore('three', {
       return this.meshes.get(meshRegionId); // Retrieve mesh by ID
     },
     setSelectedMesh(mesh) { // @TODO should this only be handled in the component refs for emits etc? which is more effiecient?
+      //mesh.material.color = new THREE.Color(0x00ff00); // @TODO this should be a ref? use meshModifier?
       this.selectedMesh = mesh;
+
     },
-    setSelectedMeshByRegion(meshRegion) {
-      const mesh = this.getMeshByRegion(meshRegion);
+    setSelectedMeshByRegionId(meshRegionId) {
+      const mesh = this.getMeshByRegion(meshRegionId);
       if (mesh) {
         this.setSelectedMesh(mesh); // @TODO what affect does this approach have on reactivity?
       }
@@ -32,7 +36,7 @@ export const useThreePolysStore = defineStore('three', {
     toggleVisibility(meshRegionId) {
       const mesh = this.getMeshByRegionId(meshRegionId);
       if (mesh) {
-        mesh.visible = !mesh.visible;
+        this.meshModifier.toggleVisibility(mesh);
       }
     },
     drillDown(meshRegionId) {
@@ -46,13 +50,14 @@ export const useThreePolysStore = defineStore('three', {
         
       if (mesh.regionId !== this.selectedMesh?.regionId) {
         
-        this.setSelectedMeshByRegionId(mesh.regionId); // @TODO affects reactivity?
+        this.setSelectedMesh(mesh); // @TODO affects reactivity?
       }
 
       if (mesh.childMeshIds) {
-        mesh.visible = !mesh.visible;
+
+        this.meshModifier.toggleVisibility(mesh)
         mesh.childMeshIds.forEach((childId) => { // @Todo better way to do this than foreach? Handle types
-          
+        
           child = this.getMeshByRegionId(childId);
 
           if (!child) {
@@ -60,7 +65,7 @@ export const useThreePolysStore = defineStore('three', {
             return
           }
 
-          child.visible = !child.visible;
+          this.meshModifier.toggleVisibility(child);
         });
       }
     }

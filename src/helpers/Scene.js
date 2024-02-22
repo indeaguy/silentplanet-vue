@@ -37,6 +37,7 @@ export class Scene {
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.targetElement.appendChild(this.renderer.domElement)
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+    this.controls.enablePan = false // disable two fingers to pan
 
     /**
      * Renderables
@@ -100,6 +101,8 @@ export class Scene {
       this.renderer.setSize(newSize.x, newSize.y)
       this.controls.dispose() // dispose old controls
       this.controls = new OrbitControls(this.camera, this.renderer.domElement) // add new controls
+      // @TODO this is duplicated
+      this.controls.enablePan = false // disable two fingers to pan
       this.size.copy(newSize)
     }
 

@@ -77,7 +77,7 @@ export class RayTracer {
 
       if (this.intersected !== firstNamedIntersect.object) {
         this.intersected = firstNamedIntersect.object
-        this.meshHandler.handleIntersection(firstNamedIntersect.object)
+        this.meshHandler.handleIntersection(firstNamedIntersect.object) // @TODO move this to the handleRayEvent callback?
       }
       // else do nothing
     } else {
