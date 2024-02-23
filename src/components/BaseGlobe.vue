@@ -6,18 +6,20 @@ import { DataLoader } from '../helpers/DataLoader.js'
 import { RayTracer } from '../helpers/RayTracer.js'
 import { MeshModifier } from '../helpers/MeshModifier.js'
 import { useThreePolysStore } from '../stores/polys.js'
-import { onMounted, onBeforeUnmount, ref, inject, watch } from 'vue'
+// import { onMounted, onBeforeUnmount, ref, inject, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
 
 // import the CONFIG
 // @TODO validate this
 // @TODO this needs to be based on the user
+// @TODO async await this too
 import config from '../assets/globe-settings.json'
 
 // @TODO Ensure that resources (like event listeners and Three.js objects) are properly cleaned up if your App instance is ever destroyed or replaced. This is crucial for avoiding memory leaks.
 // @TODO consider separating the concerns here
 
 let renderer, globe, hoverRayTracer, clickRayTracer, meshHandler, threePolysStore // Reference to the renderer, globe, and rayTracer
-const selectedRegion = inject('selectedRegion')
+//const selectedRegion = inject('selectedRegion')
 const resizeObserver = ref(null) // Reference for the ResizeObserver
 
 // @TODO render accessible non-threejs alternative as well/instead
@@ -33,7 +35,7 @@ onMounted(async () => {
   let initialMeshes = []
   let childMeshIds = [] // I guess..
 
-  // @TODO use a safe recursive function here..
+  // @TODO use a safe recursive function here?
   // @TODO get this from redis or something similar
   initialMeshes = await loadPertinentGeos(globe, renderer);
   
@@ -61,14 +63,16 @@ onMounted(async () => {
       childMeshIds.push(childMesh.regionId)
     }
 
+    // @TODO bad code smell
     mesh.childMeshIds = childMeshIds
     // @TODO mutation possible here?
 
   }
 
 
+  // @TODO what to do here cohesively? observer?
   renderer.scene.add(mesh)
-  threePolysStore.addSelectedMesh(mesh);
+  threePolysStore.addMesh(mesh);
 
 
 
@@ -128,11 +132,12 @@ async function loadPertinentGeos(globe, renderer, context = '') {
 }
 
 // Watch for changes in selectedRegion
-watch(selectedRegion, (newVal, oldVal) => {
-  console.log(`Region ID changed from ${oldVal} to ${newVal}`)
-  // Perform actions based on the new selectedRegion
-  // For example, update the globe or trigger other reactive changes
-})
+// @TODO What are the implications of this??
+// watch(threePolysStore, (newVal, oldVal) => {
+//   console.log(`Region ID changed from ${oldVal} to ${newVal}`)
+//   // Perform actions based on the new selectedRegion
+//   // For example, update the globe or trigger other reactive changes
+// })
 
 // prevent memory leaks!
 onBeforeUnmount(() => {
@@ -150,35 +155,116 @@ onBeforeUnmount(() => {
 function setupEventListeners() {
   // @TODO just make thie click handler use the polygon from the mousemove handler
   window.addEventListener('resize', () => renderer.onWindowResize(), false)
-  window.addEventListener('mousemove', (event) => hoverRayTracer.handleRayEvent(event), false)
 
-  // @TODO move this over to mesh modifier
+  // @TODO add observer class for these?
+
+  // HOVER
+  window.addEventListener('mousemove', 
+    (event) => 
+      hoverRayTracer.handleRayEvent(event, (hoveredRegion) => {
+
+        // @TODO a new one?
+        let threePolysStore = useThreePolysStore();
+
+        // @TODO is passing all these meshes around less efficient?
+
+        // update the hovered one
+        if (
+          hoveredRegion?.regionId
+          && (
+            (!threePolysStore?.hoveredMesh?.regionId) 
+            || (hoveredRegion.regionId !== threePolysStore.hoveredMesh.regionId)
+          )
+        ) {
+
+
+          if (
+            threePolysStore?.selectedMesh?.regionId
+            && hoveredRegion?.regionId
+            && (hoveredRegion.regionId == threePolysStore.selectedMesh.regionId)
+          ) {
+            meshHandler.setColour(hoveredRegion, 'selectedEventColour') // @TODO revisit this design of passing attribute names..
+          } else {
+            meshHandler.setColour(hoveredRegion, 'eventColour')
+          }
+
+
+        } 
+        
+        // reset the no-longer-hovered one
+        if (
+          threePolysStore?.hoveredMesh?.regionId
+          && (
+            (!hoveredRegion?.regionId) 
+            || (hoveredRegion.regionId !== threePolysStore.hoveredMesh.regionId)
+          )
+        ) {
+
+
+
+          if (
+            threePolysStore?.selectedMesh?.regionId
+            && (threePolysStore.hoveredMesh.regionId == threePolysStore.selectedMesh.regionId)
+          ) {
+            meshHandler.setColour(threePolysStore.hoveredMesh, 'selectedColour') // @TODO revisit this design of passing attribute names..
+          } else {
+            meshHandler.setColour(threePolysStore.hoveredMesh, 'defaultColour')
+          }
+
+
+        }
+
+        // if (!hoveredRegion) {
+        //   //meshHandler.resetIntersected()
+        //   return
+        // }
+
+        threePolysStore.setHoveredMesh(hoveredRegion, () => {
+          // do nothing for now
+        })
+
+
+
+
+      }), 
+    false
+  )
+
+  // CLICK
   window.addEventListener(
     'click',
     (event) =>
       clickRayTracer.handleRayEvent(event, (selectedRegion) => {
 
-        let threePolysStore = useThreePolysStore();
-        setSelectedRegion(selectedRegion) // @TODO do this only in the store?
-
-        if (selectedRegion && selectedRegion.regionId) {
-          threePolysStore.drillDown(selectedRegion.regionId)
+        if (!selectedRegion || !selectedRegion.regionId) {
+          return false; // do nothing
         }
 
-        // if (selectedRegion && selectedRegion.name) {
-        //   console.log(selectedRegion.name + ' is selected')
-        // }
-        
-        // if (selectedRegion && selectedRegion.regionId) {
-        //   console.log(selectedRegion.regionId + ' is selected')
-        // }
+        // @TODO a new one?
+        let threePolysStore = useThreePolysStore();
+        // @TODO combine these or reduce the need for both?
+        //threePolysStore.setHoveredMesh(selectedRegion)
+        meshHandler.setColour(selectedRegion, 'selectedEventColour')
 
-        // if (selectedRegion && selectedRegion.hasChild) {
-        //   console.log(selectedRegion.name + ' ha children')
-          
-        // } else {
-        //   console.log(' has no children')
-        // }
+
+        if (
+            threePolysStore?.selectedMesh?.regionId
+            && (
+              (!selectedRegion?.regionId) 
+              || (selectedRegion.regionId !== threePolysStore.selectedMesh.regionId)
+            )
+          ) {
+
+            meshHandler.setColour(threePolysStore.selectedMesh, 'defaultColour')
+          }
+
+        threePolysStore.setSelectedMesh(selectedRegion, () => {
+
+          // do nothing yet
+
+        }) 
+        threePolysStore.drillDown(selectedRegion.regionId) // @TODO confused concerns here? The store class is modifying the meshes
+
       }),
     false
   )
@@ -197,34 +283,6 @@ function setupEventListeners() {
     resizeObserver.value.observe(baseGlobeDiv)
   }
 }
-
-// @TODO clean this up
-// @TODO make this type safe
-function setSelectedRegion(region) {
-  // @TODO add this business logic to ORM instead
-  if (region && region.name) {
-    //region must have a name
-    // @TODO investigate how this vue 3 'reactive manor' of syntax is better
-    selectedRegion.value = { ...region }
-    console.log('Selected Region: ' + region.name)
-  }
-}
-
-/**
- * When the user clicks on the globe
- *
- * @return {type} no return value
- */
-// function globeClick() {
-//   console.log(clickRayTracer)
-//   //console.log(clickRayTracer.intersected)
-//   if (clickRayTracer.intersected && clickRayTracer.intersected.object) {
-//     setSelectedRegion(clickRayTracer.intersected.object)
-//   } else {
-//     // Handle the case where no object is intersected
-//     console.log('No intersected object or object does not have a name property')
-//   }
-// }
 </script>
 
 <style scoped>

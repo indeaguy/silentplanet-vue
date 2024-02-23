@@ -37,7 +37,7 @@
 import * as THREE from 'three' // Import the earcut library for triangulation.
 
 export class RayTracer {
-  constructor(stage, meshHandler) {
+  constructor(stage, meshHandler) { // @TODO why is meshHandler being passed as first class value here and not using dependancy injection?
     this.scene = stage.scene
     this.camera = stage.camera
     this.clientHeight = stage.clientHeight // @TODO need a very good reason to do this
@@ -77,11 +77,11 @@ export class RayTracer {
 
       if (this.intersected !== firstNamedIntersect.object) {
         this.intersected = firstNamedIntersect.object
-        this.meshHandler.handleIntersection(firstNamedIntersect.object) // @TODO move this to the handleRayEvent callback?
+        //this.meshHandler.handleIntersection(firstNamedIntersect.object) // @TODO move this to the handleRayEvent callback?
       }
       // else do nothing
     } else {
-      this.meshHandler.resetIntersected()
+      //this.meshHandler.resetIntersected()
       this.intersected = null
     }
   }
