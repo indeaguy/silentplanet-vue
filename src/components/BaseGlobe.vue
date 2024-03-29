@@ -1,5 +1,4 @@
 <script setup>
-
 import { Scene } from '../helpers/Scene.js'
 import { Globe } from '../helpers/Globe.js'
 import { DataLoader } from '../helpers/DataLoader.js'
@@ -18,7 +17,7 @@ import config from '../assets/globe-settings.json'
 // @TODO Ensure that resources (like event listeners and Three.js objects) are properly cleaned up if your App instance is ever destroyed or replaced. This is crucial for avoiding memory leaks.
 // @TODO consider separating the concerns here
 
-let renderer, globe, hoverRayTracer, clickRayTracer, meshHandler, threePolysStore // Reference to the renderer, globe, and rayTracer
+let renderer, globe, combinedRayTracer, meshHandler, threePolysStore // Reference to the renderer, globe, and rayTracer
 //const selectedRegion = inject('selectedRegion')
 const resizeObserver = ref(null) // Reference for the ResizeObserver
 
@@ -28,108 +27,120 @@ const resizeObserver = ref(null) // Reference for the ResizeObserver
 onMounted(async () => {
   renderer = new Scene(config.CAMERA, config.SCENE, 'base-globe')
   globe = new Globe(config.SPHERE, renderer)
-  threePolysStore = useThreePolysStore();
+  threePolysStore = useThreePolysStore()
   globe.createSphere()
   renderer.renderables.push(globe)
 
   let initialMeshes = []
   let childMeshIds = [] // I guess..
 
+  // @TODO 10x maybe lets never do this
+  // this adds the region of 'earth' to the heirarchy
+  // the first mesh isn't a mesh!
+  let boobyMesh = { regionId: 1, visible: true, childMeshIds: [2, 3], hasChild: true }
+  threePolysStore.addMesh(boobyMesh)
+  renderer.scene.add(boobyMesh) // I want thees to be the same thing..
+
   // @TODO use a safe recursive function here?
   // @TODO get this from redis or something similar
-  initialMeshes = await loadPertinentGeos(globe, renderer);
-  
-  for (const mesh of initialMeshes) {
+  // @TODO don't load these from scratch every time
+  initialMeshes = await loadPertinentGeos(globe)
 
+  // @TODO n+1 issue here. load them batches
+  for (const mesh of initialMeshes) {
     if (!mesh.regionId) {
       continue
     }
 
-    childMeshIds = [] // @TODO bad code smell
+    childMeshIds = []
 
     // @TODO this stuff is bound to be repeated..
     if (mesh.hasChild && mesh.regionId) {
+      const childMeshes = await loadPertinentGeos(globe, mesh.regionId, false)
 
-    const childMeshes = await loadPertinentGeos(globe, renderer, mesh.regionId);
+      for (const childMesh of childMeshes) {
+        // @TODO nested for loop bad code smell
 
-    for (const childMesh of childMeshes) { // @TODO nested for loop bad code smell
-
-      if (!childMesh.regionId) {
-        continue
+        if (!childMesh.regionId) {
+          continue
+        }
+        renderer.scene.add(childMesh)
+        threePolysStore.addMesh(childMesh)
+        childMeshIds.push(childMesh.regionId)
       }
-      childMesh.visible = false
-      renderer.scene.add(childMesh)
-      threePolysStore.addMesh(childMesh);
-      childMeshIds.push(childMesh.regionId)
+
+      mesh.childMeshIds = childMeshIds
     }
 
-    // @TODO bad code smell
-    mesh.childMeshIds = childMeshIds
-    // @TODO mutation possible here?
-
+    // @TODO what to do here cohesively? observer?
+    renderer.scene.add(mesh)
+    // @TODO yucky.
+    threePolysStore.addVisibleMesh(mesh)
   }
-
-
-  // @TODO what to do here cohesively? observer?
-  renderer.scene.add(mesh)
-  threePolysStore.addMesh(mesh);
-
-
-
-      // Do something with childMeshes
-  }
+  
 
   meshHandler = new MeshModifier()
-  hoverRayTracer = new RayTracer(renderer, meshHandler)
-  clickRayTracer = new RayTracer(renderer, meshHandler)
+  //hoverRayTracer = new RayTracer(renderer, meshHandler)
+  //clickRayTracer = new RayTracer(renderer, meshHandler)
+  combinedRayTracer = new RayTracer(renderer, meshHandler)
 
-  renderer.addResizeObserver(hoverRayTracer)
-  renderer.addResizeObserver(clickRayTracer)
+  //renderer.addResizeObserver(hoverRayTracer)
+  //renderer.addResizeObserver(clickRayTracer)
+  renderer.addResizeObserver(combinedRayTracer)
   renderer.animate()
 
   setupEventListeners()
 })
 
-async function loadPertinentGeos(globe, renderer, context = '') {
-
-  console.log(`geojson/geos${context}.json`)
-  
-  const loader = await new DataLoader(`geojson/geos${context}.json`)
+// @TODO this needs to be in polys.js?
+async function loadPertinentGeos(globe, context = 1, visible = true) {
+  const loader = await new DataLoader(context)
 
   // @TODO this is asyncronous Ensure that the rest of your application can handle the case where this data is not yet available, especially if other components depend on it.
-  try {
-      const data = await loader.loadData();
+  //try {
+  const data = await loader.loadData()
 
-      if (!data || !data.geos) return // @TODO throw an error instead
+  if (!data || !data.geos) return // @TODO throw an error instead
 
-      let meshes = [];
+  let meshes = []
 
-      data.geos.forEach((geo) => {
-        const result = globe.mapDataToSphere(
-          geo,
-          config.SPHERE.RADIUS,
-          parseInt(config.POLYGONS.COLOR, 16),
-          config.POLYGONS.RISE,
-          config.POLYGONS.SUBDIVIDE_DEPTH,
-          config.POLYGONS.MIN_EDGE_LENGTH,
-          // false // make it invisible
-        )
-        if (!result || !result.meshes) return
+  data.geos.forEach((geo) => {
+    const result = globe.mapDataToSphere(
+      geo,
+      config.SPHERE.RADIUS,
+      parseInt(config.POLYGONS.COLOR, 16),
+      config.POLYGONS.RISE,
+      config.POLYGONS.SUBDIVIDE_DEPTH,
+      config.POLYGONS.MIN_EDGE_LENGTH,
+      visible // make it visible/hidden
+    )
+    if (!result || !result.meshes) return
 
-        meshes = meshes.concat(result.meshes)
-      });
+    meshes = meshes.concat(result.meshes)
+  })
 
-      // @TODO don't do this here
-      //meshes.forEach((mesh) => renderer.scene.add(mesh))
+  // @TODO don't do this here
+  //meshes.forEach((mesh) => renderer.scene.add(mesh))
 
-      return meshes;
-      
-    } catch (error) {
-      console.error('Error loading globe data:', error);
-      throw error; // rethrow the error for caller to handle
-    }
-  
+  return meshes
+  // } catch (error) {
+  //   console.error('Error loading globe data:', error)
+  //   throw error // rethrow the error for caller to handle
+  // }
 }
+
+// This function will recursively load all child geos for the given mesh to the given depth or until there are no child geos
+//async function loadPertinentGeosToDepth(globe, startRegionMesh = null, startRegionId = 0, targetDepth = 1, targetChildren = []) {
+
+// load the children of the startRegionId
+
+// check if we reached the depth limit and if so stop
+
+// check if we have the smallest child and if so stop
+
+//
+
+//}
 
 // Watch for changes in selectedRegion
 // @TODO What are the implications of this??
@@ -142,8 +153,8 @@ async function loadPertinentGeos(globe, renderer, context = '') {
 // prevent memory leaks!
 onBeforeUnmount(() => {
   window.removeEventListener('resize', renderer.onWindowResize)
-  window.removeEventListener('mousemove', hoverRayTracer.handleRayEvent)
-  window.removeEventListener('click', clickRayTracer.handleRayEvent)
+  window.removeEventListener('mousemove', combinedRayTracer.handleRayEvent)
+  window.removeEventListener('click', combinedRayTracer.handleRayEvent)
   // Disconnect the ResizeObserver
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
@@ -159,59 +170,46 @@ function setupEventListeners() {
   // @TODO add observer class for these?
 
   // HOVER
-  window.addEventListener('mousemove', 
-    (event) => 
-      hoverRayTracer.handleRayEvent(event, (hoveredRegion) => {
-
+  window.addEventListener(
+    'mousemove',
+    (event) =>
+      combinedRayTracer.handleRayEvent(event, (hoveredRegion) => {
         // @TODO a new one?
-        let threePolysStore = useThreePolysStore();
+        let threePolysStore = useThreePolysStore()
 
         // @TODO is passing all these meshes around less efficient?
 
         // update the hovered one
         if (
-          hoveredRegion?.regionId
-          && (
-            (!threePolysStore?.hoveredMesh?.regionId) 
-            || (hoveredRegion.regionId !== threePolysStore.hoveredMesh.regionId)
-          )
+          hoveredRegion?.regionId &&
+          (!threePolysStore?.hoveredMesh?.regionId ||
+            hoveredRegion.regionId !== threePolysStore.hoveredMesh.regionId)
         ) {
-
-
           if (
-            threePolysStore?.selectedMesh?.regionId
-            && hoveredRegion?.regionId
-            && (hoveredRegion.regionId == threePolysStore.selectedMesh.regionId)
+            threePolysStore?.selectedMesh?.regionId &&
+            hoveredRegion?.regionId &&
+            hoveredRegion.regionId == threePolysStore.selectedMesh.regionId
           ) {
             meshHandler.setColour(hoveredRegion, 'selectedEventColour') // @TODO revisit this design of passing attribute names..
           } else {
             meshHandler.setColour(hoveredRegion, 'eventColour')
           }
+        }
 
-
-        } 
-        
         // reset the no-longer-hovered one
         if (
-          threePolysStore?.hoveredMesh?.regionId
-          && (
-            (!hoveredRegion?.regionId) 
-            || (hoveredRegion.regionId !== threePolysStore.hoveredMesh.regionId)
-          )
+          threePolysStore?.hoveredMesh?.regionId &&
+          (!hoveredRegion?.regionId ||
+            hoveredRegion.regionId !== threePolysStore.hoveredMesh.regionId)
         ) {
-
-
-
           if (
-            threePolysStore?.selectedMesh?.regionId
-            && (threePolysStore.hoveredMesh.regionId == threePolysStore.selectedMesh.regionId)
+            threePolysStore?.selectedMesh?.regionId &&
+            threePolysStore.hoveredMesh.regionId == threePolysStore.selectedMesh.regionId
           ) {
             meshHandler.setColour(threePolysStore.hoveredMesh, 'selectedColour') // @TODO revisit this design of passing attribute names..
           } else {
             meshHandler.setColour(threePolysStore.hoveredMesh, 'defaultColour')
           }
-
-
         }
 
         // if (!hoveredRegion) {
@@ -222,11 +220,7 @@ function setupEventListeners() {
         threePolysStore.setHoveredMesh(hoveredRegion, () => {
           // do nothing for now
         })
-
-
-
-
-      }), 
+      }),
     false
   )
 
@@ -234,37 +228,41 @@ function setupEventListeners() {
   window.addEventListener(
     'click',
     (event) =>
-      clickRayTracer.handleRayEvent(event, (selectedRegion) => {
-
-        if (!selectedRegion || !selectedRegion.regionId) {
-          return false; // do nothing
+      combinedRayTracer.handleRayEvent(event, (clickedRegion) => {
+        if (!clickedRegion || !clickedRegion.regionId) {
+          return false // do nothing
         }
 
         // @TODO a new one?
-        let threePolysStore = useThreePolysStore();
+        let threePolysStore = useThreePolysStore()
         // @TODO combine these or reduce the need for both?
-        //threePolysStore.setHoveredMesh(selectedRegion)
-        meshHandler.setColour(selectedRegion, 'selectedEventColour')
+        //threePolysStore.setHoveredMesh(clickedRegion)
+        // @TODO don't do this here?
+        meshHandler.setColour(clickedRegion, 'selectedEventColour')
 
-
+        // reset the no-longer-selected one
         if (
-            threePolysStore?.selectedMesh?.regionId
-            && (
-              (!selectedRegion?.regionId) 
-              || (selectedRegion.regionId !== threePolysStore.selectedMesh.regionId)
-            )
-          ) {
+          threePolysStore?.selectedMesh?.regionId &&
+          (!clickedRegion?.regionId ||
+            clickedRegion.regionId !== threePolysStore.selectedMesh.regionId)
+        ) {
+          meshHandler.setColour(threePolysStore.selectedMesh, 'defaultColour')
+        }
 
-            meshHandler.setColour(threePolysStore.selectedMesh, 'defaultColour')
-          }
+        // @TODO play a reel while loading
+        // load the selected region's content
 
-        threePolysStore.setSelectedMesh(selectedRegion, () => {
+        // @TODO maybe they don't want to close the others?
+        // only do this if the selected region is not a direct parent or a direct child of the previously selected region
+        threePolysStore.drillTo(threePolysStore.selectedMesh.regionId || 0, clickedRegion.regionId)
 
-          // do nothing yet
+        // @TODO if it's a direct parent, drillUp to the selected region
 
-        }) 
-        threePolysStore.drillDown(selectedRegion.regionId) // @TODO confused concerns here? The store class is modifying the meshes
+        // if it's a direct child, drillDown to the selected region
+        // @TODO this is slightly more performative but only works if the clicked region is a direct child
+        //threePolysStore.drillDown(clickedRegion.regionId)
 
+        // @TODO confused concerns here? The store class is modifying the meshes
       }),
     false
   )

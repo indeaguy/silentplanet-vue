@@ -6,8 +6,11 @@ import { useThreePolysStore } from '../stores/polys.js'
 import { computed, provide } from 'vue'
 
 //const selectedRegion = ref('')
-const threePolysStore = useThreePolysStore();
-provide('selectedRegion', computed(() => threePolysStore.selectedMesh)); // @TODO what is vue computed?
+const threePolysStore = useThreePolysStore()
+provide(
+  'selectedRegion',
+  computed(() => threePolysStore.selectedMesh)
+) // @TODO what is vue computed?
 //provide('selectedRegion', selectedRegion)
 
 // @TODO get the geotree from a backend source
@@ -38,7 +41,7 @@ provide('regionOptions', regionOptions)
 
 // Event handler for the 'update-region-id' emit
 const setSelectedRegion = (newRegion) => {
-  threePolysStore.setSelectedMeshByRegionId(newRegion);
+  threePolysStore.setSelectedMeshByRegionId(newRegion)
 }
 </script>
 

@@ -220,11 +220,18 @@ export class Globe {
    * @param {number} minEdgeLength - The minimum length of the triangle edges.
    * @return {object} || false An object containing the generated meshes and polygonMeshes.
    */
-  mapDataToSphere(data, radius, color, rise = 0, subdivisionDepth = 3, minEdgeLength = 0.05, visible = true) {
-
+  mapDataToSphere(
+    data,
+    radius,
+    color,
+    rise = 0,
+    subdivisionDepth = 3,
+    minEdgeLength = 0.05,
+    visible = true
+  ) {
     // need features and a name
     // @TODO revisit validataion and error handling
-    if (!data || !data.features || !data.properties.name || !data.properties.id) return false;
+    if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
 
     // Calculate the altitude from the radius and rise.
     let altitude = radius + rise
@@ -323,22 +330,18 @@ export class Globe {
       })
     )
     totalCombinedMeshes.visible = visible
+    
+    // Adding all the data.properties from the geojson files to the mesh object
+    Object.assign(totalCombinedMeshes, data.properties);
 
-    totalCombinedMeshes.name = data.properties.name
-    totalCombinedMeshes.regionId = data.properties.id
-
-    if (data.properties.parentId) {
-      totalCombinedMeshes.parentId = data.properties.parentId
-    }
-
-    if (data.properties.hasChild) {
-      totalCombinedMeshes.hasChild = data.properties.hasChild
+    if (!data.properties.parentId) {
+      totalCombinedMeshes.parentId = 0; // Set to 0 if parentId is falsy
     }
 
     return { meshes: totalCombinedMeshes }
   }
 
-  // Helper function to ensure CCW order for a given triangle.
+  // Helper function to ensure counter clockwise order for a given triangle.
   ensureCCW(vertices) {
     // Using the shoelace formula to calculate the signed area of a triangle.
     const area =
