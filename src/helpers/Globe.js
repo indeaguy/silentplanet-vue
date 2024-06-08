@@ -2,6 +2,11 @@
 import * as THREE from 'three'
 import { Earcut } from 'three/src/extras/Earcut.js' // Import the earcut library for triangulation.
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { CSG } from 'three-csg-ts'
+import * as turf from '@turf/turf'
+import polygonClipping from 'polygon-clipping';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry'
+
 
 export class Globe {
   constructor(config, sceneRenderer) {
@@ -18,22 +23,33 @@ export class Globe {
     this.sceneRenderer.addResizeObserver(this)
   }
 
-  createSphere() {
+  createSphere(rise = 0, color = null, side = null, wireframe = null, transparent = null, opacity = null) {
+
+    let altitude = rise + this.config.RADIUS
+    let materialColor = color ? color : this.config.FILL_COLOUR
+    let sideValue = side ? side : THREE.DoubleSide
+    //wireframeValue:  = wireframe ? wireframe : this.config.WIREFRAME,
+    let wireframeValue = wireframe ? wireframe : parseInt(this.config.FILL_COLOUR, 16)
+    let transparentValue = transparent ? transparent : this.config.TRANSPARENT
+    let opacityValue = opacity ? opacity : this.config.OPACITY
+
     var sphereGeometry = new THREE.SphereGeometry(
-      this.config.RADIUS,
+      altitude,
       this.config.WIDTH_SEGMENTS,
       this.config.HEIGHT_SEGMENTS
     )
+    // @todo use the observer patern here and make this a callback
     var sphereMaterial = new THREE.MeshBasicMaterial({
-      color: parseInt(this.config.FILL_COLOUR, 16),
-      side: THREE.DoubleSide,
-      wireframe: parseInt(this.config.FILL_COLOUR, 16),
-      //wireframe: this.config.WIREFRAME,
-      transparent: this.config.TRANSPARENT,
-      opacity: this.config.OPACITY
+      color: parseInt(materialColor, 16),
+      side: sideValue,
+      wireframe: wireframeValue,
+      transparent: transparentValue,
+      opacity: opacityValue
     })
     var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial)
-    this.sceneRenderer.scene.add(sphere)
+    //this.sceneRenderer.scene.add(sphere)
+
+    return sphere
   }
 
   createGrids(grids) {
@@ -142,7 +158,7 @@ export class Globe {
    * @param {number} minEdgeLength - The minimum length of an edge.
    * @param {THREE.Mesh} polygonMesh - The mesh representing the original polygon.
    */
-  subdivideTriangle(triangleVertices, depth, radius, rise, meshes, color, minEdgeLength) {
+  subdivideTriangle(triangleVertices, depth, radius, rise, meshes, color, minEdgeLength, maxEdgeLength) {
     const edgeLengths = [
       triangleVertices[0].distanceTo(triangleVertices[1]),
       triangleVertices[1].distanceTo(triangleVertices[2]),
@@ -161,34 +177,41 @@ export class Globe {
       const positions = triangleVertices.flatMap((vertex) => [vertex.x, vertex.y, vertex.z])
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
       geometry.setIndex([0, 1, 2])
-      const material = new THREE.MeshBasicMaterial({
+      const material = new THREE.MeshLambertMaterial({
         color: color,
         side: THREE.DoubleSide,
-        wireframe: false
+        wireframe: true
       })
       const mesh = new THREE.Mesh(geometry, material)
       meshes.push(mesh)
       return
     }
 
+    // @TODO is slerp really providing any benefit over this old way?
+
     // Calculate midpoints and ensure they lie on the surface of the sphere.
+    // const edgeMidpoints = [
+    //   triangleVertices[0]
+    //     .clone()
+    //     .lerp(triangleVertices[1], 0.5)
+    //     .normalize()
+    //     .multiplyScalar(radius + rise),
+    //   triangleVertices[1]
+    //     .clone()
+    //     .lerp(triangleVertices[2], 0.5)
+    //     .normalize()
+    //     .multiplyScalar(radius + rise),
+    //   triangleVertices[2]
+    //     .clone()
+    //     .lerp(triangleVertices[0], 0.5)
+    //     .normalize()
+    //     .multiplyScalar(radius + rise)
+    // ]
     const edgeMidpoints = [
-      triangleVertices[0]
-        .clone()
-        .lerp(triangleVertices[1], 0.5)
-        .normalize()
-        .multiplyScalar(radius + rise),
-      triangleVertices[1]
-        .clone()
-        .lerp(triangleVertices[2], 0.5)
-        .normalize()
-        .multiplyScalar(radius + rise),
-      triangleVertices[2]
-        .clone()
-        .lerp(triangleVertices[0], 0.5)
-        .normalize()
-        .multiplyScalar(radius + rise)
-    ]
+      this.slerp(triangleVertices[0], triangleVertices[1], 0.5).multiplyScalar(radius),
+      this.slerp(triangleVertices[1], triangleVertices[2], 0.5).multiplyScalar(radius),
+      this.slerp(triangleVertices[2], triangleVertices[0], 0.5).multiplyScalar(radius),
+    ];
 
     // Define the new triangles.
     const newTriangles = [
@@ -213,29 +236,23 @@ export class Globe {
    * Generate a sphere mesh based on the provided geojson data.
    *
    * @param {object} data - The data to be mapped onto the sphere in geojson format.
-   * @param {number} radius - The radius of the sphere.
-   * @param {string} color - The color of the sphere.
-   * @param {number} rise - The rise of the sphere from the radius.
-   * @param {number} subdivisionDepth - The depth of subdivision for the triangles.
-   * @param {number} minEdgeLength - The minimum length of the triangle edges.
+   * @param {boolean} visible - Whether the mesh should be visible.
+   * @param {object} config - The configuration object.
    * @return {object} || false An object containing the generated meshes and polygonMeshes.
    */
   mapDataToSphere(
     data,
-    radius,
-    color,
-    rise = 0,
-    subdivisionDepth = 3,
-    minEdgeLength = 0.05,
-    visible = true
+    visible = true,
+    config = {} // maybe use a complex type here with default values
   ) {
-    // need features and a name
-    // @TODO revisit validataion and error handling
+
+    // @TODO use typescript for this
     if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
 
-    // Calculate the altitude from the radius and rise.
-    let altitude = radius + rise
-
+    let radius = config.SPHERE.RADIUS
+    let color = parseInt(config.POLYGONS.COLOR, 16)
+    let wireframeOnly = config.POLYGONS.WIREFRAME_ONLY ?? false;
+    
     // Create an empty array to store mesh objects.
     let totalCombinedGeometry = []
 
@@ -256,15 +273,355 @@ export class Globe {
           : feature.geometry.coordinates
 
       for (let polygon of polygons) {
+
+        let coordinates = [polygon[0]] // @TODO lets create this array elsewhere
+
+        coordinates.forEach(coordinates => {
+          // @TODO some config here
+            console.log("Creating geometry for coordinates:", coordinates);
+
+            // @TODO make the third parameter 'rise' configurable
+            const geometry = this.createGeometry(coordinates, radius, 1);
+            if (!geometry) {
+                console.error("Failed to create geometry for coordinates:", coordinates);
+            } else {
+                geometries.push(geometry);
+            }
+        });
+      
+
+        meshes.forEach((mesh) => {
+          geometries.push(mesh.geometry)
+        })
+
+        // Merge all geometries into one
+        let combinedGeometry = mergeBufferGeometries(geometries, false)
+
+        totalCombinedGeometry.push(combinedGeometry)
+      }
+    }
+
+    let mergedGoJsonFeatureMeshes = mergeBufferGeometries(totalCombinedGeometry, false)
+
+    let meshMaterial = new THREE.MeshBasicMaterial({
+      color: color,
+      side: THREE.DoubleSide,
+      wireframe: wireframeOnly
+    })
+
+    let totalCombinedMeshes = new THREE.Mesh(
+      mergedGoJsonFeatureMeshes,
+      meshMaterial
+    )
+
+    if (!totalCombinedMeshes.geometry) {
+      console.error("No geometry found in totalCombinedMeshes", totalCombinedMeshes);
+    }
+    totalCombinedMeshes.geometry.computeVertexNormals();
+
+    //this.sceneRenderer.scene.add(totalCombinedMeshes)
+
+    /**
+     * @TODO totalCombinedMeshes here is a cool looking cone with all all the polygons
+     * connected at teh center. Return this if thats what we want to cache/use here.
+     */
+
+    // @TODO make this configurable
+    // @TODO should only need to pass the altitude here
+    // altitude is the height of the resulting mesh above the sphere
+    let altitude = 0.8;
+    let boundingSphere = this.createSphere(altitude, 0xff0000, 1, 1, 1, 0)
+
+    // Convert THREE meshes to CSG objects
+    const boundingSphereCsg = CSG.fromMesh(boundingSphere);
+    const totalCombinedMeshesCsg = CSG.fromMesh(totalCombinedMeshes);
+
+    // Perform an intersection so we just have a mesh hovering over the globe
+    const intersectionCSG = boundingSphereCsg.subtract(totalCombinedMeshesCsg);
+
+    // Convert the CSG result back to a THREE mesh
+    const intersectionMesh = CSG.toMesh(intersectionCSG, boundingSphere.matrix, meshMaterial);
+
+    // Adding all the data.properties from the geojson files to the mesh object
+    Object.assign(intersectionMesh, data.properties);
+
+    // @TODO should be able to remove this
+    if (!data.properties.parentId) {
+      intersectionMesh.parentId = 0; // Set to 0 if parentId is falsy
+    }
+
+    // @TODO consider convertng to indexed geometry
+    //this.convertToIndexedGeometryWithThreshold(intersectionMesh);
+
+    /**
+     * @TODO
+     * intersectionMesh here is a pyramid of the shape of the polygon with 
+     * the the point of the pyramid at the center of the sphere
+     * the bottom of the pyramid extends outside he base sphere by the altitide
+     * return that if we want to cache/use it
+     */
+
+    /**
+     * @TODO 
+     * if we subtract the base globe from intersectionMesh here
+     * we can make a volumous mesh above the surface of the globe with the height of the altitide
+     * make that and return that here if we want it.
+     */
+
+    // remove the point at the center of the sphere from the mesh so we only have whats on the surface left
+    const centerPosition = new THREE.Vector3(0, 0, 0);
+    // @TODO this.removePointIndexed(intersectionMesh, centerPosition); // faster
+    this.removePoint(intersectionMesh, centerPosition);
+
+    intersectionMesh.visible = visible
+
+    return { meshes: intersectionMesh }
+  }
+
+  // @TODO move this to a three helper somehwere or use something that already exists
+
+  convertToIndexedGeometry(mesh) {
+    const geometry = mesh.geometry;
+    const positions = geometry.attributes.position.array;
+    const vertexCount = positions.length / 3;
+
+    // Maps to track unique vertices and their indices
+    let uniqueVertices = new Map();
+    let indices = [];
+    let uniqueIndex = 0;
+
+    // @TODO Threshold to consider vertices as the same (due to floating point precision issues) .. performance conerns though
+    // ex. const threshold = 1e-4;
+
+    for (let i = 0; i < vertexCount; i++) {
+        let stride = i * 3;
+        let vertex = new THREE.Vector3(positions[stride], positions[stride + 1], positions[stride + 2]);
+        let key = `${vertex.x.toFixed(4)},${vertex.y.toFixed(4)},${vertex.z.toFixed(4)}`; // Key to track vertex uniqueness
+
+        if (uniqueVertices.has(key)) {
+            indices.push(uniqueVertices.get(key)); // Reuse existing vertex
+        } else {
+            // Add new unique vertex and update indices
+            uniqueVertices.set(key, uniqueIndex);
+            indices.push(uniqueIndex);
+            uniqueIndex++;
+        }
+    }
+
+    // Create new geometry with indices
+    const indexedGeometry = new THREE.BufferGeometry();
+    indexedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    indexedGeometry.setIndex(indices);
+
+    // Optional: Copy other attributes if necessary
+    if (geometry.attributes.normal) {
+        indexedGeometry.setAttribute('normal', geometry.attributes.normal);
+    }
+
+    // Clean up old geometry and update mesh
+    geometry.dispose();
+    mesh.geometry = indexedGeometry;
+
+    // Compute normals if needed
+    mesh.geometry.computeVertexNormals();
+}
+
+convertToIndexedGeometryWithThreshold(mesh, threshold = 1e-4) {
+  const geometry = mesh.geometry;
+  const positions = geometry.attributes.position.array;
+  const vertexCount = positions.length / 3;
+
+  let uniqueVertices = []; // List to store unique vertices
+  let indices = [];
+  let uniqueIndex = 0;
+
+  for (let i = 0; i < vertexCount; i++) {
+      let stride = i * 3;
+      let vertex = new THREE.Vector3(positions[stride], positions[stride + 1], positions[stride + 2]);
+      let isUnique = true;
+
+      // Check if this vertex is within threshold distance of any already accepted unique vertex
+      for (let j = 0; j < uniqueVertices.length; j++) {
+          if (vertex.distanceTo(uniqueVertices[j].vertex) < threshold) {
+              indices.push(uniqueVertices[j].index);
+              isUnique = false;
+              break;
+          }
+      }
+
+      if (isUnique) {
+          uniqueVertices.push({ vertex: vertex, index: uniqueIndex });
+          indices.push(uniqueIndex);
+          uniqueIndex++;
+      }
+  }
+
+  // Create new geometry with indices
+  const indexedGeometry = new THREE.BufferGeometry();
+  indexedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  indexedGeometry.setIndex(indices);
+
+  // Optional: Copy other attributes if necessary
+  if (geometry.attributes.normal) {
+      indexedGeometry.setAttribute('normal', geometry.attributes.normal);
+  }
+
+  // Clean up old geometry and update mesh
+  geometry.dispose();
+  mesh.geometry = indexedGeometry;
+
+  // Compute normals if needed
+  mesh.geometry.computeVertexNormals();
+}
+
+removePoint(mesh, centerPoint, tolerance = 0.001) {
+  const positions = mesh.geometry.attributes.position.array;
+  let newPositions = [];
+  
+  // Iterate over each set of three vertices (each triangle)
+  for (let i = 0; i < positions.length; i += 9) {
+      // Extract each vertex of the triangle
+      const v1 = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+      const v2 = new THREE.Vector3(positions[i+3], positions[i+4], positions[i+5]);
+      const v3 = new THREE.Vector3(positions[i+6], positions[i+7], positions[i+8]);
+
+      // Check if any vertex is within the tolerance distance of the centerPoint
+      if (!(v1.distanceTo(centerPoint) < tolerance || v2.distanceTo(centerPoint) < tolerance || v3.distanceTo(centerPoint) < tolerance)) {
+          // If no vertex is close enough to centerPoint, keep this triangle
+          newPositions.push(
+              v1.x, v1.y, v1.z,
+              v2.x, v2.y, v2.z,
+              v3.x, v3.y, v3.z
+          );
+      }
+  }
+
+  // Update geometry with the new positions
+  mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+  mesh.geometry.attributes.position.needsUpdate = true;
+  mesh.geometry.computeVertexNormals();  // Recompute normals if needed
+}
+
+removePointIndexed(mesh, centerPoint) {
+    const geometry = mesh.geometry;
+    const positions = geometry.attributes.position.array;
+    const indexArray = geometry.index.array;
+
+    // Step 1: Identify the vertex index to remove
+    let vertexToRemove = -1;
+    for (let i = 0; i < positions.length; i += 3) {
+        let v = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+        if (v.distanceTo(centerPoint) < 0.001) { // Adjust the tolerance as necessary
+            vertexToRemove = i / 3;
+            break;
+        }
+    }
+
+    if (vertexToRemove === -1) {
+        //console.log("No vertex found at the specified centerPoint");
+        return; // Vertex not found, no changes needed
+    }
+
+    // Step 2: Adjust the indices array to remove all faces containing the vertex
+    let newIndices = [];
+    for (let i = 0; i < indexArray.length; i += 3) {
+        let a = indexArray[i], b = indexArray[i + 1], c = indexArray[i + 2];
+        // Only add faces that do not include the vertexToRemove
+        if (a !== vertexToRemove && b !== vertexToRemove && c !== vertexToRemove) {
+            newIndices.push(a, b, c);
+        }
+    }
+
+    // Step 3: Update the geometry's index
+    geometry.setIndex(newIndices);
+    geometry.index.needsUpdate = true;
+
+    // Optionally, recompute the normals if the geometry looks distorted
+    geometry.computeVertexNormals();
+  }
+
+  createGeometry(coordinates, radius, rise) {
+    const altitude = radius + rise;
+    const vertices = [];
+    const indices = [];
+  
+    // Center vertex at the origin
+    const centerVertexIndex = 0;
+    vertices.push(0, 0, 0);  // This is the center point for all triangles
+  
+    coordinates.forEach(([lon, lat], index) => {
+      const latRad = lat * (Math.PI / 180);  // Convert latitude to radians
+      const lonRad = -lon * (Math.PI / 180);  // Convert longitude to radians and negate
+  
+      const x = altitude * Math.cos(latRad) * Math.cos(lonRad);
+      const y = altitude * Math.sin(latRad);
+      const z = altitude * Math.cos(latRad) * Math.sin(lonRad);
+  
+      vertices.push(x, y, z);
+    });
+  
+    // Create triangles connecting each vertex with the center and the next vertex
+    for (let i = 1; i <= vertices.length / 3 - 1; i++) {
+      indices.push(centerVertexIndex, i, (i % (vertices.length / 3 - 1)) + 1);
+    }
+  
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setIndex(indices);
+    return geometry;
+  }
+
+  /**
+   * Generate a sphere mesh based on the provided geojson data.
+   *
+   * @param {object} data - The data to be mapped onto the sphere in geojson format.
+   * @param {boolean} visible - Whether the mesh should be visible.
+   * @param {object} config - The configuration object.
+   * @return {object} || false An object containing the generated meshes and polygonMeshes.
+   */
+  mapDataToSphereOld(
+    data,
+    visible = true,
+    config = {} // maybe use a complex type here with default values
+  ) {
+    // need features and a name
+    if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
+
+    let radius = config.SPHERE.RADIUS
+    let color = parseInt(config.POLYGONS.COLOR, 16)
+    let rise = config.POLYGONS.RISE ?? 0;
+    let subdivisionDepth = config.POLYGONS.SUBDIVIDE_DEPTH ?? 3;
+    let minEdgeLength = config.POLYGONS.MIN_EDGE_LENGTH ?? 0.05;
+    let wireframeOnly = config.POLYGONS.WIREFRAME_ONLY ?? false;
+
+    // Create an empty array to store mesh objects.
+    let totalCombinedGeometry = []
+
+    // Loop through features in the data.
+    for (let feature of data.features) {
+      if (feature.geometry.type !== 'Polygon' && feature.geometry.type !== 'MultiPolygon') {
+        continue
+      }
+
+      let meshes = []
+      let geometries = []
+
+      // Check the geometry type and prepare an array of polygons.
+      let polygons =
+        feature.geometry.type === 'Polygon'
+          ? [feature.geometry.coordinates]
+          : feature.geometry.coordinates
+
+      for (let polygon of polygons) {
+
         // Extract the coordinates from the polygon data.
         let coordinates = polygon[0]
 
-        // Triangulate the polygon interior using Earcut.
-        const triangles = Earcut.triangulate(coordinates.flat())
+        // Foreach segment triangulate the polygon interior using Earcut.
+        const allTriangles = Earcut.triangulate(coordinates.flat())
 
-        // Iterate through the triangle indices and create triangles.
-        for (let i = 0; i < triangles.length; i += 3) {
-          const triangleIndices = [triangles[i], triangles[i + 1], triangles[i + 2]]
+        for (let i = 0; i < allTriangles.length; i += 3) {
+          const triangleIndices = [allTriangles[i], allTriangles[i + 1], allTriangles[i + 2]]
 
           // Convert triangle coordinates to 3D vectors on the sphere.
           const triangleVertices = triangleIndices.map((index) => {
@@ -300,21 +657,6 @@ export class Globe {
         // Merge all geometries into one
         let combinedGeometry = mergeBufferGeometries(geometries, false)
 
-        // Create a single mesh with the combined geometry
-        // @TODO make it configurable whether the mesh is double sided
-        // let combinedMesh = new THREE.Mesh(
-        //   combinedGeometry,
-        //   new THREE.MeshBasicMaterial({
-        //     color: color,
-        //     side: THREE.DoubleSide
-        //   })
-        // )
-
-        // Assign the properties from the geojson to the mesh
-        // if (feature.properties.name) {
-        //   combinedMesh.name = feature.properties.name
-        // }
-
         totalCombinedGeometry.push(combinedGeometry)
       }
     }
@@ -326,7 +668,8 @@ export class Globe {
       mergedGoJsonFeatureMeshes,
       new THREE.MeshBasicMaterial({
         color: color,
-        side: THREE.DoubleSide
+        side: THREE.DoubleSide,
+        wireframe: wireframeOnly
       })
     )
     totalCombinedMeshes.visible = visible
@@ -340,7 +683,6 @@ export class Globe {
 
     return { meshes: totalCombinedMeshes }
   }
-
   // Helper function to ensure counter clockwise order for a given triangle.
   ensureCCW(vertices) {
     // Using the shoelace formula to calculate the signed area of a triangle.
@@ -356,4 +698,19 @@ export class Globe {
     }
     return vertices
   }
+
+  slerp(point1, point2, t) {
+    const angle = Math.acos(point1.dot(point2));
+    const sinTotal = Math.sin(angle);
+    const ratioA = Math.sin((1 - t) * angle) / sinTotal;
+    const ratioB = Math.sin(t * angle) / sinTotal;
+    const x = point1.clone().multiplyScalar(ratioA).add(point2.clone().multiplyScalar(ratioB));
+    return x.normalize();
+  }
+
+calculateDistance(coord1, coord2) {
+    // This is a placeholder. Use a more accurate geographic distance calculation suitable for your precision needs
+    return Math.sqrt(Math.pow(coord2[0] - coord1[0], 2) + Math.pow(coord2[1] - coord1[1], 2));
+}
+
 }
