@@ -4,21 +4,13 @@ Silent Planet is the ultimate discovery platform leveraging geography, classific
 
 ## Prerequisites
 
-Before you begin, ensure you have Homebrew installed on your macOS. If Homebrew is not installed, you can install it by running the following command in your terminal:
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
+Before you begin, ensure you have **Node.js** and **Bun** installed on your system. If Bun is not installed, you can find installation instructions on the [official Bun website](https://bun.sh).
 
 ## Installation
 
 ### Install Bun
 
-After installing Homebrew, you can install Bun by running:
-
-```bash
-brew install bun
-```
+Follow the installation instructions for Bun based on your operating system from the official Bun website.
 
 ### Install Dependencies
 
