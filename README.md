@@ -1,57 +1,80 @@
-# silentplanet-vue
+# Silent Planet
 
-This template should help get you started developing with Vue 3 in Vite.
+Silent Planet is the ultimate discovery platform leveraging geography, classification, and democratic data. This application is built using Vue.js, Three.js, and Vite, and includes Cypress for testing.
 
-## Recommended IDE Setup
+## Prerequisites
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+Before you begin, ensure you have Homebrew installed on your macOS. If Homebrew is not installed, you can install it by running the following command in your terminal:
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-### Compile and Hot-Reload for Development
+## Installation
 
-```sh
-npm run dev
+### Install Bun
+
+After installing Homebrew, you can install Bun by running:
+
+```bash
+brew install bun
 ```
 
-### Compile and Minify for Production
+### Install Dependencies
 
-```sh
-npm run build
+Navigate to your project directory where your \`package.json\` file is located and run:
+
+```bash
+bun install
 ```
 
-### Run Headed Component Tests with [Cypress Component Testing](https://on.cypress.io/component)
+This command installs all the necessary dependencies for the project.
 
-```sh
-npm run test:unit:dev # or `npm run test:unit` for headless testing
+## Development
+
+To start the development server, run:
+
+```bash
+bun run dev
 ```
 
-### Run End-to-End Tests with [Cypress](https://www.cypress.io/)
+This will serve your application using Vite on a local server.
 
-```sh
-npm run test:e2e:dev
+## Building the Project
+
+To build your application for production, use:
+
+```bash
+bun run build
 ```
 
-This runs the end-to-end tests against the Vite development server.
-It is much faster than the production build.
+## Testing
 
-But it's still recommended to test the production build with `test:e2e` before deploying (e.g. in CI environments):
+Run end-to-end tests with Cypress by executing:
 
-```sh
-npm run build
-npm run test:e2e
+```bash
+bun run test:e2e
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+For component tests, use:
 
-```sh
-npm run lint
+```bash
+bun run test:unit
 ```
+
+## Linting and Formatting
+
+Ensure your code follows best practices by running the linters and formatters:
+
+```bash
+bun run lint
+bun run format
+```
+
+## Contributing
+
+Contributions to Silent Planet are welcome! Please feel free to submit pull requests or open issues to discuss proposed changes.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
