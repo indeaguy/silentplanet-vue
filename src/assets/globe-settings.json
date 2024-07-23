@@ -20,7 +20,7 @@
     "MAX_DISTANCE": 20,
     "WIREFRAME": false,
     "TRANSPARENT": true,
-    "OPACITY": 0.35,
+    "OPACITY": 0.57,
     "GRIDS": {
       "O": {
         "COLOR": "0xffffff",
@@ -45,8 +45,12 @@
   "POLYGONS": {
     "RISE": 0,
     "COLOR": "0xff0000",
-    "SUBDIVIDE_DEPTH": 3,
+    "SUBDIVIDE_DEPTH": 0,
     "MIN_EDGE_LENGTH": 0.05,
+    "SHOW_GRIDLINES": true,
+    "SHOW_GRIDPOINTS": true,
+    "SHOW_LABELS": true,
+    "WIREFRAME_ONLY": false,
     "LAYER_OVERRIDES": {
       "O": {}
     }

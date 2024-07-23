@@ -17,7 +17,7 @@ import config from '../assets/globe-settings.json'
 // @TODO Ensure that resources (like event listeners and Three.js objects) are properly cleaned up if your App instance is ever destroyed or replaced. This is crucial for avoiding memory leaks.
 // @TODO consider separating the concerns here
 
-let renderer, globe, combinedRayTracer, meshHandler, threePolysStore // Reference to the renderer, globe, and rayTracer
+let renderer, globe, combinedRayTracer, meshHandler, threePolysStore, sphere // Reference to the renderer, globe, and rayTracer
 //const selectedRegion = inject('selectedRegion')
 const resizeObserver = ref(null) // Reference for the ResizeObserver
 
@@ -28,7 +28,8 @@ onMounted(async () => {
   renderer = new Scene(config.CAMERA, config.SCENE, 'base-globe')
   globe = new Globe(config.SPHERE, renderer)
   threePolysStore = useThreePolysStore()
-  globe.createSphere()
+  sphere = globe.createSphere()
+  renderer.scene.add(sphere)
   renderer.renderables.push(globe)
 
   let initialMeshes = []
@@ -107,12 +108,8 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
   data.geos.forEach((geo) => {
     const result = globe.mapDataToSphere(
       geo,
-      config.SPHERE.RADIUS,
-      parseInt(config.POLYGONS.COLOR, 16),
-      config.POLYGONS.RISE,
-      config.POLYGONS.SUBDIVIDE_DEPTH,
-      config.POLYGONS.MIN_EDGE_LENGTH,
-      visible // make it visible/hidden
+      visible, // make it visible/hidden
+      config
     )
     if (!result || !result.meshes) return
 

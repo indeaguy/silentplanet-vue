@@ -14,8 +14,11 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@turf/turf": "^6.5.0",
     "pinia": "^2.1.7",
+    "polygon-clipping": "^0.15.7",
     "three": "^0.159.0",
+    "three-csg-ts": "^3.2.0",
     "vue": "^3.3.4",
     "vue-router": "^4.2.5"
   },
