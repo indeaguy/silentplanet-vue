@@ -12,6 +12,10 @@ Before you begin, ensure you have **Node.js** and **Bun** installed on your syst
 
 Follow the installation instructions for Bun based on your operating system from the official Bun website.
 
+```bash
+brew install oven-sh/bun/bun
+```
+
 ### Install Dependencies
 
 Navigate to your project directory where your \`package.json\` file is located and run:

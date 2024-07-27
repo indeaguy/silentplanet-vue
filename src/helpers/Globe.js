@@ -3,9 +3,6 @@ import * as THREE from 'three'
 import { Earcut } from 'three/src/extras/Earcut.js' // Import the earcut library for triangulation.
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CSG } from 'three-csg-ts'
-import * as turf from '@turf/turf'
-import polygonClipping from 'polygon-clipping';
-import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry'
 
 
 export class Globe {
