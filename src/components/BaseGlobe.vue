@@ -5,7 +5,6 @@ import { DataLoader } from '../helpers/DataLoader.js'
 import { RayTracer } from '../helpers/RayTracer.js'
 import { MeshModifier } from '../helpers/MeshModifier.js'
 import { useThreePolysStore } from '../stores/polys.js'
-// import { onMounted, onBeforeUnmount, ref, inject, watch } from 'vue'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 
 // import the CONFIG
