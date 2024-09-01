@@ -16,7 +16,7 @@ import config from '../assets/globe-settings.json'
 // @TODO Ensure that resources (like event listeners and Three.js objects) are properly cleaned up if your App instance is ever destroyed or replaced. This is crucial for avoiding memory leaks.
 // @TODO consider separating the concerns here
 
-let renderer, globe, combinedRayTracer, meshHandler, threePolysStore, sphere // Reference to the renderer, globe, and rayTracer
+let renderer, globe, grids, combinedRayTracer, meshHandler, threePolysStore, sphere // Reference to the renderer, globe, and rayTracer
 //const selectedRegion = inject('selectedRegion')
 const resizeObserver = ref(null) // Reference for the ResizeObserver
 
@@ -29,6 +29,17 @@ onMounted(async () => {
   threePolysStore = useThreePolysStore()
   sphere = globe.createSphere()
   renderer.scene.add(sphere)
+
+  grids = globe.createGrids()
+
+  Object.values(grids).forEach(gridArray => {
+    gridArray.forEach(line => {
+      renderer.scene.add(line)
+    })
+  })
+
+  // @TODO anything added here has to be removed in onBeforeUnmount?
+  // anything here has a render() method
   renderer.renderables.push(globe)
 
   let initialMeshes = []

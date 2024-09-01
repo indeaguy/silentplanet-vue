@@ -5,6 +5,7 @@ import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUt
 import { CSG } from 'three-csg-ts'
 
 
+
 export class Globe {
   constructor(config, sceneRenderer) {
     this.config = config
@@ -12,9 +13,6 @@ export class Globe {
     this.sceneRenderer.controls.minDistance = this.config.RADIUS + this.config.MIN_DISTANCE
     this.sceneRenderer.controls.maxDistance = this.config.MAX_DISTANCE
     this.gridMaterials = {}
-
-    // @TODO Consider if there's a way to optimize the grid creation, especially if you're creating many lines. If the grid lines don't change often, you might want to create them once and then show/hide or modify them, instead of recreating them frequently.
-    this.createGrids(this.config.GRIDS)
 
     // handle resize
     this.sceneRenderer.addResizeObserver(this)
@@ -49,28 +47,53 @@ export class Globe {
     return sphere
   }
 
-  createGrids(grids) {
-    Object.entries(grids).forEach(([key, gridConfig]) => {
-      const material = new THREE.LineBasicMaterial({ color: parseInt(gridConfig.COLOR, 16) })
-      this.createGrid(gridConfig.LAT_DENSITY, gridConfig.LON_DENSITY, material)
-      this.gridMaterials[key] = {
-        material: material,
-        config: gridConfig
-      }
-    })
+  createGrids() {
+    let grids = this.createSphericalGrids(this.config.GRIDS);
+    this.gridMaterials = this.createGridMaterials(this.config.GRIDS);
+    this.applyMaterialToGridLines(grids);
+    return grids;
   }
 
-  createGrid(latDensity, lonDensity, material) {
+  createSphericalGrids(gridConfigs) {
+    const allGridLines = {};
+    Object.entries(gridConfigs).forEach(([key, gridConfig]) => {
+      // here we will create the lines for each grid
+      const grid = this.createSphericalGridLines(gridConfig.LAT_DENSITY, gridConfig.LON_DENSITY, key)
+      allGridLines[key] = grid;
+    })
+    return allGridLines;
+  }
+  
+  createGridMaterials(gridConfigs) {
+    const materials = {};
+    Object.entries(gridConfigs).forEach(([key, gridConfig]) => {
+
+      // here we will create the initial materials for each gridConfig
+      // @TODO can we add observers here so we can update the material when the config changes?
+      materials[key] = {
+        material: new THREE.LineBasicMaterial({ color: parseInt(gridConfig.COLOR, 16) }),
+        config: gridConfig
+      }
+    });
+    return materials;
+  }
+
+  createSphericalGridLines(latDensity, lonDensity, gridKey) {
+    const lines = []
     for (let i = -80; i <= 80; i += latDensity) {
       let theta = (90 - i) * (Math.PI / 180)
-      let line = this.createLatitudeLine(theta, material)
-      this.sceneRenderer.scene.add(line)
+      let line = this.createLatitudeLine(theta)
+      // @TODO Add to my shape docs here
+      line.gridKey = gridKey;
+      lines.push(line)
     }
     for (let i = -180; i <= 180; i += lonDensity) {
       let phi = (i + 180) * (Math.PI / 180)
-      let line = this.createLongitudeLine(phi, material)
-      this.sceneRenderer.scene.add(line)
+      let line = this.createLongitudeLine(phi)
+      line.gridKey = gridKey;
+      lines.push(line)
     }
+    return lines
   }
 
   createLatitudeLine(theta, material) {
@@ -101,6 +124,15 @@ export class Globe {
     var geometry = new THREE.BufferGeometry().setFromPoints(points)
     var line = new THREE.Line(geometry, material)
     return line
+  }
+
+  applyMaterialToGridLines(grids) {
+    Object.entries(grids).forEach(([gridKey, gridLines]) => {
+      const material = this.gridMaterials[gridKey].material;
+      gridLines.forEach(line => {
+        line.material = material;
+      });
+    });
   }
 
   onResize(newSize) {
@@ -179,9 +211,7 @@ export class Globe {
         side: THREE.DoubleSide,
         wireframe: true
       })
-      const mesh = new THREE.Mesh(geometry, material)
-      meshes.push(mesh)
-      return
+      return new THREE.Mesh(geometry, material)
     }
 
     // @TODO is slerp really providing any benefit over this old way?
