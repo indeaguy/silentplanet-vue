@@ -3,16 +3,18 @@ import * as THREE from 'three'
 import { Earcut } from 'three/src/extras/Earcut.js' // Import the earcut library for triangulation.
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CSG } from 'three-csg-ts'
-
-
+import { Grid } from './Grid.js'
+import { RenderEffects } from './RenderEffects.js';
 
 export class Globe {
   constructor(config, sceneRenderer) {
     this.config = config
     this.sceneRenderer = sceneRenderer
-    this.sceneRenderer.controls.minDistance = this.config.RADIUS + this.config.MIN_DISTANCE
-    this.sceneRenderer.controls.maxDistance = this.config.MAX_DISTANCE
+    this.sceneRenderer.controls.minDistance = config.RADIUS + config.MIN_DISTANCE
+    this.sceneRenderer.controls.maxDistance = config.MAX_DISTANCE
     this.gridMaterials = {}
+    this.grid = new Grid(config)
+    this.renderEffects = new RenderEffects(sceneRenderer);
 
     // handle resize
     this.sceneRenderer.addResizeObserver(this)
@@ -48,91 +50,7 @@ export class Globe {
   }
 
   createGrids() {
-    let grids = this.createSphericalGrids(this.config.GRIDS);
-    this.gridMaterials = this.createGridMaterials(this.config.GRIDS);
-    this.applyMaterialToGridLines(grids);
-    return grids;
-  }
-
-  createSphericalGrids(gridConfigs) {
-    const allGridLines = {};
-    Object.entries(gridConfigs).forEach(([key, gridConfig]) => {
-      // here we will create the lines for each grid
-      const grid = this.createSphericalGridLines(gridConfig.LAT_DENSITY, gridConfig.LON_DENSITY, key)
-      allGridLines[key] = grid;
-    })
-    return allGridLines;
-  }
-  
-  createGridMaterials(gridConfigs) {
-    const materials = {};
-    Object.entries(gridConfigs).forEach(([key, gridConfig]) => {
-
-      // here we will create the initial materials for each gridConfig
-      // @TODO can we add observers here so we can update the material when the config changes?
-      materials[key] = {
-        material: new THREE.LineBasicMaterial({ color: parseInt(gridConfig.COLOR, 16) }),
-        config: gridConfig
-      }
-    });
-    return materials;
-  }
-
-  createSphericalGridLines(latDensity, lonDensity, gridKey) {
-    const lines = []
-    for (let i = -80; i <= 80; i += latDensity) {
-      let theta = (90 - i) * (Math.PI / 180)
-      let line = this.createLatitudeLine(theta)
-      // @TODO Add to my shape docs here
-      line.gridKey = gridKey;
-      lines.push(line)
-    }
-    for (let i = -180; i <= 180; i += lonDensity) {
-      let phi = (i + 180) * (Math.PI / 180)
-      let line = this.createLongitudeLine(phi)
-      line.gridKey = gridKey;
-      lines.push(line)
-    }
-    return lines
-  }
-
-  createLatitudeLine(theta, material) {
-    var points = []
-    for (let i = 0; i <= 360; i += 2) {
-      let rad = Math.PI / 180
-      let phi = i * rad
-      let x = -(this.config.RADIUS * Math.sin(theta) * Math.cos(phi))
-      let y = this.config.RADIUS * Math.cos(theta)
-      let z = this.config.RADIUS * Math.sin(theta) * Math.sin(phi)
-      points.push(new THREE.Vector3(x, y, z))
-    }
-    var geometry = new THREE.BufferGeometry().setFromPoints(points)
-    var line = new THREE.Line(geometry, material)
-    return line
-  }
-
-  createLongitudeLine(phi, material) {
-    var points = []
-    for (let i = 0; i <= 180; i += 2) {
-      let rad = Math.PI / 180
-      let theta = i * rad
-      let x = -(this.config.RADIUS * Math.sin(theta) * Math.cos(phi))
-      let y = this.config.RADIUS * Math.cos(theta)
-      let z = this.config.RADIUS * Math.sin(theta) * Math.sin(phi)
-      points.push(new THREE.Vector3(x, y, z))
-    }
-    var geometry = new THREE.BufferGeometry().setFromPoints(points)
-    var line = new THREE.Line(geometry, material)
-    return line
-  }
-
-  applyMaterialToGridLines(grids) {
-    Object.entries(grids).forEach(([gridKey, gridLines]) => {
-      const material = this.gridMaterials[gridKey].material;
-      gridLines.forEach(line => {
-        line.material = material;
-      });
-    });
+    return this.grid.createGrids();
   }
 
   onResize(newSize) {
@@ -140,38 +58,12 @@ export class Globe {
     this.sceneRenderer.controls.maxDistance = this.config.MAX_DISTANCE
   }
 
-  // @TODO: fade with three colours based on distance:
-  // invisible > vibrant > invisible
-  fadeGrid(material, config, distance) {
-    let normalized
-
-    const fadeStart =
-      config.FADE_START *
-      (this.sceneRenderer.controls.minDistance + this.sceneRenderer.controls.maxDistance)
-    const fadeEnd =
-      config.FADE_END *
-      (this.sceneRenderer.controls.minDistance + this.sceneRenderer.controls.maxDistance)
-    if (distance > fadeEnd) {
-      normalized = 1
-    } else if (distance < fadeStart) {
-      normalized = 0
-    } else {
-      normalized = (distance - fadeStart) / (fadeEnd - fadeStart)
-    }
-
-    var color1 = new THREE.Color(parseInt(config.COLOR_FINAL, 16)) // what it fades to
-    var color2 = new THREE.Color(parseInt(config.COLOR, 16)) // what it fades from (config.COLOR);
-    var color = color1.clone().lerp(color2, normalized)
-
-    material.color.lerp(color, config.FADE_SPEED)
-  }
-
   render() {
     //this.sceneRenderer.camera.position.z = 2;
     var distance = this.sceneRenderer.camera.position.length()
 
-    Object.values(this.gridMaterials).forEach(({ material, config }) => {
-      this.fadeGrid(material, config, distance)
+    Object.values(this.grid.gridMaterials).forEach(({ material, config }) => {
+      this.renderEffects.fadeGrid(material, config, distance);
     })
   }
 
@@ -260,14 +152,14 @@ export class Globe {
    */
 
   /**
-   * Generate a sphere mesh based on the provided geojson data.
+   * Generate a globe mesh based on the provided geojson data.
    *
-   * @param {object} data - The data to be mapped onto the sphere in geojson format.
+   * @param {object} data - The data to be mapped onto the globe in geojson format.
    * @param {boolean} visible - Whether the mesh should be visible.
    * @param {object} config - The configuration object.
    * @return {object} || false An object containing the generated meshes and polygonMeshes.
    */
-  mapDataToSphere(
+  mapDataToGlobe(
     data,
     visible = true,
     config = {} // maybe use a complex type here with default values
@@ -279,6 +171,8 @@ export class Globe {
     let radius = config.SPHERE.RADIUS
     let color = parseInt(config.POLYGONS.COLOR, 16)
     let wireframeOnly = config.POLYGONS.WIREFRAME_ONLY ?? false;
+    let altitude = config.POLYGONS.RISE ?? 0;
+    let centerPosition = new THREE.Vector3(this.config.CENTER[0], this.config.CENTER[1], this.config.CENTER[2]);
     
     // Create an empty array to store mesh objects.
     let totalCombinedGeometry = []
@@ -307,8 +201,8 @@ export class Globe {
           // @TODO some config here
             console.log("Creating geometry for coordinates:", coordinates);
 
-            // @TODO make the third parameter 'rise' configurable
-            const geometry = this.createGeometry(coordinates, radius, 1);
+            // This is where the magic happens
+            const geometry = this.createBufferGeometryFromLatLonPairs(coordinates);
             if (!geometry) {
                 console.error("Failed to create geometry for coordinates:", coordinates);
             } else {
@@ -353,11 +247,7 @@ export class Globe {
      * connected at teh center. Return this if thats what we want to cache/use here.
      */
 
-    // @TODO make this configurable
-    // @TODO should only need to pass the altitude here
-    // altitude is the height of the resulting mesh above the sphere
-    let altitude = 0.8;
-    let boundingSphere = this.createSphere(altitude, 0xff0000, 1, 1, 1, 0)
+    let boundingSphere = this.createSphere(altitude)
 
     // Convert THREE meshes to CSG objects
     const boundingSphereCsg = CSG.fromMesh(boundingSphere);
@@ -372,17 +262,16 @@ export class Globe {
     // Adding all the data.properties from the geojson files to the mesh object
     Object.assign(intersectionMesh, data.properties);
 
-    // @TODO should be able to remove this
-    if (!data.properties.parentId) {
-      intersectionMesh.parentId = 0; // Set to 0 if parentId is falsy
-    }
-
-    // @TODO consider convertng to indexed geometry
-    //this.convertToIndexedGeometryWithThreshold(intersectionMesh);
+    /**
+     * @TODO 
+     * Consider converting the intersectionMesh to 'indexed geometry' here
+     * to improve rendering performance.
+     * See the WiP helper methods convertToIndexedGeometryWithThreshold, removePointIndexed
+     */
 
     /**
      * @TODO
-     * intersectionMesh here is a pyramid of the shape of the polygon with 
+     * intersectionMesh at this point is a pyramid of the shape of the polygon with 
      * the the point of the pyramid at the center of the sphere
      * the bottom of the pyramid extends outside he base sphere by the altitide
      * return that if we want to cache/use it
@@ -396,7 +285,6 @@ export class Globe {
      */
 
     // remove the point at the center of the sphere from the mesh so we only have whats on the surface left
-    const centerPosition = new THREE.Vector3(0, 0, 0);
     // @TODO this.removePointIndexed(intersectionMesh, centerPosition); // faster
     this.removePoint(intersectionMesh, centerPosition);
 
@@ -405,184 +293,57 @@ export class Globe {
     return { meshes: intersectionMesh }
   }
 
-  // @TODO move this to a three helper somehwere or use something that already exists
+  removePoint(mesh, centerPoint, tolerance = 0.001) {
+    const positions = mesh.geometry.attributes.position.array;
+    let newPositions = [];
+    
+    // Iterate over each set of three vertices (each triangle)
+    for (let i = 0; i < positions.length; i += 9) {
+        // Extract each vertex of the triangle
+        const v1 = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+        const v2 = new THREE.Vector3(positions[i+3], positions[i+4], positions[i+5]);
+        const v3 = new THREE.Vector3(positions[i+6], positions[i+7], positions[i+8]);
 
-  convertToIndexedGeometry(mesh) {
-    const geometry = mesh.geometry;
-    const positions = geometry.attributes.position.array;
-    const vertexCount = positions.length / 3;
-
-    // Maps to track unique vertices and their indices
-    let uniqueVertices = new Map();
-    let indices = [];
-    let uniqueIndex = 0;
-
-    // @TODO Threshold to consider vertices as the same (due to floating point precision issues) .. performance conerns though
-    // ex. const threshold = 1e-4;
-
-    for (let i = 0; i < vertexCount; i++) {
-        let stride = i * 3;
-        let vertex = new THREE.Vector3(positions[stride], positions[stride + 1], positions[stride + 2]);
-        let key = `${vertex.x.toFixed(4)},${vertex.y.toFixed(4)},${vertex.z.toFixed(4)}`; // Key to track vertex uniqueness
-
-        if (uniqueVertices.has(key)) {
-            indices.push(uniqueVertices.get(key)); // Reuse existing vertex
-        } else {
-            // Add new unique vertex and update indices
-            uniqueVertices.set(key, uniqueIndex);
-            indices.push(uniqueIndex);
-            uniqueIndex++;
+        // Check if any vertex is within the tolerance distance of the centerPoint
+        if (!(v1.distanceTo(centerPoint) < tolerance || v2.distanceTo(centerPoint) < tolerance || v3.distanceTo(centerPoint) < tolerance)) {
+            // If no vertex is close enough to centerPoint, keep this triangle
+            newPositions.push(
+                v1.x, v1.y, v1.z,
+                v2.x, v2.y, v2.z,
+                v3.x, v3.y, v3.z
+            );
         }
     }
 
-    // Create new geometry with indices
-    const indexedGeometry = new THREE.BufferGeometry();
-    indexedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    indexedGeometry.setIndex(indices);
-
-    // Optional: Copy other attributes if necessary
-    if (geometry.attributes.normal) {
-        indexedGeometry.setAttribute('normal', geometry.attributes.normal);
-    }
-
-    // Clean up old geometry and update mesh
-    geometry.dispose();
-    mesh.geometry = indexedGeometry;
-
-    // Compute normals if needed
-    mesh.geometry.computeVertexNormals();
-}
-
-convertToIndexedGeometryWithThreshold(mesh, threshold = 1e-4) {
-  const geometry = mesh.geometry;
-  const positions = geometry.attributes.position.array;
-  const vertexCount = positions.length / 3;
-
-  let uniqueVertices = []; // List to store unique vertices
-  let indices = [];
-  let uniqueIndex = 0;
-
-  for (let i = 0; i < vertexCount; i++) {
-      let stride = i * 3;
-      let vertex = new THREE.Vector3(positions[stride], positions[stride + 1], positions[stride + 2]);
-      let isUnique = true;
-
-      // Check if this vertex is within threshold distance of any already accepted unique vertex
-      for (let j = 0; j < uniqueVertices.length; j++) {
-          if (vertex.distanceTo(uniqueVertices[j].vertex) < threshold) {
-              indices.push(uniqueVertices[j].index);
-              isUnique = false;
-              break;
-          }
-      }
-
-      if (isUnique) {
-          uniqueVertices.push({ vertex: vertex, index: uniqueIndex });
-          indices.push(uniqueIndex);
-          uniqueIndex++;
-      }
+    // Update geometry with the new positions
+    mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.computeVertexNormals();  // Recompute normals if needed
   }
 
-  // Create new geometry with indices
-  const indexedGeometry = new THREE.BufferGeometry();
-  indexedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  indexedGeometry.setIndex(indices);
-
-  // Optional: Copy other attributes if necessary
-  if (geometry.attributes.normal) {
-      indexedGeometry.setAttribute('normal', geometry.attributes.normal);
-  }
-
-  // Clean up old geometry and update mesh
-  geometry.dispose();
-  mesh.geometry = indexedGeometry;
-
-  // Compute normals if needed
-  mesh.geometry.computeVertexNormals();
-}
-
-removePoint(mesh, centerPoint, tolerance = 0.001) {
-  const positions = mesh.geometry.attributes.position.array;
-  let newPositions = [];
-  
-  // Iterate over each set of three vertices (each triangle)
-  for (let i = 0; i < positions.length; i += 9) {
-      // Extract each vertex of the triangle
-      const v1 = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
-      const v2 = new THREE.Vector3(positions[i+3], positions[i+4], positions[i+5]);
-      const v3 = new THREE.Vector3(positions[i+6], positions[i+7], positions[i+8]);
-
-      // Check if any vertex is within the tolerance distance of the centerPoint
-      if (!(v1.distanceTo(centerPoint) < tolerance || v2.distanceTo(centerPoint) < tolerance || v3.distanceTo(centerPoint) < tolerance)) {
-          // If no vertex is close enough to centerPoint, keep this triangle
-          newPositions.push(
-              v1.x, v1.y, v1.z,
-              v2.x, v2.y, v2.z,
-              v3.x, v3.y, v3.z
-          );
-      }
-  }
-
-  // Update geometry with the new positions
-  mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
-  mesh.geometry.attributes.position.needsUpdate = true;
-  mesh.geometry.computeVertexNormals();  // Recompute normals if needed
-}
-
-removePointIndexed(mesh, centerPoint) {
-    const geometry = mesh.geometry;
-    const positions = geometry.attributes.position.array;
-    const indexArray = geometry.index.array;
-
-    // Step 1: Identify the vertex index to remove
-    let vertexToRemove = -1;
-    for (let i = 0; i < positions.length; i += 3) {
-        let v = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
-        if (v.distanceTo(centerPoint) < 0.001) { // Adjust the tolerance as necessary
-            vertexToRemove = i / 3;
-            break;
-        }
-    }
-
-    if (vertexToRemove === -1) {
-        //console.log("No vertex found at the specified centerPoint");
-        return; // Vertex not found, no changes needed
-    }
-
-    // Step 2: Adjust the indices array to remove all faces containing the vertex
-    let newIndices = [];
-    for (let i = 0; i < indexArray.length; i += 3) {
-        let a = indexArray[i], b = indexArray[i + 1], c = indexArray[i + 2];
-        // Only add faces that do not include the vertexToRemove
-        if (a !== vertexToRemove && b !== vertexToRemove && c !== vertexToRemove) {
-            newIndices.push(a, b, c);
-        }
-    }
-
-    // Step 3: Update the geometry's index
-    geometry.setIndex(newIndices);
-    geometry.index.needsUpdate = true;
-
-    // Optionally, recompute the normals if the geometry looks distorted
-    geometry.computeVertexNormals();
-  }
-
-  createGeometry(coordinates, radius, rise) {
-    const altitude = radius + rise;
+  /**
+   * This is where the magic happens. Creates a geometry from an array of coordinates.
+   * @param {Array<Array<number>>} coordinates - An array of [longitude, latitude] pairs.
+   *                                             Each pair should be in degrees.
+   *                                             The coordinates should form a closed loop,
+   *                                             i.e., the first and last coordinates should be the same.
+   * @returns {THREE.BufferGeometry} The created geometry.
+   */
+  createBufferGeometryFromLatLonPairs(coordinates) {
     const vertices = [];
     const indices = [];
   
     // Center vertex at the origin
     const centerVertexIndex = 0;
-    vertices.push(0, 0, 0);  // This is the center point for all triangles
+    vertices.push(this.config.CENTER[0], this.config.CENTER[1], this.config.CENTER[2]);  // This is the center point for all triangles
   
     coordinates.forEach(([lon, lat], index) => {
       const latRad = lat * (Math.PI / 180);  // Convert latitude to radians
       const lonRad = -lon * (Math.PI / 180);  // Convert longitude to radians and negate
   
-      const x = altitude * Math.cos(latRad) * Math.cos(lonRad);
-      const y = altitude * Math.sin(latRad);
-      const z = altitude * Math.cos(latRad) * Math.sin(lonRad);
+      const x = Math.cos(latRad) * Math.cos(lonRad);
+      const y = Math.sin(latRad);
+      const z = Math.cos(latRad) * Math.sin(lonRad);
   
       vertices.push(x, y, z);
     });

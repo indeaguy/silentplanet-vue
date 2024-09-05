@@ -71,6 +71,16 @@ bun run format
 
 Contributions to Silent Planet are welcome! Please feel free to submit pull requests or open issues to discuss proposed changes.
 
+### Design Decisions
+
+#### Passing objects by reference
+
+In the codebase, we pass objects by reference when possible. This is a design decision motivated by performance reasons. When an object is instantiated, its initial state is created and passed around by reference. Any updates to that object are made to the original object, which can lead to unexpected behavior if the object is not cloned.
+
+#### Using a singleton for the config
+
+We use a singleton for the config. This is a design decision motivated by the need to access the config from various parts of the application. The config is passed around by reference, and any updates to the config are made to the original object.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

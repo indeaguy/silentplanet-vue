@@ -12,6 +12,7 @@
     "DEFAULT_POINT_Z": 5
   },
   "SPHERE": {
+    "CENTER": [0, 0, 0],
     "RADIUS": 1,
     "FILL_COLOUR": "0x000000",
     "WIDTH_SEGMENTS": 20,
@@ -43,7 +44,7 @@
     }
   },
   "POLYGONS": {
-    "RISE": 0,
+    "RISE": 0.02,
     "COLOR": "0xff0000",
     "SUBDIVIDE_DEPTH": 0,
     "MIN_EDGE_LENGTH": 0.05,

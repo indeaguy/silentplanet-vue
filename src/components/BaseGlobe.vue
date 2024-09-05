@@ -116,7 +116,7 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
   let meshes = []
 
   data.geos.forEach((geo) => {
-    const result = globe.mapDataToSphere(
+    const result = globe.mapDataToGlobe(
       geo,
       visible, // make it visible/hidden
       config
