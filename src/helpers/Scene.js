@@ -39,6 +39,10 @@ export class Scene {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enablePan = false // disable two fingers to pan
 
+    // how far you can zoom in and out
+    this.controls.minDistance = this.cameraConfig.MIN_DISTANCE
+    this.controls.maxDistance = this.cameraConfig.MAX_DISTANCE
+
     /**
      * Renderables
      */
@@ -103,6 +107,8 @@ export class Scene {
       this.controls = new OrbitControls(this.camera, this.renderer.domElement) // add new controls
       // @TODO this is duplicated
       this.controls.enablePan = false // disable two fingers to pan
+      this.controls.minDistance = this.cameraConfig.MIN_DISTANCE
+      this.controls.maxDistance = this.cameraConfig.MAX_DISTANCE
       this.size.copy(newSize)
     }
 

@@ -10,8 +10,6 @@ export class Globe {
   constructor(config, sceneRenderer) {
     this.config = config
     this.sceneRenderer = sceneRenderer
-    this.sceneRenderer.controls.minDistance = config.RADIUS + config.MIN_DISTANCE
-    this.sceneRenderer.controls.maxDistance = config.MAX_DISTANCE
     this.gridMaterials = {}
     this.grid = new Grid(config)
     this.renderEffects = new RenderEffects(sceneRenderer);
@@ -53,9 +51,12 @@ export class Globe {
     return this.grid.createGrids();
   }
 
+  /**
+   * Resize observer callback
+   * @param {*} newSize 
+   */
   onResize(newSize) {
-    this.sceneRenderer.controls.minDistance = this.config.RADIUS + this.config.MIN_DISTANCE
-    this.sceneRenderer.controls.maxDistance = this.config.MAX_DISTANCE
+    // do nothing yet.
   }
 
   render() {
