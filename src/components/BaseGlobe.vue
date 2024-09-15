@@ -105,11 +105,11 @@ onMounted(async () => {
 
 // @TODO this needs to be in polys.js?
 async function loadPertinentGeos(globe, context = 1, visible = true) {
-  const loader = await new DataLoader(context)
+  const loader = await new DataLoader()
 
   // @TODO this is asyncronous Ensure that the rest of your application can handle the case where this data is not yet available, especially if other components depend on it.
   //try {
-  const data = await loader.loadData()
+  const data = await loader.getGeoJsonData(context)
 
   if (!data || !data.geos) return // @TODO throw an error instead
 

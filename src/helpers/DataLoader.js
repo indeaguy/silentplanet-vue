@@ -1,23 +1,21 @@
 export class DataLoader {
-  constructor(geoIds, exclude_meshes = 1, depth = 0, limit = 0) {
-    this.baseUrl = import.meta.env.VITE_APP_RUST_SERVICE_URL
-    this.url = `${this.baseUrl}?geo_ids=${geoIds}`
-    if (exclude_meshes) {
-      this.url += `&exclude_meshes=${exclude_meshes}`
-    }
-    if (depth) {
-      this.url += `&depth=${depth}`
-    }
-    if (limit) {
-      this.url += `&limit=${limit}`
-    }
+  constructor() {
+    this.baseUrl = import.meta.env.VITE_APP_RUST_GEOS_SERVICE_URL;
   }
 
-  async loadData() {
-    // Fetch data from the specified URL.
-    const response = await fetch(this.url)
-    // Parse the response as JSON data.
-    const data = await response.json()
-    return data
+  setGetGeoJsonUrlParameters(geoIds, options = {}) {
+    const { exclude_meshes = 1, depth = 0, limit = 0 } = options;
+    this.url = new URL(this.baseUrl);
+    
+    this.url.searchParams.append('geo_ids', geoIds);
+    if (exclude_meshes) this.url.searchParams.append('exclude_meshes', exclude_meshes);
+    if (depth) this.url.searchParams.append('depth', depth);
+    if (limit) this.url.searchParams.append('limit', limit);
+  }
+
+  async getGeoJsonData(geoIds, options = {}) {
+    this.setGetGeoJsonUrlParameters(geoIds, options);
+    const response = await fetch(this.url);
+    return response.json();
   }
 }
