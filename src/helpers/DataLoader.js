@@ -1,21 +1,35 @@
 export class DataLoader {
   constructor() {
-    this.baseUrl = import.meta.env.VITE_APP_RUST_GEOS_SERVICE_URL;
+    this.geosEndpoint = import.meta.env.VITE_APP_RUST_GEOS_SERVICE_URL;
+    this.configEndpoint = import.meta.env.VITE_APP_CONFIG_SERVICE_URL;
+
   }
 
-  setGetGeoJsonUrlParameters(geoIds, options = {}) {
-    const { exclude_meshes = 1, depth = 0, limit = 0 } = options;
-    this.url = new URL(this.baseUrl);
+  createRequestUrl(baseUrl, params = {}) {
+    const url = new URL(baseUrl);
     
-    this.url.searchParams.append('geo_ids', geoIds);
-    if (exclude_meshes) this.url.searchParams.append('exclude_meshes', exclude_meshes);
-    if (depth) this.url.searchParams.append('depth', depth);
-    if (limit) this.url.searchParams.append('limit', limit);
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, value);
+      }
+    }
+    
+    return url.toString();
+  }
+
+  async fetchDataWithAuth(endpoint, params = {}) {
+    // @TODO get user id from auth and use jwt token in header
+    const userId = 1;
+    const url = this.createRequestUrl(endpoint, { user_id: userId, ...params });
+    const response = await fetch(url);
+    return response.json();
   }
 
   async getGeoJsonData(geoIds, options = {}) {
-    this.setGetGeoJsonUrlParameters(geoIds, options);
-    const response = await fetch(this.url);
-    return response.json();
+    return this.fetchDataWithAuth(this.geosEndpoint, { geo_ids: geoIds, ...options });
+  }
+
+  async getConfigData() {
+    return this.fetchDataWithAuth(this.configEndpoint);
   }
 }
