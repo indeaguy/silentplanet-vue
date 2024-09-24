@@ -1,125 +1,107 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+// @TODO encapsulation problem here! This must aleady be initialized somewhere.
+import configInstance from '../helpers/Config.js';
 
-// @TODO rename this class to stage
 export class Scene {
-  constructor(cameraConfig, sceneConfig, targetElement) {
-    // this line needs validation
-    this.targetElement = document.getElementById(targetElement)
-    this.cameraConfig = cameraConfig
-    this.sceneConfig = sceneConfig
-    this.clientWidth = this.targetElement.clientWidth
-    this.clientHeight = this.targetElement.clientHeight
-    this.updateSize()
+  constructor(targetElement) {
+    const { CAMERA, SCENE } = configInstance.settings;
 
-    this.scene = new THREE.Scene()
+    this.targetElement = document.getElementById(targetElement);
+    this.updateSceneSize(SCENE);
 
-    this.camera = new THREE.PerspectiveCamera(
-      cameraConfig.FOV,
-      (this.clientWidth * sceneConfig.WIDTH_PERCENTAGE) /
-        (this.clientHeight * sceneConfig.HEIGHT_PERCENTAGE),
-      cameraConfig.MIN_VISIBLE,
-      cameraConfig.MAX_VISIBLE
-    )
-    this.camera.position.set(
-      cameraConfig.DEFAULT_POINT_X,
-      cameraConfig.DEFAULT_POINT_Y,
-      cameraConfig.DEFAULT_POINT_Z
-    )
-    this.camera.updateProjectionMatrix()
+    this.scene = new THREE.Scene();
+    this.setupCamera(CAMERA);
+    this.setupRenderer();
+    this.setupControls(CAMERA);
 
-    this.renderer = new THREE.WebGLRenderer()
-    this.renderer.setSize(
-      this.clientWidth * sceneConfig.WIDTH_PERCENTAGE,
-      this.clientHeight * sceneConfig.HEIGHT_PERCENTAGE
-    )
-    // @TODO set this to 1 to make it look like startrek next generation or starwars
-    this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.targetElement.appendChild(this.renderer.domElement)
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement)
-    this.controls.enablePan = false // disable two fingers to pan
-
-    // how far you can zoom in and out
-    this.controls.minDistance = this.cameraConfig.MIN_DISTANCE
-    this.controls.maxDistance = this.cameraConfig.MAX_DISTANCE
-
-    /**
-     * Renderables
-     */
-
-    this.renderables = []
-
-    /**
-     * Observers
-     *
-     * when something changes here inform anything 'observing' these
-     */
-
-    this.resizeObservers = []
-
-    // Handle #base-globe div resizing
-    this.size = new THREE.Vector2(
-      this.clientWidth * sceneConfig.WIDTH_PERCENTAGE,
-      this.clientHeight * sceneConfig.HEIGHT_PERCENTAGE
-    )
-    // this.onWindowResize = this.onWindowResize.bind(this)
-    // window.addEventListener('resize', this.onWindowResize, false)
+    this.renderables = [];
+    this.resizeObservers = [];
+    this.size = new THREE.Vector2(this.sceneWidth, this.sceneHeight);
   }
 
-  // allow other objects to subscribe to resize events
+  setupCamera(CAMERA) {
+    const {
+      FOV,
+      MIN_VISIBLE_DISTANCE,
+      MAX_VISIBLE_DISTANCE,
+      DEFAULT_POINT_X,
+      DEFAULT_POINT_Y,
+      DEFAULT_POINT_Z
+    } = CAMERA;
+
+    this.camera = new THREE.PerspectiveCamera(
+      FOV,
+      this.sceneWidth / this.sceneHeight,
+      MIN_VISIBLE_DISTANCE,
+      MAX_VISIBLE_DISTANCE
+    );
+    this.camera.position.set(DEFAULT_POINT_X, DEFAULT_POINT_Y, DEFAULT_POINT_Z);
+    this.camera.updateProjectionMatrix();
+  }
+
+  setupRenderer() {
+    this.renderer = new THREE.WebGLRenderer();
+    this.renderer.setSize(this.sceneWidth, this.sceneHeight);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.targetElement.appendChild(this.renderer.domElement);
+  }
+
+  setupControls(CAMERA) {
+    const {
+      MAX_ZOOM_DISTANCE,
+      MIN_ZOOM_DISTANCE
+    } = CAMERA;
+
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.enablePan = false;
+    this.controls.minDistance = MIN_ZOOM_DISTANCE;
+    this.controls.maxDistance = MAX_ZOOM_DISTANCE;
+  }
+
   addResizeObserver(observer) {
-    this.resizeObservers.push(observer)
+    this.resizeObservers.push(observer);
   }
 
   animate() {
-    const animateFunc = () => {
-      requestAnimationFrame(animateFunc)
-      this.render()
-    }
-    animateFunc()
+    requestAnimationFrame(() => this.animate());
+    this.render();
   }
 
   render() {
-    this.controls.update()
-    for (let renderable of this.renderables) {
-      renderable.render()
-    }
-    this.renderer.render(this.scene, this.camera)
+    this.controls.update();
+    this.renderables.forEach(renderable => renderable.render());
+    this.renderer.render(this.scene, this.camera);
   }
-
-  /**
-   * Supporting methods
-   */
 
   onWindowResize() {
-    this.updateSize()
-    const newSize = new THREE.Vector2(
-      this.clientWidth * this.sceneConfig.WIDTH_PERCENTAGE,
-      this.clientHeight * this.sceneConfig.HEIGHT_PERCENTAGE
-    )
+    const { SCENE } = configInstance.settings;
+    this.updateSceneSize(SCENE);
+    const newSize = new THREE.Vector2(this.sceneWidth, this.sceneHeight);
+
     if (!newSize.equals(this.size)) {
-      this.camera.aspect =
-        (this.clientWidth * this.sceneConfig.WIDTH_PERCENTAGE) /
-        (this.clientHeight * this.sceneConfig.HEIGHT_PERCENTAGE)
-      this.camera.updateProjectionMatrix()
-      this.renderer.setSize(newSize.x, newSize.y)
-      this.controls.dispose() // dispose old controls
-      this.controls = new OrbitControls(this.camera, this.renderer.domElement) // add new controls
-      // @TODO this is duplicated
-      this.controls.enablePan = false // disable two fingers to pan
-      this.controls.minDistance = this.cameraConfig.MIN_DISTANCE
-      this.controls.maxDistance = this.cameraConfig.MAX_DISTANCE
-      this.size.copy(newSize)
+      this.updateCameraAndRenderer(newSize);
+      this.size.copy(newSize);
     }
 
-    // Notify all observers about the resize event
-    for (let observer of this.resizeObservers) {
-      observer.onResize(newSize)
-    }
+    this.resizeObservers.forEach(observer => observer.onResize(newSize));
   }
 
-  updateSize() {
-    this.clientWidth = this.targetElement.clientWidth
-    this.clientHeight = this.targetElement.clientHeight
+  updateCameraAndRenderer(newSize) {
+    this.camera.aspect = newSize.x / newSize.y;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(newSize.x, newSize.y);
+    this.controls.dispose();
+    this.setupControls(configInstance.settings.CAMERA);
+  }
+
+  updateSceneSize(SCENE) {
+    const {
+      WIDTH_PERCENTAGE,
+      HEIGHT_PERCENTAGE
+    } = SCENE;
+
+    this.sceneWidth = this.targetElement.clientWidth * WIDTH_PERCENTAGE;
+    this.sceneHeight = this.targetElement.clientHeight * HEIGHT_PERCENTAGE;
   }
 }

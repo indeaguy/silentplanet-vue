@@ -1,14 +1,14 @@
 import * as THREE from 'three';
+import configInstance from './Config.js';
 
 export class Grid {
-  constructor(config) {
-    this.config = config;
+  constructor() {
     this.gridMaterials = {};
   }
 
   createGrids() {
-    let grids = this.createSphericalGrids(this.config.GRIDS);
-    this.gridMaterials = this.createGridMaterials(this.config.GRIDS);
+    let grids = this.createSphericalGrids(configInstance.settings.SPHERE.GRIDS);
+    this.gridMaterials = this.createGridMaterials(configInstance.settings.SPHERE.GRIDS);
     this.applyMaterialToGridLines(grids);
     return grids;
   }
@@ -55,9 +55,9 @@ export class Grid {
     for (let i = 0; i <= 360; i += 2) {
       let rad = Math.PI / 180
       let phi = i * rad
-      let x = -(this.config.RADIUS * Math.sin(theta) * Math.cos(phi))
-      let y = this.config.RADIUS * Math.cos(theta)
-      let z = this.config.RADIUS * Math.sin(theta) * Math.sin(phi)
+      let x = -(configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.cos(phi))
+      let y = configInstance.settings.SPHERE.RADIUS * Math.cos(theta)
+      let z = configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.sin(phi)
       points.push(new THREE.Vector3(x, y, z))
     }
     var geometry = new THREE.BufferGeometry().setFromPoints(points)
@@ -69,9 +69,9 @@ export class Grid {
     for (let i = 0; i <= 180; i += 2) {
       let rad = Math.PI / 180
       let theta = i * rad
-      let x = -(this.config.RADIUS * Math.sin(theta) * Math.cos(phi))
-      let y = this.config.RADIUS * Math.cos(theta)
-      let z = this.config.RADIUS * Math.sin(theta) * Math.sin(phi)
+      let x = -(configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.cos(phi))
+      let y = configInstance.settings.SPHERE.RADIUS * Math.cos(theta)
+      let z = configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.sin(phi)
       points.push(new THREE.Vector3(x, y, z))
     }
     var geometry = new THREE.BufferGeometry().setFromPoints(points)

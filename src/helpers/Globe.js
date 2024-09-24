@@ -4,34 +4,51 @@ import { Earcut } from 'three/src/extras/Earcut.js' // Import the earcut library
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CSG } from 'three-csg-ts'
 import { Grid } from './Grid.js'
+// @TODO encapsulation problem here! This must aleady be initialized somewhere.
+import configInstance from './Config.js';
 import { RenderEffects } from './RenderEffects.js';
 
 export class Globe {
-  constructor(config, sceneRenderer) {
-    this.config = config
+  constructor(sceneRenderer) {
     this.sceneRenderer = sceneRenderer
     this.gridMaterials = {}
-    this.grid = new Grid(config)
+    this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
     this.renderEffects = new RenderEffects(sceneRenderer);
 
     // handle resize
     this.sceneRenderer.addResizeObserver(this)
   }
 
-  createSphere(rise = 0, color = null, side = null, wireframe = null, transparent = null, opacity = null) {
-
-    let altitude = rise + this.config.RADIUS
-    let materialColor = color ? color : this.config.FILL_COLOUR
+  /**
+   * Create a sphere mesh with the specified parameters.
+   * @param {number} rise - The altitude of the sphere.
+   * @param {string} color - The color of the sphere.
+   * @param {string} side - The side of the sphere.
+   * @param {boolean} wireframe - Whether to display the wireframe.
+   * @param {boolean} transparent - Whether the sphere is transparent.
+   * @param {number} opacity - The opacity of the sphere.
+   * @returns {THREE.Mesh} The created sphere mesh.
+   */
+  createSphere(
+    rise = 0, 
+    color = null, 
+    side = null, 
+    wireframe = null, 
+    transparent = null, 
+    opacity = null
+  ) {
+    let altitude = rise + configInstance.settings.SPHERE.RADIUS
+    let materialColor = color ? color : configInstance.settings.SPHERE.FILL_COLOUR
     let sideValue = side ? side : THREE.DoubleSide
     //wireframeValue:  = wireframe ? wireframe : this.config.WIREFRAME,
-    let wireframeValue = wireframe ? wireframe : parseInt(this.config.FILL_COLOUR, 16)
-    let transparentValue = transparent ? transparent : this.config.TRANSPARENT
-    let opacityValue = opacity ? opacity : this.config.OPACITY
+    let wireframeValue = wireframe ? wireframe : parseInt(configInstance.settings.SPHERE.FILL_COLOUR, 16)
+    let transparentValue = transparent ? transparent : configInstance.settings.SPHERE.TRANSPARENT
+    let opacityValue = opacity ? opacity : configInstance.settings.SPHERE.OPACITY
 
     var sphereGeometry = new THREE.SphereGeometry(
       altitude,
-      this.config.WIDTH_SEGMENTS,
-      this.config.HEIGHT_SEGMENTS
+      configInstance.settings.SPHERE.WIDTH_SEGMENTS,
+      configInstance.settings.SPHERE.HEIGHT_SEGMENTS
     )
     // @todo use the observer patern here and make this a callback
     var sphereMaterial = new THREE.MeshBasicMaterial({
@@ -163,17 +180,21 @@ export class Globe {
   mapDataToGlobe(
     data,
     visible = true,
-    config = {} // maybe use a complex type here with default values
+    config = {}
   ) {
 
     // @TODO use typescript for this
     if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
 
-    let radius = config.SPHERE.RADIUS
-    let color = parseInt(config.POLYGONS.COLOR, 16)
-    let wireframeOnly = config.POLYGONS.WIREFRAME_ONLY ?? false;
-    let altitude = config.POLYGONS.RISE ?? 0;
-    let centerPosition = new THREE.Vector3(this.config.CENTER[0], this.config.CENTER[1], this.config.CENTER[2]);
+    let radius = configInstance.settings.SPHERE.RADIUS
+    let color = parseInt(configInstance.settings.POLYGONS.COLOR, 16)
+    let wireframeOnly = configInstance.settings.POLYGONS.WIREFRAME_ONLY ?? false;
+    let altitude = configInstance.settings.POLYGONS.RISE ?? 0;
+    let centerPosition = new THREE.Vector3(
+      configInstance.settings.SPHERE.CENTER[0], 
+      configInstance.settings.SPHERE.CENTER[1], 
+      configInstance.settings.SPHERE.CENTER[2]
+    );
     
     // Create an empty array to store mesh objects.
     let totalCombinedGeometry = []
@@ -336,7 +357,11 @@ export class Globe {
   
     // Center vertex at the origin
     const centerVertexIndex = 0;
-    vertices.push(this.config.CENTER[0], this.config.CENTER[1], this.config.CENTER[2]);  // This is the center point for all triangles
+    vertices.push(
+      configInstance.settings.SPHERE.CENTER[0], 
+      configInstance.settings.SPHERE.CENTER[1], 
+      configInstance.settings.SPHERE.CENTER[2]
+    );  // This is the center point for all triangles
   
     coordinates.forEach(([lon, lat], index) => {
       const latRad = lat * (Math.PI / 180);  // Convert latitude to radians
@@ -376,12 +401,12 @@ export class Globe {
     // need features and a name
     if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
 
-    let radius = config.SPHERE.RADIUS
-    let color = parseInt(config.POLYGONS.COLOR, 16)
-    let rise = config.POLYGONS.RISE ?? 0;
-    let subdivisionDepth = config.POLYGONS.SUBDIVIDE_DEPTH ?? 3;
-    let minEdgeLength = config.POLYGONS.MIN_EDGE_LENGTH ?? 0.05;
-    let wireframeOnly = config.POLYGONS.WIREFRAME_ONLY ?? false;
+    let radius = configInstance.settings.SPHERE.RADIUS
+    let color = parseInt(configInstance.settings.POLYGONS.COLOR, 16)
+    let rise = configInstance.settings.POLYGONS.RISE ?? 0;
+    let subdivisionDepth = configInstance.settings.POLYGONS.SUBDIVIDE_DEPTH ?? 3;
+    let minEdgeLength = configInstance.settings.POLYGONS.MIN_EDGE_LENGTH ?? 0.05;
+    let wireframeOnly = configInstance.settings.POLYGONS.WIREFRAME_ONLY ?? false;
 
     // Create an empty array to store mesh objects.
     let totalCombinedGeometry = []

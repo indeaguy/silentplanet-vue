@@ -1,8 +1,9 @@
 <script setup>
 import { Scene } from '../helpers/Scene.js'
 import { Globe } from '../helpers/Globe.js'
-import { DataLoader } from '../helpers/DataLoader.js'
-import { RayTracer } from '../helpers/RayTracer.js'
+import configInstance from '../helpers/Config.js';
+import { getGeoJsonData } from '../helpers/Geos/Services/RustBackendGeosService.js'
+import { handleRayEvent, setRayTracerStage } from '../helpers/RayTracer.js'
 import { MeshModifier } from '../helpers/MeshModifier.js'
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
@@ -16,16 +17,25 @@ import config from '../assets/globe-settings.json'
 // @TODO Ensure that resources (like event listeners and Three.js objects) are properly cleaned up if your App instance is ever destroyed or replaced. This is crucial for avoiding memory leaks.
 // @TODO consider separating the concerns here
 
-let renderer, globe, grids, combinedRayTracer, meshHandler, threePolysStore, sphere // Reference to the renderer, globe, and rayTracer
+let renderer, globe, grids, meshHandler, threePolysStore, sphere // Reference to the renderer, globe, and rayTracer
 //const selectedRegion = inject('selectedRegion')
 const resizeObserver = ref(null) // Reference for the ResizeObserver
 
-// @TODO render accessible non-threejs alternative as well/instead
 // this makes sure the base-globe element is loaded in the dom first
 // @TODO revisit whether I need to use aysnc for the arrow function here
 onMounted(async () => {
-  renderer = new Scene(config.CAMERA, config.SCENE, 'base-globe')
-  globe = new Globe(config.SPHERE, renderer)
+
+  // Singleton instance of app config for the user
+  await configInstance.initialize().catch(
+    (error) => {
+      console.error('Error initializing config:', error);
+      throw error; // rethrow the error for caller to handle
+    }
+  );
+
+  renderer = new Scene('base-globe')
+  setRayTracerStage(renderer) // Set the stage for RayTracer
+  globe = new Globe(renderer)
   threePolysStore = useThreePolysStore()
   sphere = globe.createSphere()
   renderer.scene.add(sphere)
@@ -91,13 +101,7 @@ onMounted(async () => {
   
 
   meshHandler = new MeshModifier()
-  //hoverRayTracer = new RayTracer(renderer, meshHandler)
-  //clickRayTracer = new RayTracer(renderer, meshHandler)
-  combinedRayTracer = new RayTracer(renderer, meshHandler)
 
-  //renderer.addResizeObserver(hoverRayTracer)
-  //renderer.addResizeObserver(clickRayTracer)
-  renderer.addResizeObserver(combinedRayTracer)
   renderer.animate()
 
   setupEventListeners()
@@ -105,11 +109,12 @@ onMounted(async () => {
 
 // @TODO this needs to be in polys.js?
 async function loadPertinentGeos(globe, context = 1, visible = true) {
-  const loader = await new DataLoader()
 
   // @TODO this is asyncronous Ensure that the rest of your application can handle the case where this data is not yet available, especially if other components depend on it.
-  //try {
-  const data = await loader.getGeoJsonData(context)
+  const data = await getGeoJsonData(context).catch((error) => {
+    console.error('Error loading globe data:', error);
+    throw error; // rethrow the error for caller to handle
+  })
 
   if (!data || !data.geos) return // @TODO throw an error instead
 
@@ -129,11 +134,7 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
   // @TODO don't do this here
   //meshes.forEach((mesh) => renderer.scene.add(mesh))
 
-  return meshes
-  // } catch (error) {
-  //   console.error('Error loading globe data:', error)
-  //   throw error // rethrow the error for caller to handle
-  // }
+  return meshes;
 }
 
 // This function will recursively load all child geos for the given mesh to the given depth or until there are no child geos
@@ -160,8 +161,8 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
 // prevent memory leaks!
 onBeforeUnmount(() => {
   window.removeEventListener('resize', renderer.onWindowResize)
-  window.removeEventListener('mousemove', combinedRayTracer.handleRayEvent)
-  window.removeEventListener('click', combinedRayTracer.handleRayEvent)
+  window.removeEventListener('mousemove', handleRayEvent)
+  window.removeEventListener('click', handleRayEvent)
   // Disconnect the ResizeObserver
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
@@ -180,7 +181,7 @@ function setupEventListeners() {
   window.addEventListener(
     'mousemove',
     (event) =>
-      combinedRayTracer.handleRayEvent(event, (hoveredRegion) => {
+      handleRayEvent(event, (hoveredRegion) => {
         // @TODO a new one?
         let threePolysStore = useThreePolysStore()
 
@@ -235,7 +236,7 @@ function setupEventListeners() {
   window.addEventListener(
     'click',
     (event) =>
-      combinedRayTracer.handleRayEvent(event, (clickedRegion) => {
+      handleRayEvent(event, (clickedRegion) => {
         if (!clickedRegion || !clickedRegion.regionId) {
           return false // do nothing
         }
