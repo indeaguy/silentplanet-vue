@@ -1,8 +1,9 @@
 import * as THREE from 'three';
+import configInstance from './Config.js';
 
 export class RenderEffects {
-  constructor(sceneRenderer) {
-    this.sceneRenderer = sceneRenderer;
+  constructor(worldStageModel) {
+    this.worldStageModel = worldStageModel;
   }
 
   /**
@@ -14,12 +15,11 @@ export class RenderEffects {
   fadeGrid(material, config, distance) {
     let normalized;
 
-    const fadeStart =
-      config.FADE_START *
-      (this.sceneRenderer.controls.minDistance + this.sceneRenderer.controls.maxDistance);
-    const fadeEnd =
-      config.FADE_END *
-      (this.sceneRenderer.controls.minDistance + this.sceneRenderer.controls.maxDistance);
+    const { CAMERA } = configInstance.settings;
+    const { MIN_ZOOM_DISTANCE, MAX_ZOOM_DISTANCE } = CAMERA;
+
+    const fadeStart = config.FADE_START * (MIN_ZOOM_DISTANCE + MAX_ZOOM_DISTANCE);
+    const fadeEnd = config.FADE_END * (MIN_ZOOM_DISTANCE + MAX_ZOOM_DISTANCE);
     
     if (distance > fadeEnd) {
       normalized = 1;

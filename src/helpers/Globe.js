@@ -1,6 +1,5 @@
 // Globe.js and Scene.js
 import * as THREE from 'three'
-import { Earcut } from 'three/src/extras/Earcut.js' // Import the earcut library for triangulation.
 import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CSG } from 'three-csg-ts'
 import { Grid } from './Grid.js'
@@ -9,14 +8,14 @@ import configInstance from './Config.js';
 import { RenderEffects } from './RenderEffects.js';
 
 export class Globe {
-  constructor(sceneRenderer) {
-    this.sceneRenderer = sceneRenderer
+  constructor(worldStageModel) {
+    this.worldStageModel = worldStageModel
     this.gridMaterials = {}
     this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
-    this.renderEffects = new RenderEffects(sceneRenderer);
+    this.renderEffects = new RenderEffects(worldStageModel);
 
     // handle resize
-    this.sceneRenderer.addResizeObserver(this)
+    this.worldStageModel.addResizeObserver(this)
   }
 
   /**
@@ -73,101 +72,16 @@ export class Globe {
    * @param {*} newSize 
    */
   onResize(newSize) {
-    // do nothing yet.
+    // Update any globe-specific properties that depend on size
   }
 
   render() {
-    //this.sceneRenderer.camera.position.z = 2;
-    var distance = this.sceneRenderer.camera.position.length()
+    var distance = this.worldStageModel.camera.position.length()
 
     Object.values(this.grid.gridMaterials).forEach(({ material, config }) => {
       this.renderEffects.fadeGrid(material, config, distance);
     })
   }
-
-  /**
-   * Subdivides a triangle and creates mesh triangles.
-   *
-   * @param {Array<THREE.Vector3>} triangleVertices - The vertices of the triangle.
-   * @param {number} depth - The depth of subdivision.
-   * @param {number} radius - The radius of the sphere.
-   * @param {number} rise - The distance from the surface of the sphere.
-   * @param {Array<THREE.Mesh>} meshes - An array to store the created meshes.
-   * @param {number} color - The color of the mesh.
-   * @param {number} minEdgeLength - The minimum length of an edge.
-   * @param {THREE.Mesh} polygonMesh - The mesh representing the original polygon.
-   */
-  subdivideTriangle(triangleVertices, depth, radius, rise, meshes, color, minEdgeLength, maxEdgeLength) {
-    const edgeLengths = [
-      triangleVertices[0].distanceTo(triangleVertices[1]),
-      triangleVertices[1].distanceTo(triangleVertices[2]),
-      triangleVertices[2].distanceTo(triangleVertices[0])
-    ]
-    const longestEdge = Math.max(...edgeLengths)
-
-    // Check against the minimum edge length
-    if (longestEdge < minEdgeLength) {
-      depth = 0
-    }
-
-    if (depth <= 0) {
-      // Base case: No more subdivision needed. Create the mesh triangle.
-      const geometry = new THREE.BufferGeometry()
-      const positions = triangleVertices.flatMap((vertex) => [vertex.x, vertex.y, vertex.z])
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-      geometry.setIndex([0, 1, 2])
-      const material = new THREE.MeshLambertMaterial({
-        color: color,
-        side: THREE.DoubleSide,
-        wireframe: true
-      })
-      return new THREE.Mesh(geometry, material)
-    }
-
-    // @TODO is slerp really providing any benefit over this old way?
-
-    // Calculate midpoints and ensure they lie on the surface of the sphere.
-    // const edgeMidpoints = [
-    //   triangleVertices[0]
-    //     .clone()
-    //     .lerp(triangleVertices[1], 0.5)
-    //     .normalize()
-    //     .multiplyScalar(radius + rise),
-    //   triangleVertices[1]
-    //     .clone()
-    //     .lerp(triangleVertices[2], 0.5)
-    //     .normalize()
-    //     .multiplyScalar(radius + rise),
-    //   triangleVertices[2]
-    //     .clone()
-    //     .lerp(triangleVertices[0], 0.5)
-    //     .normalize()
-    //     .multiplyScalar(radius + rise)
-    // ]
-    const edgeMidpoints = [
-      this.slerp(triangleVertices[0], triangleVertices[1], 0.5).multiplyScalar(radius),
-      this.slerp(triangleVertices[1], triangleVertices[2], 0.5).multiplyScalar(radius),
-      this.slerp(triangleVertices[2], triangleVertices[0], 0.5).multiplyScalar(radius),
-    ];
-
-    // Define the new triangles.
-    const newTriangles = [
-      [triangleVertices[0], edgeMidpoints[0], edgeMidpoints[2]],
-      [edgeMidpoints[0], triangleVertices[1], edgeMidpoints[1]],
-      [edgeMidpoints[1], triangleVertices[2], edgeMidpoints[2]],
-      [edgeMidpoints[2], edgeMidpoints[0], edgeMidpoints[1]]
-    ]
-
-    // Recursively subdivide each triangle.
-    // meshes is being passed by reference here!
-    for (let t of newTriangles) {
-      this.subdivideTriangle(t, depth - 1, radius, rise, meshes, color, minEdgeLength)
-    }
-  }
-
-  /**
-   * Globe polygon helper methods
-   */
 
   /**
    * Generate a globe mesh based on the provided geojson data.
@@ -307,7 +221,7 @@ export class Globe {
      */
 
     // remove the point at the center of the sphere from the mesh so we only have whats on the surface left
-    // @TODO this.removePointIndexed(intersectionMesh, centerPosition); // faster
+    // @TODO this.removePointIndexed(intersectionMesh, centerPosition); // faster?
     this.removePoint(intersectionMesh, centerPosition);
 
     intersectionMesh.visible = visible
@@ -384,147 +298,4 @@ export class Globe {
     geometry.setIndex(indices);
     return geometry;
   }
-
-  /**
-   * Generate a sphere mesh based on the provided geojson data.
-   *
-   * @param {object} data - The data to be mapped onto the sphere in geojson format.
-   * @param {boolean} visible - Whether the mesh should be visible.
-   * @param {object} config - The configuration object.
-   * @return {object} || false An object containing the generated meshes and polygonMeshes.
-   */
-  mapDataToSphereOld(
-    data,
-    visible = true,
-    config = {} // maybe use a complex type here with default values
-  ) {
-    // need features and a name
-    if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
-
-    let radius = configInstance.settings.SPHERE.RADIUS
-    let color = parseInt(configInstance.settings.POLYGONS.COLOR, 16)
-    let rise = configInstance.settings.POLYGONS.RISE ?? 0;
-    let subdivisionDepth = configInstance.settings.POLYGONS.SUBDIVIDE_DEPTH ?? 3;
-    let minEdgeLength = configInstance.settings.POLYGONS.MIN_EDGE_LENGTH ?? 0.05;
-    let wireframeOnly = configInstance.settings.POLYGONS.WIREFRAME_ONLY ?? false;
-
-    // Create an empty array to store mesh objects.
-    let totalCombinedGeometry = []
-
-    // Loop through features in the data.
-    for (let feature of data.features) {
-      if (feature.geometry.type !== 'Polygon' && feature.geometry.type !== 'MultiPolygon') {
-        continue
-      }
-
-      let meshes = []
-      let geometries = []
-
-      // Check the geometry type and prepare an array of polygons.
-      let polygons =
-        feature.geometry.type === 'Polygon'
-          ? [feature.geometry.coordinates]
-          : feature.geometry.coordinates
-
-      for (let polygon of polygons) {
-
-        // Extract the coordinates from the polygon data.
-        let coordinates = polygon[0]
-
-        // Foreach segment triangulate the polygon interior using Earcut.
-        const allTriangles = Earcut.triangulate(coordinates.flat())
-
-        for (let i = 0; i < allTriangles.length; i += 3) {
-          const triangleIndices = [allTriangles[i], allTriangles[i + 1], allTriangles[i + 2]]
-
-          // Convert triangle coordinates to 3D vectors on the sphere.
-          const triangleVertices = triangleIndices.map((index) => {
-            const vertex = coordinates[index]
-            const latRad = vertex[1] * (Math.PI / 180)
-            const lonRad = -vertex[0] * (Math.PI / 180)
-            const x = radius * Math.cos(latRad) * Math.cos(lonRad)
-            const y = radius * Math.sin(latRad)
-            const z = radius * Math.cos(latRad) * Math.sin(lonRad)
-            return new THREE.Vector3(x, y, z)
-          })
-
-          // Ensure the triangle vertices are in CCW order.
-          const orderedVertices = this.ensureCCW(triangleVertices)
-
-          // Use the subdivideTriangle method to handle potential triangle subdivisions.
-          // meshes is being passed by reference here!
-          this.subdivideTriangle(
-            orderedVertices,
-            subdivisionDepth,
-            radius,
-            rise,
-            meshes,
-            color,
-            minEdgeLength
-          )
-        }
-
-        meshes.forEach((mesh) => {
-          geometries.push(mesh.geometry)
-        })
-
-        // Merge all geometries into one
-        let combinedGeometry = mergeBufferGeometries(geometries, false)
-
-        totalCombinedGeometry.push(combinedGeometry)
-      }
-    }
-
-    // @todo add abstraction for combining meshes and cache this for later use don't process in runtime
-    let mergedGoJsonFeatureMeshes = mergeBufferGeometries(totalCombinedGeometry, false)
-
-    let totalCombinedMeshes = new THREE.Mesh(
-      mergedGoJsonFeatureMeshes,
-      new THREE.MeshBasicMaterial({
-        color: color,
-        side: THREE.DoubleSide,
-        wireframe: wireframeOnly
-      })
-    )
-    totalCombinedMeshes.visible = visible
-    
-    // Adding all the data.properties from the geojson files to the mesh object
-    Object.assign(totalCombinedMeshes, data.properties);
-
-    if (!data.properties.parentId) {
-      totalCombinedMeshes.parentId = 0; // Set to 0 if parentId is falsy
-    }
-
-    return { meshes: totalCombinedMeshes }
-  }
-  // Helper function to ensure counter clockwise order for a given triangle.
-  ensureCCW(vertices) {
-    // Using the shoelace formula to calculate the signed area of a triangle.
-    const area =
-      (vertices[1].x - vertices[0].x) * (vertices[2].y - vertices[0].y) -
-      (vertices[2].x - vertices[0].x) * (vertices[1].y - vertices[0].y)
-
-    // If the area is negative, the winding is CW and we need to swap vertices.
-    if (area < 0) {
-      const temp = vertices[1]
-      vertices[1] = vertices[2]
-      vertices[2] = temp
-    }
-    return vertices
-  }
-
-  slerp(point1, point2, t) {
-    const angle = Math.acos(point1.dot(point2));
-    const sinTotal = Math.sin(angle);
-    const ratioA = Math.sin((1 - t) * angle) / sinTotal;
-    const ratioB = Math.sin(t * angle) / sinTotal;
-    const x = point1.clone().multiplyScalar(ratioA).add(point2.clone().multiplyScalar(ratioB));
-    return x.normalize();
-  }
-
-calculateDistance(coord1, coord2) {
-    // This is a placeholder. Use a more accurate geographic distance calculation suitable for your precision needs
-    return Math.sqrt(Math.pow(coord2[0] - coord1[0], 2) + Math.pow(coord2[1] - coord1[1], 2));
-}
-
 }
