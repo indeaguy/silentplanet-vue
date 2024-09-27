@@ -1,4 +1,5 @@
-import * as THREE from 'three'
+import * as THREE from 'three';
+import { RayTracerController } from '../RayTracer/RayTracerController.js';
 
 export class WorldStageModel {
   constructor() {
@@ -7,6 +8,7 @@ export class WorldStageModel {
     this.renderables = [];
     this.resizeObservers = [];
     this.size = new THREE.Vector2();
+    this.rayTracer = new RayTracerController(this); // Add RayTracerController instance
   }
 
   addResizeObserver(observer) {

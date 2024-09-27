@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { MeshModifier } from '../helpers/MeshModifier'
+import { createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage/modules/MeshModifier/index.js'
 
 // @TODO move this to a library/existing?
 function findMatchingValuesSorted(array1, array2) {
@@ -15,7 +15,7 @@ function findMatchingValuesSorted(array1, array2) {
 export const useThreePolysStore = defineStore('three', {
   state: () => ({
     meshes: new Map(), // Using a Map instead of an array
-    meshModifier: new MeshModifier(),
+    meshModifier: createMeshModifier(), // Use the new createMeshModifier function
     selectedMesh: {},
     selectedMeshes: [],
     hoveredMesh: {},
@@ -107,7 +107,7 @@ export const useThreePolysStore = defineStore('three', {
       }
 
       // toggle the visibility first
-      this.meshModifier.toggleVisibility(mesh)
+      this.meshModifier.view.toggleVisibility(mesh)
 
       // then conditionally add or remove the mesh from openedMeshIds and openMeshes
       // @TODO before I can start adding here need to also account for the meshes that are added by default

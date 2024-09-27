@@ -1,4 +1,4 @@
-import configInstance from '../../helpers/Config.js';
+import configInstance from '../../../../../silentplanet-three-app/Config.js';
 import { WorldStageModel } from './WorldStageModel.js';
 import { WorldStageView } from './WorldStageView.js';
 
@@ -51,5 +51,9 @@ export class WorldStageController {
 
   addResizeObserver(observer) {
     this.model.addResizeObserver(observer);
+  }
+
+  handleRayEvent(event, callback) {
+    this.model.rayTracer.handleRayEvent(event, callback);
   }
 }

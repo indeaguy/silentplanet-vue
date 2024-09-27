@@ -9,7 +9,7 @@ import { fetchDataWithAuth } from './DataLoader.js';
  * 
  * Example usage:
  * 
- * import configInstance from './helpers/Config';
+ * import configInstance from './silentplanet-three-app/singletons/config/Config';
  * 
  * then..
  * 

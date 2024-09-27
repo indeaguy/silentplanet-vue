@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import configInstance from '../../helpers/Config.js';
+import configInstance from '../../../../../silentplanet-three-app/Config.js';
 
 export class WorldStageView {
   constructor(model, targetElement) {

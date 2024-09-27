@@ -1,16 +1,15 @@
 <script setup>
-import { WorldStageController } from '../helpers/WorldStage/WorldStageController.js'
-import { Globe } from '../helpers/Globe.js'
-import configInstance from '../helpers/Config.js';
-import { getGeoJsonData } from '../helpers/Geos/Services/RustBackendGeosService.js'
-import { handleRayEvent, setRayTracerWorldStageModel } from '../helpers/RayTracer.js'
-import { MeshModifier } from '../helpers/MeshModifier.js'
+import { WorldStageController } from '../silentplanet-three-app/make-these-libs/three-world-stage/modules/WorldStage/WorldStageController.js'
+import { Globe } from '../silentplanet-three-app/Globe.js'
+import configInstance from '../silentplanet-three-app/Config.js';
+import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo/GeosService.js'
+import { createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage/modules/MeshModifier'
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 
 import config from '../assets/globe-settings.json'
 
-let worldStage, globe, grids, meshHandler, threePolysStore, sphere
+let worldStage, globe, grids, meshModifier, threePolysStore, sphere
 const resizeObserver = ref(null)
 
 onMounted(async () => {
@@ -22,7 +21,6 @@ onMounted(async () => {
   );
 
   worldStage = new WorldStageController('base-globe')
-  setRayTracerWorldStageModel(worldStage.model)
   globe = new Globe(worldStage.model)
   threePolysStore = useThreePolysStore()
   sphere = globe.createSphere()
@@ -82,7 +80,7 @@ onMounted(async () => {
     threePolysStore.addVisibleMesh(mesh)
   }
 
-  meshHandler = new MeshModifier()
+  meshModifier = createMeshModifier()
 
   worldStage.animate()
 
@@ -128,9 +126,8 @@ onBeforeUnmount(() => {
 // @TODO there is a vue way to do this...
 function setupEventListeners() {
   window.addEventListener('resize', () => worldStage.onWindowResize(), false)
-
-  window.addEventListener('mousemove', (event) => handleRayEvent(event, handleHoverEvent), false)
-  window.addEventListener('click', (event) => handleRayEvent(event, handleClickEvent), false)
+  window.addEventListener('mousemove', (event) => worldStage.handleRayEvent(event, handleHoverEvent), false)
+  window.addEventListener('click', (event) => worldStage.handleRayEvent(event, handleClickEvent), false)
 
   // @TODO add observer?
   // @TODO use const for id
@@ -160,9 +157,9 @@ function handleHoverEvent(hoveredRegion) {
       hoveredRegion?.regionId &&
       hoveredRegion.regionId == threePolysStore.selectedMesh.regionId
     ) {
-      meshHandler.setColour(hoveredRegion, 'selectedEventColour')
+      meshModifier.setColour(hoveredRegion, 'selectedEventColour')
     } else {
-      meshHandler.setColour(hoveredRegion, 'eventColour')
+      meshModifier.setColour(hoveredRegion, 'eventColour')
     }
   }
 
@@ -175,9 +172,9 @@ function handleHoverEvent(hoveredRegion) {
       threePolysStore?.selectedMesh?.regionId &&
       threePolysStore.hoveredMesh.regionId == threePolysStore.selectedMesh.regionId
     ) {
-      meshHandler.setColour(threePolysStore.hoveredMesh, 'selectedColour')
+      meshModifier.setColour(threePolysStore.hoveredMesh, 'selectedColour')
     } else {
-      meshHandler.setColour(threePolysStore.hoveredMesh, 'defaultColour')
+      meshModifier.setColour(threePolysStore.hoveredMesh, 'defaultColour')
     }
   }
 
@@ -192,14 +189,14 @@ function handleClickEvent(clickedRegion) {
   }
 
   let threePolysStore = useThreePolysStore()
-  meshHandler.setColour(clickedRegion, 'selectedEventColour')
+  meshModifier.setColour(clickedRegion, 'selectedEventColour')
 
   if (
     threePolysStore?.selectedMesh?.regionId &&
     (!clickedRegion?.regionId ||
       clickedRegion.regionId !== threePolysStore.selectedMesh.regionId)
   ) {
-    meshHandler.setColour(threePolysStore.selectedMesh, 'defaultColour')
+    meshModifier.setColour(threePolysStore.selectedMesh, 'defaultColour')
   }
 
   threePolysStore.drillTo(threePolysStore.selectedMesh.regionId || 0, clickedRegion.regionId)
