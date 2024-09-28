@@ -56,4 +56,20 @@ export class MeshModifierController {
       this.model.resetIntersected();
     }
   }
+
+  fadeMeshColourByCameraDistance(mesh, config, distance) {
+    if (!mesh || !mesh.material || !config) {
+      return;
+    }
+
+    const fadeStart = config.FADE_START * (this.model.minZoomDistance + this.model.maxZoomDistance);
+    const fadeEnd = config.FADE_END * (this.model.minZoomDistance + this.model.maxZoomDistance);
+    
+    const normalizedDistance = this.model.calculateNormalizedDistance(distance, fadeStart, fadeEnd);
+
+    const fromColor = new THREE.Color(parseInt(config.COLOR, 16));
+    const toColor = new THREE.Color(parseInt(config.COLOR_FINAL, 16));
+
+    this.view.fadeMeshColourByCameraDistance(mesh.material, fromColor, toColor, normalizedDistance, config.FADE_SPEED);
+  }
 }

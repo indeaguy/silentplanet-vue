@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RayTracerController } from '../RayTracer/RayTracerController.js';
+import { RayTracerController } from '../RayTracer';
 
 export class WorldStageModel {
   constructor() {
@@ -17,5 +17,9 @@ export class WorldStageModel {
 
   updateSize(width, height) {
     this.size.set(width, height);
+  }
+
+  handleRayEvent(event, callback) {
+    this.rayTracer.handleRayEvent(event, callback);
   }
 }

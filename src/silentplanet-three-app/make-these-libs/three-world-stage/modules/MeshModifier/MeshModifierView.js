@@ -24,4 +24,9 @@ export class MeshModifierView {
       mesh.visible = true;
     }
   }
+
+  fadeMeshColourByCameraDistance(material, fromColor, toColor, normalizedDistance, fadeSpeed) {
+    const color = new THREE.Color().lerpColors(fromColor, toColor, normalizedDistance);
+    material.color.lerp(color, fadeSpeed);
+  }
 }

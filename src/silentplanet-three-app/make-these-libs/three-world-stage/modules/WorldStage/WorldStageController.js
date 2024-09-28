@@ -54,6 +54,6 @@ export class WorldStageController {
   }
 
   handleRayEvent(event, callback) {
-    this.model.rayTracer.handleRayEvent(event, callback);
+    this.model.handleRayEvent(event, callback);
   }
 }

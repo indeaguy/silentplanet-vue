@@ -5,14 +5,18 @@ import { CSG } from 'three-csg-ts'
 import { Grid } from './Grid.js'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
 import configInstance from './Config.js';
-import { RenderEffects } from './RenderEffects.js';
+import { MeshModifierController } from './make-these-libs/three-world-stage/modules/MeshModifier/MeshModifierController.js';
+import { MeshModifierModel } from './make-these-libs/three-world-stage/modules/MeshModifier/MeshModifierModel.js';
+import { MeshModifierView } from './make-these-libs/three-world-stage/modules/MeshModifier/MeshModifierView.js';
 
 export class Globe {
   constructor(worldStageModel) {
     this.worldStageModel = worldStageModel
     this.gridMaterials = {}
     this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
-    this.renderEffects = new RenderEffects(worldStageModel);
+    const meshModifierModel = new MeshModifierModel();
+    const meshModifierView = new MeshModifierView();
+    this.meshModifier = new MeshModifierController(meshModifierModel, meshModifierView);
 
     // handle resize
     this.worldStageModel.addResizeObserver(this)
@@ -79,7 +83,11 @@ export class Globe {
     var distance = this.worldStageModel.camera.position.length()
 
     Object.values(this.grid.gridMaterials).forEach(({ material, config }) => {
-      this.renderEffects.fadeGrid(material, config, distance);
+      this.meshModifier.fadeMeshColourByCameraDistance(
+        { material },  // Wrap material in an object to simulate a mesh
+        config,
+        distance
+      );
     })
   }
 
