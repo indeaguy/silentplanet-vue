@@ -54,11 +54,8 @@ export const useThreePolysStore = defineStore('three', {
       return null // Return null if no valid mesh is found
     },
     setSelectedMesh(mesh, callback = false) {
-      //mesh.material.color = new THREE.Color(0x00ff00); // @TODO this should be a ref? use meshModifier?
-
-      mesh.isSelected = true // @TODO what problems with this cause?
+      mesh.isSelected = true
       this.selectedMesh = mesh
-
       if (typeof callback === 'function') {
         // it's overriden don't do the default selected mesh behavior
         callback(mesh)

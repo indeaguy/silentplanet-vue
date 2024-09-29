@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import configInstance from '../../../../../silentplanet-three-app/Config.js';
 
+const PARSE_INT_AS_HEX = 16;
+
 export class MeshModifierModel {
   constructor(defaultColour, eventColour, selectedColour, selectedEventColour) {
     this.defaultColour = this.newColour(defaultColour, true);
@@ -28,14 +30,23 @@ export class MeshModifierModel {
   }
 
   newColour(color, bypass = false) {
-    if (!bypass && !this.isValidHexColour(color)) {
-      return;
+    if (bypass) {
+      return new THREE.Color(color);
     }
-    return new THREE.Color(color);
-  }
 
-  isValidHexColour(color) {
-    return typeof color === 'string' && /^0x[0-9A-Fa-f]{6}$/.test(color);
+    if (typeof color === 'string') {
+      // Remove '#' if #RRGGBB format
+      color = color.replace(/^#/, '');
+      // Remove '0x' if 0xRRGGBB format
+      color = color.replace(/^0x/, '');
+      // Parse as hexadecimal
+      const parsedColor = parseInt(color, PARSE_INT_AS_HEX);
+      if (!isNaN(parsedColor) && parsedColor >= 0 && parsedColor <= 0xFFFFFF) {
+        return new THREE.Color(parsedColor);
+      }
+    }
+    console.warn(`Invalid color value: ${color}. Using default color.`);
+    return new THREE.Color(0xFFFFFF); // Default to white
   }
 
   setIntersected(mesh) {
@@ -44,15 +55,5 @@ export class MeshModifierModel {
 
   resetIntersected() {
     this.intersected = null;
-  }
-
-  calculateNormalizedDistance(distance, fadeStart, fadeEnd) {
-    if (distance > fadeEnd) {
-      return 1;
-    } else if (distance < fadeStart) {
-      return 0;
-    } else {
-      return (distance - fadeStart) / (fadeEnd - fadeStart);
-    }
   }
 }

@@ -1,10 +1,13 @@
-import configInstance from '../../../../../silentplanet-three-app/Config.js';
 import { WorldStageModel } from './WorldStageModel.js';
 import { WorldStageView } from './WorldStageView.js';
 
 export class WorldStageController {
-  constructor(targetElement) {
-    this.model = new WorldStageModel();
+  /**
+   * @param {string} targetElement - The ID of the HTML element to render the scene into.
+   * @param {WorldStageConfig} config - The configuration object for the WorldStage.
+   */
+  constructor(targetElement, config) {
+    this.model = new WorldStageModel(config);
     this.targetElement = document.getElementById(targetElement);
     this.view = new WorldStageView(this.model, this.targetElement);
     this.setupScene();
@@ -21,7 +24,7 @@ export class WorldStageController {
   }
 
   updateSceneSize() {
-    const { SCENE } = configInstance.settings;
+    const { SCENE } = this.model.config.settings;
     const { WIDTH_PERCENTAGE, HEIGHT_PERCENTAGE } = SCENE;
     const width = this.targetElement.clientWidth * WIDTH_PERCENTAGE;
     const height = this.targetElement.clientHeight * HEIGHT_PERCENTAGE;

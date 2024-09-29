@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import configInstance from '../../../../../silentplanet-three-app/Config.js';
 
 export class WorldStageView {
   constructor(model, targetElement) {
@@ -11,7 +10,7 @@ export class WorldStageView {
   }
 
   setupCamera() {
-    const { CAMERA } = configInstance.settings;
+    const { CAMERA } = this.model.config.settings;
     const {
       FOV,
       MIN_VISIBLE_DISTANCE,
@@ -44,7 +43,7 @@ export class WorldStageView {
       return;
     }
 
-    const { CAMERA } = configInstance.settings;
+    const { CAMERA } = this.model.config.settings;
     const {
       MAX_ZOOM_DISTANCE,
       MIN_ZOOM_DISTANCE

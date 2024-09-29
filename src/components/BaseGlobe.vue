@@ -20,9 +20,10 @@ onMounted(async () => {
     }
   );
 
-  worldStage = new WorldStageController('base-globe')
-  globe = new Globe(worldStage.model)
+  worldStage = new WorldStageController('base-globe', configInstance)
   threePolysStore = useThreePolysStore()
+  
+  globe = new Globe(worldStage.model)
   sphere = globe.createSphere()
   worldStage.model.scene.add(sphere)
 

@@ -1,4 +1,5 @@
 import { fetchDataWithAuth } from './DataLoader.js';
+import { SilentPlanetThreeConfig } from './types/ConfigTypes.js';
 
 /**
  * Config is used to load the configuration for the app
@@ -118,7 +119,7 @@ class Config {
     return this._settings;
   }
 
-  // Make settings read-only and get synchronously
+  /** @returns {SilentPlanetThreeConfig} */
   get settings() {
     if (!this._initialized) {
       console.warn('Config not yet initialized. Initializing now...');
@@ -128,5 +129,6 @@ class Config {
 }
 
 // Export a singleton instance
+/** @type {Config} */
 const configInstance = new Config();
 export default configInstance;

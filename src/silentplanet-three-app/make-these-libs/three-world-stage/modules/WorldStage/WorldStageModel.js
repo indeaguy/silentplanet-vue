@@ -1,14 +1,19 @@
 import * as THREE from 'three';
 import { RayTracerController } from '../RayTracer';
+import { WorldStageConfig } from './types/ConfigTypes.js';
 
 export class WorldStageModel {
-  constructor() {
+  /**
+   * @param {WorldStageConfig} config
+   */
+  constructor(config) {
+    this.config = config;
     this.scene = new THREE.Scene();
     this.camera = null;
     this.renderables = [];
     this.resizeObservers = [];
     this.size = new THREE.Vector2();
-    this.rayTracer = new RayTracerController(this); // Add RayTracerController instance
+    this.rayTracer = new RayTracerController(this);
   }
 
   addResizeObserver(observer) {

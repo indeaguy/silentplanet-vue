@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-
 export class MeshModifierController {
   constructor(model, view) {
     this.model = model;
@@ -62,14 +60,26 @@ export class MeshModifierController {
       return;
     }
 
+    // @TODO This migth be the wrong calculation
     const fadeStart = config.FADE_START * (this.model.minZoomDistance + this.model.maxZoomDistance);
     const fadeEnd = config.FADE_END * (this.model.minZoomDistance + this.model.maxZoomDistance);
     
-    const normalizedDistance = this.model.calculateNormalizedDistance(distance, fadeStart, fadeEnd);
+    const normalizedDistance = calculateNormalizedDistance(distance, fadeStart, fadeEnd);
 
-    const fromColor = new THREE.Color(parseInt(config.COLOR, 16));
-    const toColor = new THREE.Color(parseInt(config.COLOR_FINAL, 16));
+    const fromColor = this.model.newColour(config.COLOR);
+    const toColor = this.model.newColour(config.COLOR_FINAL);
 
     this.view.fadeMeshColourByCameraDistance(mesh.material, fromColor, toColor, normalizedDistance, config.FADE_SPEED);
+  }
+}
+
+
+function calculateNormalizedDistance(distance, fadeStart, fadeEnd) {
+  if (distance > fadeEnd) {
+    return 1;
+  } else if (distance < fadeStart) {
+    return 0;
+  } else {
+    return (distance - fadeStart) / (fadeEnd - fadeStart);
   }
 }
