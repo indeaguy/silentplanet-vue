@@ -1,9 +1,8 @@
 <script setup>
-import { WorldStageController } from '../silentplanet-three-app/make-these-libs/three-world-stage/modules/WorldStage/WorldStageController.js'
-import { Globe } from '../silentplanet-three-app/Globe.js'
+import { WorldStageController, createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage';
+import { Globe } from '../silentplanet-three-app/Globe.js';
 import configInstance from '../silentplanet-three-app/Config.js';
 import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo/GeosService.js'
-import { createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage/modules/MeshModifier'
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 
