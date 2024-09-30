@@ -1,3 +1,5 @@
+let instance = null;
+
 import { WorldStageModel } from './WorldStageModel.js';
 import { WorldStageView } from './WorldStageView.js';
 
@@ -7,10 +9,15 @@ export class WorldStageController {
    * @param {WorldStageConfig} config - The configuration object for the WorldStage.
    */
   constructor(targetElement, config) {
+    // it's a singleton
+    if (instance) {
+      return instance;
+    }
     this.model = new WorldStageModel(config);
     this.targetElement = document.getElementById(targetElement);
     this.view = new WorldStageView(this.model, this.targetElement);
     this.setupScene();
+    instance = this;
   }
 
   setupScene() {
@@ -59,4 +66,15 @@ export class WorldStageController {
   handleRayEvent(event, callback) {
     this.model.handleRayEvent(event, callback);
   }
+}
+
+  /**
+   * @param {string} targetElement - The ID of the HTML element to render the scene into.
+   * @param {WorldStageConfig} config - The configuration object for the WorldStage.
+   */
+export function getWorldStageController(targetElement, config) {
+  if (!instance) {
+    instance = new WorldStageController(targetElement, config);
+  }
+  return instance;
 }

@@ -1,5 +1,5 @@
 // Import main components
-import { WorldStageController } from './modules/WorldStage';
+import { WorldStageController, getWorldStageController } from './modules/WorldStage';
 import { createMeshModifier } from './modules/MeshModifier';
 import { RayTracerController } from './modules/RayTracer';
 
@@ -9,6 +9,7 @@ import { RayTracerController } from './modules/RayTracer';
 // Main export object
 const ThreeWorldStage = {
   WorldStageController,
+  getWorldStageController,
   createMeshModifier,
   RayTracerController,
   // Add any other exports here

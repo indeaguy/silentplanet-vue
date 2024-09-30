@@ -103,7 +103,7 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
       geo,
       visible,
       config
-    )
+     )
     if (!result || !result.meshes) return
 
     meshes = meshes.concat(result.meshes)

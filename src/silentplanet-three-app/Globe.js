@@ -5,18 +5,13 @@ import { CSG } from 'three-csg-ts'
 import { Grid } from './Grid.js'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
 import configInstance from './Config.js';
-import { MeshModifierController } from './make-these-libs/three-world-stage/modules/MeshModifier/MeshModifierController.js';
-import { MeshModifierModel } from './make-these-libs/three-world-stage/modules/MeshModifier/MeshModifierModel.js';
-import { MeshModifierView } from './make-these-libs/three-world-stage/modules/MeshModifier/MeshModifierView.js';
-import { WorldStageController, createMeshModifier } from './make-these-libs/three-world-stage';
+import { createMeshModifier } from './make-these-libs/three-world-stage';
 
 export class Globe {
   constructor(worldStageModel) {
     this.worldStageModel = worldStageModel
     this.gridMaterials = {}
     this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
-    const meshModifierModel = new MeshModifierModel();
-    const meshModifierView = new MeshModifierView();
     this.meshModifier = createMeshModifier();
 
     // handle resize

@@ -10,12 +10,13 @@
  * ...
  */
 
-import { WorldStageController } from './WorldStageController.js';
+import { WorldStageController, getWorldStageController } from './WorldStageController.js';
 import { WorldStageModel } from './WorldStageModel.js';
 import { WorldStageView } from './WorldStageView.js';
 
 export {
   WorldStageController,
+  getWorldStageController,
   WorldStageModel,
   WorldStageView
 };
