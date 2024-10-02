@@ -5,10 +5,9 @@ import configInstance from '../silentplanet-three-app/Config.js';
 import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo/GeosService.js'
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { createSphere, createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-world-stage/helpers'
 
-import config from '../assets/globe-settings.json'
-
-let worldStage, globe, grids, meshModifier, threePolysStore, sphere
+let worldStage, globe, grids, meshModifier, threePolysStore, sphereMaterial, sphere
 const resizeObserver = ref(null)
 
 onMounted(async () => {
@@ -21,9 +20,20 @@ onMounted(async () => {
 
   worldStage = new WorldStageController('base-globe', configInstance)
   threePolysStore = useThreePolysStore()
-  
   globe = new Globe(worldStage.model)
-  sphere = globe.createSphere()
+
+  sphereMaterial = createMeshBasicMaterial({
+    color: configInstance.settings.SPHERE.FILL_COLOUR,
+    wireframe: configInstance.settings.SPHERE.WIREFRAME,
+    transparent: configInstance.settings.SPHERE.TRANSPARENT,
+    opacity: configInstance.settings.SPHERE.OPACITY
+  });
+  sphere = createSphere({
+    radius: configInstance.settings.SPHERE.RADIUS,
+    widthSegments: configInstance.settings.SPHERE.WIDTH_SEGMENTS,
+    heightSegments: configInstance.settings.SPHERE.HEIGHT_SEGMENTS,
+    material: sphereMaterial
+  });
   worldStage.model.scene.add(sphere)
 
   grids = globe.createGrids()
@@ -41,10 +51,6 @@ onMounted(async () => {
   // @TODO this is a bit of a hack
   let childMeshIds = []
 
-  // @TODO remove this
-  let boobyMesh = { regionId: 1, visible: true, childMeshIds: [2, 3], hasChild: true }
-  threePolysStore.addMesh(boobyMesh)
-  worldStage.model.scene.add(boobyMesh)
 
   // @TODO use a safe recursive function here?
   // @TODO get this from redis or something similar
@@ -102,7 +108,7 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
     const result = globe.mapDataToGlobe(
       geo,
       visible,
-      config
+      configInstance.settings
      )
     if (!result || !result.meshes) return
 
@@ -115,8 +121,8 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
 // @TODO prevent memory leaks!
 onBeforeUnmount(() => {
   window.removeEventListener('resize', worldStage.onWindowResize)
-  window.removeEventListener('mousemove', handleRayEvent)
-  window.removeEventListener('click', handleRayEvent)
+  window.removeEventListener('mousemove', worldStage.handleRayEvent)
+  window.removeEventListener('click', worldStage.handleRayEvent)
   if (resizeObserver.value) {
     resizeObserver.value.disconnect()
   }

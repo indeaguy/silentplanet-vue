@@ -1,6 +1,9 @@
-import { toggleMeshVisibility } from '../modules/MeshModifier';
+import { toggleMeshVisibility, createMeshBasicMaterial, createSphere } from '../modules/MeshModifier';
 
+// @TODO remove
 // Export the helper methods
 export {
-    toggleMeshVisibility
-};
+    toggleMeshVisibility,
+    createMeshBasicMaterial,
+    createSphere
+}

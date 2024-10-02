@@ -1,66 +1,21 @@
 // Globe.js and Scene.js
 import * as THREE from 'three'
-import { mergeBufferGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { CSG } from 'three-csg-ts'
 import { Grid } from './Grid.js'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
 import configInstance from './Config.js';
-import { createMeshModifier } from './make-these-libs/three-world-stage';
+// @TODO export these from a better place and rename to utilss
+import { fadeMeshColourByCameraDistance, createSphere } from './make-these-libs/three-world-stage/modules/MeshModifier/helpers/ThreeMeshHelpers';
 
 export class Globe {
   constructor(worldStageModel) {
     this.worldStageModel = worldStageModel
     this.gridMaterials = {}
     this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
-    this.meshModifier = createMeshModifier();
 
     // handle resize
     this.worldStageModel.addResizeObserver(this)
-  }
-
-  /**
-   * Create a sphere mesh with the specified parameters.
-   * @param {number} rise - The altitude of the sphere.
-   * @param {string} color - The color of the sphere.
-   * @param {string} side - The side of the sphere.
-   * @param {boolean} wireframe - Whether to display the wireframe.
-   * @param {boolean} transparent - Whether the sphere is transparent.
-   * @param {number} opacity - The opacity of the sphere.
-   * @returns {THREE.Mesh} The created sphere mesh.
-   */
-  createSphere(
-    rise = 0, 
-    color = null, 
-    side = null, 
-    wireframe = null, 
-    transparent = null, 
-    opacity = null
-  ) {
-    let altitude = rise + configInstance.settings.SPHERE.RADIUS
-    let materialColor = color ? color : configInstance.settings.SPHERE.FILL_COLOUR
-    let sideValue = side ? side : THREE.DoubleSide
-    //wireframeValue:  = wireframe ? wireframe : this.config.WIREFRAME,
-    let wireframeValue = wireframe ? wireframe : parseInt(configInstance.settings.SPHERE.FILL_COLOUR, 16)
-    let transparentValue = transparent ? transparent : configInstance.settings.SPHERE.TRANSPARENT
-    let opacityValue = opacity ? opacity : configInstance.settings.SPHERE.OPACITY
-
-    var sphereGeometry = new THREE.SphereGeometry(
-      altitude,
-      configInstance.settings.SPHERE.WIDTH_SEGMENTS,
-      configInstance.settings.SPHERE.HEIGHT_SEGMENTS
-    )
-    // @todo use the observer patern here and make this a callback
-    var sphereMaterial = new THREE.MeshBasicMaterial({
-      color: parseInt(materialColor, 16),
-      side: sideValue,
-      wireframe: wireframeValue,
-      transparent: transparentValue,
-      opacity: opacityValue
-    })
-    var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial)
-    //this.sceneRenderer.scene.add(sphere)
-
-    return sphere
   }
 
   createGrids() {
@@ -76,13 +31,18 @@ export class Globe {
   }
 
   render() {
-    var distance = this.worldStageModel.camera.position.length()
+    // @TODO probably should use radius instead of min zoom distance
+    var cameraDistance = this.worldStageModel.camera.position.length()
 
     Object.values(this.grid.gridMaterials).forEach(({ material, config }) => {
-      this.meshModifier.fadeMeshColourByCameraDistance(
+      fadeMeshColourByCameraDistance(
         { material },  // Wrap material in an object to simulate a mesh
-        config,
-        distance
+        config.COLOR,
+        config.COLOR_FINAL,
+        cameraDistance,
+        config.FADE_START * (configInstance.settings.CAMERA.MIN_ZOOM_DISTANCE + configInstance.settings.CAMERA.MAX_ZOOM_DISTANCE),
+        config.FADE_END * (configInstance.settings.CAMERA.MIN_ZOOM_DISTANCE + configInstance.settings.CAMERA.MAX_ZOOM_DISTANCE),
+        config.FADE_SPEED
       );
     })
   }
@@ -156,13 +116,13 @@ export class Globe {
         })
 
         // Merge all geometries into one
-        let combinedGeometry = mergeBufferGeometries(geometries, false)
+        let combinedGeometry = mergeGeometries(geometries, false)
 
         totalCombinedGeometry.push(combinedGeometry)
       }
     }
 
-    let mergedGoJsonFeatureMeshes = mergeBufferGeometries(totalCombinedGeometry, false)
+    let mergedGoJsonFeatureMeshes = mergeGeometries(totalCombinedGeometry, false)
 
     let meshMaterial = new THREE.MeshBasicMaterial({
       color: color,
@@ -187,7 +147,11 @@ export class Globe {
      * connected at teh center. Return this if thats what we want to cache/use here.
      */
 
-    let boundingSphere = this.createSphere(altitude)
+    let boundingSphere = createSphere({
+      radius: configInstance.settings.POLYGONS.RISE + configInstance.settings.SPHERE.RADIUS,
+      widthSegments: configInstance.settings.SPHERE.WIDTH_SEGMENTS,
+      heightSegments: configInstance.settings.SPHERE.HEIGHT_SEGMENTS
+    });
 
     // Convert THREE meshes to CSG objects
     const boundingSphereCsg = CSG.fromMesh(boundingSphere);
