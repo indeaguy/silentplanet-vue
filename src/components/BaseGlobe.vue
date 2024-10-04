@@ -163,9 +163,9 @@ function handleHoverEvent(hoveredRegion) {
       hoveredRegion?.regionId &&
       hoveredRegion.regionId == threePolysStore.selectedMesh.regionId
     ) {
-      meshModifier.setColour(hoveredRegion, 'selectedEventColour')
+      meshModifier.setColour(hoveredRegion, 'selected')
     } else {
-      meshModifier.setColour(hoveredRegion, 'eventColour')
+      meshModifier.setColour(hoveredRegion, 'event')
     }
   }
 
@@ -178,9 +178,9 @@ function handleHoverEvent(hoveredRegion) {
       threePolysStore?.selectedMesh?.regionId &&
       threePolysStore.hoveredMesh.regionId == threePolysStore.selectedMesh.regionId
     ) {
-      meshModifier.setColour(threePolysStore.hoveredMesh, 'selectedColour')
+      meshModifier.setColour(threePolysStore.hoveredMesh, 'selected')
     } else {
-      meshModifier.setColour(threePolysStore.hoveredMesh, 'defaultColour')
+      meshModifier.setColour(threePolysStore.hoveredMesh, 'default')
     }
   }
 
@@ -195,14 +195,14 @@ function handleClickEvent(clickedRegion) {
   }
 
   let threePolysStore = useThreePolysStore()
-  meshModifier.setColour(clickedRegion, 'selectedEventColour')
+  meshModifier.setColour(clickedRegion, 'selectedEvent')
 
   if (
     threePolysStore?.selectedMesh?.regionId &&
     (!clickedRegion?.regionId ||
       clickedRegion.regionId !== threePolysStore.selectedMesh.regionId)
   ) {
-    meshModifier.setColour(threePolysStore.selectedMesh, 'defaultColour')
+    meshModifier.setColour(threePolysStore.selectedMesh, 'default')
   }
 
   threePolysStore.drillTo(threePolysStore.selectedMesh.regionId || 0, clickedRegion.regionId)

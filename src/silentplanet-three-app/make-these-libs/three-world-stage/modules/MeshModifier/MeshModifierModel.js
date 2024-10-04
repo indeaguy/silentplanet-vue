@@ -1,12 +1,61 @@
 import { newThreeColour } from './helpers/ThreeMeshHelpers';
 
 export class MeshModifierModel {
-  constructor(defaultColour, eventColour, selectedColour, selectedEventColour) {
-    this.defaultColour = newThreeColour(defaultColour, true);
-    this.eventColour = newThreeColour(eventColour, true);
-    this.selectedColour = newThreeColour(selectedColour, true);
-    this.selectedEventColour = newThreeColour(selectedEventColour, true);
+  constructor() {
+    this.states = new Map();
     this.intersected = null;
+  }
+
+  /**
+   * Add a state to the mesh model
+   * @param {string} stateName 
+   * @returns {void}
+   * 
+   * @example
+   * addState('default')
+   * addState('event')
+   * addState('selected')
+   * addState('selectedEvent')
+   */
+  addState(stateName) {
+    if (!this.states.has(stateName)) {
+      this.states.set(stateName, {});
+    }
+  }
+
+  /**
+   * Add a color to a state
+   * @param {string} stateName 
+   * @param {string} colour 
+   * @returns {void}
+   * 
+   * @example
+   * addColorToState('default', '#f279a8')
+   * addColorToState('event', '#ffc0cb')
+   * addColorToState('selected', '#0051e6')
+   * addColorToState('selectedEvent', '#005aff')
+   */
+  addColorToState(stateName, colour) {
+    if (!this.states.has(stateName)) {
+      this.addState(stateName);
+    }
+    const state = this.states.get(stateName);
+    state.colour = newThreeColour(colour, true);
+  }
+
+  /**
+   * Get a state
+   * @param {string} stateName 
+   * @returns {object}
+   * 
+   * @example
+   * getState('default')
+   * getState('event')
+   * getState('selected')
+   * getState('selectedEvent')
+   */
+  getState(stateName) {
+    return this.states.get(stateName);
   }
 
   setIntersected(mesh) {

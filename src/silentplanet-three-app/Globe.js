@@ -124,6 +124,7 @@ export class Globe {
 
     let mergedGoJsonFeatureMeshes = mergeGeometries(totalCombinedGeometry, false)
 
+    // @TODO use createStandardMeshMaterial instead
     let meshMaterial = new THREE.MeshBasicMaterial({
       color: color,
       side: THREE.DoubleSide,
@@ -139,8 +140,6 @@ export class Globe {
       console.error("No geometry found in totalCombinedMeshes", totalCombinedMeshes);
     }
     totalCombinedMeshes.geometry.computeVertexNormals();
-
-    //this.sceneRenderer.scene.add(totalCombinedMeshes)
 
     /**
      * @TODO totalCombinedMeshes here is a cool looking cone with all all the polygons

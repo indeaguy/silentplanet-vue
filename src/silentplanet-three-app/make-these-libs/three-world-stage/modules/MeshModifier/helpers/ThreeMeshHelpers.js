@@ -71,28 +71,33 @@ export function updateMeshColor(mesh, colour) {
  */
 export function newThreeColour(color = DEFAULT_COLOR) {
   // Check if the color is already in the cache
-  // if (colorCache.has(color)) {
-  //   return colorCache.get(color);
-  // }
+  if (colorCache.has(color)) {
+    return colorCache.get(color);
+  }
 
   let threeColor;
-  // try {
+  try {
     if (typeof color === 'number' && Number.isInteger(color) && color >= 0 && color <= DEFAULT_COLOR) {
       threeColor = new THREE.Color(color); // it's a valid hex integer
     } else if (typeof color === 'string') {
-      // Remove '#' if #RRGGBB format
-      color = color.replace(/^#/, '');
-      // Remove '0x' if 0xRRGGBB format
-      color = color.replace(/^0x/, '');
-      // Parse as hexadecimal
-      const parsedColor = parseInt(color, PARSE_INT_AS_HEX);
-      if (!isNaN(parsedColor) && parsedColor >= 0 && parsedColor <= DEFAULT_COLOR) {
-        threeColor = new THREE.Color(parsedColor);
+      // Check if it's a valid hex color string
+      if (isValidHexColour(color)) {
+        threeColor = new THREE.Color(color);
+      } else {
+        // Remove '#' if #RRGGBB format
+        color = color.replace(/^#/, '');
+        // Remove '0x' if 0xRRGGBB format
+        color = color.replace(/^0x/, '');
+        // Parse as hexadecimal
+        const parsedColor = parseInt(color, PARSE_INT_AS_HEX);
+        if (!isNaN(parsedColor) && parsedColor >= 0 && parsedColor <= DEFAULT_COLOR) {
+          threeColor = new THREE.Color(parsedColor);
+        }
       }
     }
-  // } catch (error) {
-  //   console.error(`Error processing color: ${color}`, error);
-  // }
+  } catch (error) {
+    console.error(`Error processing color: ${color}`, error);
+  }
 
   if (!threeColor) {
     console.warn(`Invalid color value: ${color}. Using default color.`);
@@ -155,6 +160,16 @@ function calculateNormalizedDistance(distance, min, max) {
 }
 
 /**
+ * Checks if a string is a valid hex color
+ * 
+ * @param {string} colour 
+ * @returns {boolean}
+ */
+function isValidHexColour(colour) {
+  return /^#[0-9A-F]{6}$/i.test(colour);
+}
+
+/**
  * Mesh shapes
  */
 
@@ -193,6 +208,10 @@ export function createSphere({
   }
   return new THREE.Mesh(sphereGeometry, material)
 }
+
+/**
+ * Mesh materials
+ */
 
 /**
  * Create a basic THREE material with minimal inputs.
