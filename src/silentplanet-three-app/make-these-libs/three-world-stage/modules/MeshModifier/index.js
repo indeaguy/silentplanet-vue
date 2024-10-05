@@ -1,25 +1,11 @@
 // Import necessary modules and helpers
 import { MeshModifierModel } from './MeshModifierModel';
 import { MeshModifierController } from './MeshModifierController';
-import {
-  toggleMeshVisibility,
-  createSphere,
-  createBasicMeshBasicMaterial,
-  createDebugMaterial,
-  createMeshBasicMaterial,
-  createStandardMeshMaterial
-} from './helpers/ThreeMeshHelpers';
 
 // Export modules and helper functions
 export {
   MeshModifierModel,
-  MeshModifierController,
-  toggleMeshVisibility,
-  createSphere,
-  createBasicMeshBasicMaterial,
-  createDebugMaterial,
-  createMeshBasicMaterial,
-  createStandardMeshMaterial
+  MeshModifierController
 };
 
 /**

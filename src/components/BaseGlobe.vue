@@ -5,7 +5,7 @@ import configInstance from '../silentplanet-three-app/Config.js';
 import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo/GeosService.js'
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
-import { createSphere, createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-world-stage/helpers'
+import { createSphere, createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-helpers'
 
 let worldStage, globe, grids, meshModifier, threePolysStore, sphereMaterial, sphere
 const resizeObserver = ref(null)

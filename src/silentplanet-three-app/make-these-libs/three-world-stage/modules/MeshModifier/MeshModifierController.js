@@ -1,4 +1,4 @@
-import { updateMeshColor, newThreeColour } from './helpers/ThreeMeshHelpers';
+import { updateMeshColour, newThreeColour } from '../../../../make-these-libs/three-helpers';
 
 export class MeshModifierController {
   constructor(model) {
@@ -25,7 +25,7 @@ export class MeshModifierController {
         mesh.material.color?.g !== colourToUse?.g ||
         mesh.material.color?.b !== colourToUse?.b)
     ) {
-      updateMeshColor(mesh, colourToUse);
+      updateMeshColour(mesh, colourToUse);
 
       if (updateState) {
         this.model.addColorToState(stateName, colourToUse);

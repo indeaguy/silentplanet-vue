@@ -6,7 +6,7 @@ import { Grid } from './Grid.js'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
 import configInstance from './Config.js';
 // @TODO export these from a better place and rename to utilss
-import { fadeMeshColourByCameraDistance, createSphere } from './make-these-libs/three-world-stage/modules/MeshModifier/helpers/ThreeMeshHelpers';
+import { fadeMeshColourByCameraDistance, createSphere } from './make-these-libs/three-helpers'
 
 export class Globe {
   constructor(worldStageModel) {

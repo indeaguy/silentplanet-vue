@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { toggleMeshVisibility } from '../silentplanet-three-app/make-these-libs/three-world-stage/helpers'
+import { toggleMeshVisibility } from '../silentplanet-three-app/make-these-libs/three-helpers'
 
 export const useThreePolysStore = defineStore('ThreePolysStoreMeshes', {
   state: () => ({

@@ -1,4 +1,4 @@
-import { newThreeColour } from './helpers/ThreeMeshHelpers';
+import { newThreeColour } from '../../../../make-these-libs/three-helpers';
 
 export class MeshModifierModel {
   constructor() {
