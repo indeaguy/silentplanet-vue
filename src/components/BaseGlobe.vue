@@ -2,7 +2,7 @@
 import { WorldStageController, createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage';
 import { Globe } from '../silentplanet-three-app/Globe.js';
 import configInstance from '../silentplanet-three-app/Config.js';
-import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo/GeosService.js'
+import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo'
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { createSphere, createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-helpers'

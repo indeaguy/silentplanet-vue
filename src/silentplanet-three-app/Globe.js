@@ -1,12 +1,13 @@
 // Globe.js and Scene.js
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { getGeometryData } from './services/silentplanet-express-admin'
 import { CSG } from 'three-csg-ts'
 import { Grid } from './Grid.js'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
 import configInstance from './Config.js';
 // @TODO export these from a better place and rename to utilss
-import { fadeMeshColourByCameraDistance, createSphere } from './make-these-libs/three-helpers'
+import { fadeMeshColourByCameraDistance, createSphere, removePoint } from './make-these-libs/three-helpers'
 
 export class Globe {
   constructor(worldStageModel) {
@@ -189,39 +190,11 @@ export class Globe {
 
     // remove the point at the center of the sphere from the mesh so we only have whats on the surface left
     // @TODO this.removePointIndexed(intersectionMesh, centerPosition); // faster?
-    this.removePoint(intersectionMesh, centerPosition);
+    removePoint(intersectionMesh, centerPosition);
 
     intersectionMesh.visible = visible
 
     return { meshes: intersectionMesh }
-  }
-
-  removePoint(mesh, centerPoint, tolerance = 0.001) {
-    const positions = mesh.geometry.attributes.position.array;
-    let newPositions = [];
-    
-    // Iterate over each set of three vertices (each triangle)
-    for (let i = 0; i < positions.length; i += 9) {
-        // Extract each vertex of the triangle
-        const v1 = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
-        const v2 = new THREE.Vector3(positions[i+3], positions[i+4], positions[i+5]);
-        const v3 = new THREE.Vector3(positions[i+6], positions[i+7], positions[i+8]);
-
-        // Check if any vertex is within the tolerance distance of the centerPoint
-        if (!(v1.distanceTo(centerPoint) < tolerance || v2.distanceTo(centerPoint) < tolerance || v3.distanceTo(centerPoint) < tolerance)) {
-            // If no vertex is close enough to centerPoint, keep this triangle
-            newPositions.push(
-                v1.x, v1.y, v1.z,
-                v2.x, v2.y, v2.z,
-                v3.x, v3.y, v3.z
-            );
-        }
-    }
-
-    // Update geometry with the new positions
-    mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute(newPositions, 3));
-    mesh.geometry.attributes.position.needsUpdate = true;
-    mesh.geometry.computeVertexNormals();  // Recompute normals if needed
   }
 
   /**
@@ -233,33 +206,11 @@ export class Globe {
    * @returns {THREE.BufferGeometry} The created geometry.
    */
   createBufferGeometryFromLatLonPairs(coordinates) {
-    const vertices = [];
-    const indices = [];
-  
-    // Center vertex at the origin
-    const centerVertexIndex = 0;
-    vertices.push(
-      configInstance.settings.SPHERE.CENTER[0], 
-      configInstance.settings.SPHERE.CENTER[1], 
-      configInstance.settings.SPHERE.CENTER[2]
-    );  // This is the center point for all triangles
-  
-    coordinates.forEach(([lon, lat], index) => {
-      const latRad = lat * (Math.PI / 180);  // Convert latitude to radians
-      const lonRad = -lon * (Math.PI / 180);  // Convert longitude to radians and negate
-  
-      const x = Math.cos(latRad) * Math.cos(lonRad);
-      const y = Math.sin(latRad);
-      const z = Math.cos(latRad) * Math.sin(lonRad);
-  
-      vertices.push(x, y, z);
-    });
-  
-    // Create triangles connecting each vertex with the center and the next vertex
-    for (let i = 1; i <= vertices.length / 3 - 1; i++) {
-      indices.push(centerVertexIndex, i, (i % (vertices.length / 3 - 1)) + 1);
-    }
-  
+    const { vertices, indices } = getGeometryData(coordinates, configInstance.settings.SPHERE.CENTER);
+    return this.constructThreeBufferGeometry(vertices, indices);  
+  }
+
+  constructThreeBufferGeometry(vertices, indices) {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setIndex(indices);

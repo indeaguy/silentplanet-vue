@@ -19,6 +19,10 @@ import {
     createMeshBasicMaterial
 } from './utils/Materials';
 
+import {
+    removePoint
+} from './utils/MorphMeshes';
+
 export {
     toggleMeshVisibility,
     hideMesh,
@@ -28,5 +32,6 @@ export {
     fadeMeshColourByCameraDistance,
     createSphere,
     createBasicMeshBasicMaterial,
-    createMeshBasicMaterial
+    createMeshBasicMaterial,
+    removePoint
 }
