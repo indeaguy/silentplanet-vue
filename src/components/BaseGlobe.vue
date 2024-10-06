@@ -6,6 +6,7 @@ import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { createSphere, createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-helpers'
+import { mapGeoJsonDataToGlobe } from '../silentplanet-three-app/services/silentplanet-express-admin'
 
 let worldStage, globe, grids, meshModifier, threePolysStore, sphereMaterial, sphere
 const resizeObserver = ref(null)
@@ -55,7 +56,7 @@ onMounted(async () => {
   // @TODO use a safe recursive function here?
   // @TODO get this from redis or something similar
   // @TODO don't load these from scratch every time
-  initialMeshes = await loadPertinentGeos(globe)
+  initialMeshes = await loadPertinentGeos()
 
   // @TODO n+1 issue here. load them batches
   for (const mesh of initialMeshes) {
@@ -66,7 +67,7 @@ onMounted(async () => {
     childMeshIds = []
 
     if (mesh.hasChild && mesh.regionId) {
-      const childMeshes = await loadPertinentGeos(globe, mesh.regionId, false)
+      const childMeshes = await loadPertinentGeos(mesh.regionId, false)
 
       for (const childMesh of childMeshes) {
         // @TODO nested for loop bad code smell
@@ -94,7 +95,7 @@ onMounted(async () => {
 })
 
 // @TODO this needs to be in polys.js?
-async function loadPertinentGeos(globe, context = 1, visible = true) {
+async function loadPertinentGeos(context = 1, visible = true) {
   const data = await getGeoJsonData(context).catch((error) => {
     console.error('Error loading globe data:', error);
     throw error;
@@ -105,7 +106,7 @@ async function loadPertinentGeos(globe, context = 1, visible = true) {
   let meshes = []
 
   data.geos.forEach((geo) => {
-    const result = globe.mapDataToGlobe(
+    const result = mapGeoJsonDataToGlobe(
       geo,
       visible,
       configInstance.settings

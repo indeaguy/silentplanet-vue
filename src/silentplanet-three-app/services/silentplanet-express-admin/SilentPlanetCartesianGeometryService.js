@@ -1,6 +1,5 @@
-import configInstance from '../../Config.js'
-
-// @TODO: proteect this logic in the backend
+// @TODO: there's some SAUCE here, protect this logic in the backend
+// @TODO: add the ability to get the lat/lon from cartesian coordinates
 
 /**
  * Converts latitude and longitude pairs to a geometry on a sphere.
@@ -12,15 +11,15 @@ import configInstance from '../../Config.js'
  * @param {Array<number>} centerVertex - The center vertex of the geometry.
  * @returns {Object} An object containing the vertices and indices of the geometry.
  */
-export function getGeometryData(coordinates, centerVertex) {
+export function getCartesianGeometryData(coordinates, centerVertex) {
   const vertices = createVerticesFromCoordinates(coordinates, centerVertex);
   const indices = createIndices(vertices.length / 3);
   return { vertices, indices };
 }
 
-function createVerticesFromCoordinates(coordinates) {
+function createVerticesFromCoordinates(coordinates, centerVertex) {
   const vertices = [
-    ...configInstance.settings.SPHERE.CENTER // Center vertex - x, y, z
+    ...centerVertex // Center vertex - [x, y, z]
   ];
 
   coordinates.forEach(([lon, lat]) => {

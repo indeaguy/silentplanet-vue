@@ -1,5 +1,5 @@
-import { getGeometryData } from './GeometryService.js'
+import { mapGeoJsonDataToGlobe } from './SilentPlanetThreeGlobalRegionService.js'
 
 export {
-    getGeometryData
+    mapGeoJsonDataToGlobe
 }
