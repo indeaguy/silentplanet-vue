@@ -1,13 +1,12 @@
 import { Grid } from './Grid.js'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
-import configInstance from './Config.js';
+import { configInstance } from './services/silentplanet-rust-geo';
 // @TODO export these from a better place and rename to utilss
-import { fadeMeshColourByCameraDistance, createSphere, removePoint } from './make-these-libs/three-helpers'
+import { fadeMaterialColourByCameraDistance, createSphere, removePoint } from './make-these-libs/three-helpers'
 
 export class Globe {
   constructor(worldStageModel) {
     this.worldStageModel = worldStageModel
-    this.gridMaterials = {}
     this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
 
     // handle resize
@@ -31,8 +30,8 @@ export class Globe {
     var cameraDistance = this.worldStageModel.camera.position.length()
 
     Object.values(this.grid.gridMaterials).forEach(({ material, config }) => {
-      fadeMeshColourByCameraDistance(
-        { material },  // Wrap material in an object to simulate a mesh
+      fadeMaterialColourByCameraDistance(
+        material,
         config.COLOR,
         config.COLOR_FINAL,
         cameraDistance,

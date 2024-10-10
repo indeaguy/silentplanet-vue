@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import configInstance from './Config.js';
+import { configInstance } from './services/silentplanet-rust-geo';
 
 export class Grid {
   constructor() {

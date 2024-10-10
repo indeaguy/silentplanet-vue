@@ -1,4 +1,4 @@
-import { fetchDataWithAuth } from './DataLoader.js';
+import { fetchDataWithAuth } from '../DataLoader.js';
 import { SilentPlanetThreeConfig } from './types/ConfigTypes.js';
 
 /**
@@ -91,7 +91,9 @@ class Config {
 
   async loadLocalConfig() {
     try {
-      const defaultConfig = await import('../assets/globe-settings.json');
+      const globeSettingsPath = import.meta.env.VITE_APP_GLOBE_SETTINGS_PATH;
+      const defaultConfig = await import(/* @vite-ignore */ globeSettingsPath);
+
       this._settings = defaultConfig.default;
       console.log("Loaded default configuration:", this._settings);
       if (this._settings) {
@@ -131,4 +133,4 @@ class Config {
 // Export a singleton instance
 /** @type {Config} */
 const configInstance = new Config();
-export default configInstance;
+export { configInstance };

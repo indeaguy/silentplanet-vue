@@ -1,12 +1,11 @@
 <script setup>
 import { WorldStageController, createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage';
 import { Globe } from '../silentplanet-three-app/Globe.js';
-import configInstance from '../silentplanet-three-app/Config.js';
-import { getGeoJsonData } from '../silentplanet-three-app/services/silentplanet-rust-geo'
+import { configInstance } from '../silentplanet-three-app/services/silentplanet-rust-geo';
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { createSphere, createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-helpers'
-import { mapGeoJsonDataToGlobe } from '../silentplanet-three-app/services/silentplanet-express-admin'
+import { loadAndCreatePertinentRegionMeshesFromRedis } from '../silentplanet-three-app/services/GeosMeshService'
 
 let worldStage, globe, grids, meshModifier, threePolysStore, sphereMaterial, sphere
 const resizeObserver = ref(null)
@@ -56,7 +55,7 @@ onMounted(async () => {
   // @TODO use a safe recursive function here?
   // @TODO get this from redis or something similar
   // @TODO don't load these from scratch every time
-  initialMeshes = await loadPertinentGeos()
+  initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis()
 
   // @TODO n+1 issue here. load them batches
   for (const mesh of initialMeshes) {
@@ -67,7 +66,7 @@ onMounted(async () => {
     childMeshIds = []
 
     if (mesh.hasChild && mesh.regionId) {
-      const childMeshes = await loadPertinentGeos(mesh.regionId, false)
+      const childMeshes = await loadAndCreatePertinentRegionMeshesFromRedis(mesh.regionId, false)
 
       for (const childMesh of childMeshes) {
         // @TODO nested for loop bad code smell
@@ -93,31 +92,6 @@ onMounted(async () => {
 
   setupEventListeners()
 })
-
-// @TODO this needs to be in polys.js?
-async function loadPertinentGeos(context = 1, visible = true) {
-  const data = await getGeoJsonData(context).catch((error) => {
-    console.error('Error loading globe data:', error);
-    throw error;
-  })
-
-  if (!data || !data.geos) return // @TODO throw an error instead
-
-  let meshes = []
-
-  data.geos.forEach((geo) => {
-    const result = mapGeoJsonDataToGlobe(
-      geo,
-      visible,
-      configInstance.settings
-     )
-    if (!result || !result.meshes) return
-
-    meshes = meshes.concat(result.meshes)
-  })
-
-  return meshes;
-}
 
 // @TODO prevent memory leaks!
 onBeforeUnmount(() => {

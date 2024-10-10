@@ -7,7 +7,7 @@ import {
 import {
     updateMeshColour,
     newThreeColour,
-    fadeMeshColourByCameraDistance
+    fadeMaterialColourByCameraDistance
 } from './utils/Colours';
 
 import {
@@ -29,7 +29,7 @@ export {
     showMesh,
     updateMeshColour,
     newThreeColour,
-    fadeMeshColourByCameraDistance,
+    fadeMaterialColourByCameraDistance,
     createSphere,
     createBasicMeshBasicMaterial,
     createMeshBasicMaterial,

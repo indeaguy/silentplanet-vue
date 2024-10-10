@@ -1,4 +1,4 @@
-import { fetchDataWithAuth } from '../../DataLoader';
+import { fetchDataWithAuth } from '../DataLoader';
 
 export async function getGeoJsonData(geoIds, options = {}) {
   return fetchDataWithAuth(

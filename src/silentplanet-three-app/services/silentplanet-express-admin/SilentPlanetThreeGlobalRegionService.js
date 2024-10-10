@@ -6,7 +6,7 @@ import { CSG } from 'three-csg-ts'
 import { createSphere, removePoint } from '../../make-these-libs/three-helpers'
 // @TODO encapsulation problem here! This must aleady be initialized somewhere.
 // @TODO separate this concern
-import configInstance from '../../Config.js';
+import { configInstance } from '../silentplanet-rust-geo';
 
 // @TODO: there's some SAUCE here, protect this logic in the backend
 

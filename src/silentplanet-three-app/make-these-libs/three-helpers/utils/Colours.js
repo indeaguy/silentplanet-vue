@@ -69,7 +69,7 @@ export function updateMeshColour(mesh, colour) {
   /**
    * Fades the mesh colour by the camera distance
    * 
-   * @param {THREE.Mesh} mesh 
+   * @param {THREE.MeshMaterial} mesh 
    * @param {THREE.Color} fromColor 
    * @param {THREE.Color} toColor 
    * @param {number} cameraDistance 
@@ -78,8 +78,8 @@ export function updateMeshColour(mesh, colour) {
    * @param {number} fadeSpeed 
    * @returns {void}
    */
-  export function fadeMeshColourByCameraDistance(
-    mesh, 
+  export function fadeMaterialColourByCameraDistance(
+    material, 
     fromColor, 
     toColor, 
     cameraDistance, 
@@ -87,14 +87,14 @@ export function updateMeshColour(mesh, colour) {
     fadeMaxDistance, 
     fadeSpeed
   ) {
-    if (!mesh || !mesh.material || !fromColor || !toColor) {
+    if (!material || !fromColor || !toColor) {
       return;
     }
     const fromThreeColor = newThreeColour(fromColor);
     const toThreeColor = newThreeColour(toColor);
     const normalizedDistance = calculateNormalizedDistance(cameraDistance, fadeMinDistance, fadeMaxDistance);
     const color = new THREE.Color().lerpColors(fromThreeColor, toThreeColor, normalizedDistance);
-    mesh.material.color.lerp(color, fadeSpeed);
+    material.color.lerp(color, fadeSpeed);
   }
   
   /**
