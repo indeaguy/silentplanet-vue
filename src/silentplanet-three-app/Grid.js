@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { configInstance } from './services/silentplanet-rust-geo';
+import { createCircularLine } from './make-these-libs/three-helpers/utils/Lines';
 
 export class Grid {
   constructor() {
@@ -51,31 +52,11 @@ export class Grid {
   }
 
   createLatitudeLine(theta) {
-    var points = []
-    for (let i = 0; i <= 360; i += 2) {
-      let rad = Math.PI / 180
-      let phi = i * rad
-      let x = -(configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.cos(phi))
-      let y = configInstance.settings.SPHERE.RADIUS * Math.cos(theta)
-      let z = configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.sin(phi)
-      points.push(new THREE.Vector3(x, y, z))
-    }
-    var geometry = new THREE.BufferGeometry().setFromPoints(points)
-    return new THREE.Line(geometry)
+    return createCircularLine(configInstance.settings.SPHERE.RADIUS, theta, true);
   }
 
   createLongitudeLine(phi) {
-    var points = []
-    for (let i = 0; i <= 180; i += 2) {
-      let rad = Math.PI / 180
-      let theta = i * rad
-      let x = -(configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.cos(phi))
-      let y = configInstance.settings.SPHERE.RADIUS * Math.cos(theta)
-      let z = configInstance.settings.SPHERE.RADIUS * Math.sin(theta) * Math.sin(phi)
-      points.push(new THREE.Vector3(x, y, z))
-    }
-    var geometry = new THREE.BufferGeometry().setFromPoints(points)
-    return new THREE.Line(geometry)
+    return createCircularLine(configInstance.settings.SPHERE.RADIUS, phi, false);
   }
 
   applyMaterialToGridLines(grids) {
