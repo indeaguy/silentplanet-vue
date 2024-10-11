@@ -15,7 +15,6 @@ export function createBasicMeshBasicMaterial(color = DEFAULT_COLOR, wireframe = 
     wireframe: wireframe
   });
 }
-
   
 /**
  * Create a MeshBasicMaterial with the specified parameters.
@@ -43,6 +42,19 @@ export function createMeshBasicMaterial({
     opacity: opacity
   });
 }
+
+/**
+ * Create a LineBasicMaterial with the specified color.
+ * 
+ * @param {string|number} color - The color of the material (hex string or number).
+ * @returns {THREE.LineBasicMaterial} The created LineBasicMaterial.
+ */
+export function createLineBasicMaterial(color = DEFAULT_COLOR) {
+  return new THREE.LineBasicMaterial({
+    color: newThreeColour(color)
+  });
+}
+
   
   
 //   /**

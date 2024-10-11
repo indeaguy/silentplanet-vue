@@ -1,20 +1,44 @@
-import { Grid } from './Grid.js'
-// @TODO encapsulation problem here! This must aleady be initialized somewhere.
+import * as THREE from 'three';
 import { configInstance } from './services/silentplanet-rust-geo';
-// @TODO export these from a better place and rename to utilss
-import { fadeMaterialColourByCameraDistance, createSphere, removePoint } from './make-these-libs/three-helpers'
+import { createLineBasicMaterial, createSphericalGridLines, fadeMaterialColourByCameraDistance } from './make-these-libs/three-helpers'
 
 export class Globe {
   constructor(worldStageModel) {
     this.worldStageModel = worldStageModel
-    this.grid = new Grid(configInstance.settings.SPHERE.GRIDS)
+    this.gridMaterials = {};
 
     // handle resize
     this.worldStageModel.addResizeObserver(this)
   }
 
   createGrids() {
-    return this.grid.createGrids();
+    const allGridLines = {};
+    this.gridMaterials = {};
+
+    Object.entries(configInstance.settings.SPHERE.GRIDS).forEach(([key, gridConfig]) => {
+      // Create grid lines
+      const grid = createSphericalGridLines(
+        configInstance.settings.SPHERE.RADIUS,
+        gridConfig.LAT_DENSITY,
+        gridConfig.LAT_DENSITY,
+        gridConfig.LON_DENSITY,
+        key
+      );
+
+      // Create material using the new function
+      const material = createLineBasicMaterial(gridConfig.COLOR);
+
+      // Apply material to grid lines
+      grid.forEach(line => {
+        line.material = material;
+      });
+
+      // Store grid lines and materials
+      allGridLines[key] = grid;
+      this.gridMaterials[key] = { material, config: gridConfig };
+    });
+
+    return allGridLines;
   }
 
   /**
@@ -26,10 +50,9 @@ export class Globe {
   }
 
   render() {
-    // @TODO probably should use radius instead of min zoom distance
     var cameraDistance = this.worldStageModel.camera.position.length()
 
-    Object.values(this.grid.gridMaterials).forEach(({ material, config }) => {
+    Object.values(this.gridMaterials).forEach(({ material, config }) => {
       fadeMaterialColourByCameraDistance(
         material,
         config.COLOR,

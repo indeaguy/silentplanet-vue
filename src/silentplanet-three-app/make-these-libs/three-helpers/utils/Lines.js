@@ -36,6 +36,8 @@ export function createCircularLine(radius, angle, isHorizontal = true) {
  * @param {number} lonDensity 
  * @param {string | number} gridKey 
  * @returns {THREE.Line[]}
+ * 
+ * @TODO performance issues! Increasing the radius here can cause the browser to crash!
  */
 export function createSphericalGridLines(radius, latDensity, lonDensity, gridKey) {
   const lines = []

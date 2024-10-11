@@ -16,12 +16,17 @@ import {
 
 import {
     createBasicMeshBasicMaterial,
-    createMeshBasicMaterial
+    createMeshBasicMaterial,
+    createLineBasicMaterial
 } from './utils/Materials';
 
 import {
     removePoint
 } from './utils/MorphMeshes';
+
+import {
+    createSphericalGridLines
+} from './utils/Lines';
 
 export {
     toggleMeshVisibility,
@@ -33,5 +38,7 @@ export {
     createSphere,
     createBasicMeshBasicMaterial,
     createMeshBasicMaterial,
-    removePoint
+    createLineBasicMaterial,
+    removePoint,
+    createSphericalGridLines
 }
