@@ -1,6 +1,6 @@
 <script setup>
 import { WorldStageController, createMeshModifier } from '../silentplanet-three-app/make-these-libs/three-world-stage';
-import { Globe } from '../silentplanet-three-app/Globe.js';
+import { SilentPlanetThree } from '@/silentplanet-three-app';
 import { configInstance } from '../silentplanet-three-app/services/silentplanet-rust-geo';
 import { useThreePolysStore } from '../stores/polys.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
@@ -20,7 +20,9 @@ onMounted(async () => {
 
   worldStage = new WorldStageController('base-globe', configInstance)
   threePolysStore = useThreePolysStore()
-  globe = new Globe(worldStage.model)
+  globe = new SilentPlanetThree(worldStage.model)
+
+  worldStage.model.renderables.push(globe)
 
   sphereMaterial = createMeshBasicMaterial({
     color: configInstance.settings.SPHERE.FILL_COLOUR,
@@ -45,7 +47,6 @@ onMounted(async () => {
   })
 
   // @TODO anything added here has to be removed in onBeforeUnmount?
-  worldStage.model.renderables.push(globe)
 
   let initialMeshes = []
   // @TODO this is a bit of a hack

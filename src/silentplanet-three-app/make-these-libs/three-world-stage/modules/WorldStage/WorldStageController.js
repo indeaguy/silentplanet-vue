@@ -71,6 +71,7 @@ export class WorldStageController {
   /**
    * @param {string} targetElement - The ID of the HTML element to render the scene into.
    * @param {WorldStageConfig} config - The configuration object for the WorldStage.
+   * @returns {WorldStageController}
    */
 export function getWorldStageController(targetElement, config) {
   if (!instance) {

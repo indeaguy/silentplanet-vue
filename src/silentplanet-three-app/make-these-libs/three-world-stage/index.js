@@ -16,7 +16,7 @@ const ThreeWorldStage = {
 };
 
 // Named exports for individual components
-export { WorldStageController, createMeshModifier, RayTracerController };
+export { WorldStageController, getWorldStageController, createMeshModifier, RayTracerController };
 
 // Default export
 export default ThreeWorldStage;
