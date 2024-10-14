@@ -84,3 +84,8 @@ We use a singleton for the config. This is a design decision motivated by the ne
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Attribution
+
+The starry sky textures are from [NASA](https://svs.gsfc.nasa.gov/4851/).
+Starry sky cube creation in https://jaxry.github.io/panorama-to-cubemap/

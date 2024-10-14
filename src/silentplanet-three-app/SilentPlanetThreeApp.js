@@ -1,7 +1,16 @@
 import { configInstance } from './services/silentplanet-rust-geo';
 import { getWorldStageController, createMeshModifier } from './make-these-libs/three-world-stage';
-import { createLineBasicMaterial, createMeshBasicMaterial, createSphere, createSphericalGridLines, fadeMaterialColourByCameraDistance } from './make-these-libs/three-helpers'
+import {
+  createLineBasicMaterial,
+  createMeshBasicMaterial,
+  createMeshPhongMaterial,
+  createSphere,
+  createSphericalGridLines,
+  fadeMaterialColourByCameraDistance,
+  loadCubeTexture
+} from './make-these-libs/three-helpers'
 import { loadAndCreatePertinentRegionMeshesFromRedis } from '../silentplanet-three-app/services/GeosMeshService'
+import { StarrySky } from './make-these-libs/three-world-stage/modules/StarrySky/StarrySky';
 
 export class SilentPlanetThree {
   constructor(elementId, threePolysStore) {
@@ -10,6 +19,7 @@ export class SilentPlanetThree {
     this.threePolysStore = threePolysStore;
     this.elementId = elementId;
     this.meshModifier = null;
+    this.starrySky = null;
 
     // @TODO maybe don't do this.
     // Bind the methods to ensure correct 'this' context
@@ -18,7 +28,6 @@ export class SilentPlanetThree {
   }
 
   async initialize() {
-
     let sphereMaterial, sphere, grids;
 
     await configInstance.initialize().catch(
@@ -30,15 +39,21 @@ export class SilentPlanetThree {
 
     this.worldStage = getWorldStageController(this.elementId, configInstance);
 
+    // Initialize starry sky
+    this.initializeStarrySky();
+
+    const envMap = this.starrySky.getEnvMap();
+
     // Observers!
     this.worldStage.addResizeObserver(this);
 
     // Adding to the inital scene
-    sphereMaterial = createMeshBasicMaterial({
+    sphereMaterial = createMeshPhongMaterial({
       color: configInstance.settings.SPHERE.FILL_COLOUR,
       wireframe: configInstance.settings.SPHERE.WIREFRAME,
       transparent: configInstance.settings.SPHERE.TRANSPARENT,
-      opacity: configInstance.settings.SPHERE.OPACITY
+      opacity: configInstance.settings.SPHERE.OPACITY,
+      envMap: envMap
     });
     sphere = createSphere({
       radius: configInstance.settings.SPHERE.RADIUS,
@@ -71,6 +86,20 @@ export class SilentPlanetThree {
     // Ensure that handleHoverEvent and handleClickEvent are bound to the correct context
     this.worldStage.handleHoverEvent = this.handleHoverEvent;
     this.worldStage.handleClickEvent = this.handleClickEvent;
+  }
+
+  initializeStarrySky() {
+    const starryTexturePaths = configInstance.settings.STARRY_SKY_TEXTURES;
+
+    if (starryTexturePaths && starryTexturePaths.length === 6) {
+
+      // envMap
+      const envMap = loadCubeTexture(starryTexturePaths);
+      this.starrySky = new StarrySky(this.worldStage.model.scene, this.worldStage.model.camera, envMap);
+      this.starrySky.initialize(starryTexturePaths);
+    } else {
+      console.warn('Starry sky textures not properly configured');
+    }
   }
 
   // @TODO the only reason this is here is because it needs access to configInstance and this.gridMaterials
@@ -166,7 +195,7 @@ export class SilentPlanetThree {
         hoveredRegion?.regionId &&
         hoveredRegion.regionId == this.threePolysStore.selectedMesh.regionId
       ) {
-        this.meshModifier.setColour(hoveredRegion, 'selected')
+        this.meshModifier.setColour(hoveredRegion, 'selectedEvent')
       } else {
         this.meshModifier.setColour(hoveredRegion, 'event')
       }
@@ -244,5 +273,10 @@ export class SilentPlanetThree {
         config.FADE_SPEED
       );
     })
+
+    // Update starry sky
+    if (this.starrySky) {
+      this.starrySky.update();
+    }
   }
 }

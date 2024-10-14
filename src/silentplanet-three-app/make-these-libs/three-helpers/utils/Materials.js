@@ -55,8 +55,48 @@ export function createLineBasicMaterial(color = DEFAULT_COLOR) {
   });
 }
 
-  
-  
+/**
+ * Create a MeshPhongMaterial with the specified parameters.
+ * 
+ * @param {Object} options - Configuration options for the material.
+ * @param {string|number} [options.color=DEFAULT_COLOR] - The color of the material (hex string or number).
+ * @param {boolean} [options.wireframe=false] - Whether to display the material as a wireframe.
+ * @param {boolean} [options.transparent=false] - Whether the material is transparent.
+ * @param {number} [options.opacity=1] - The opacity of the material (0 to 1).
+ * @param {THREE.Side} [options.side=THREE.DoubleSide] - Which side of the geometry to render.
+ * @param {THREE.CubeTexture} [options.envMap=null] - The environment map to use for reflection.
+ * @param {number} [options.shininess=100] - How shiny the material appears (0 to 100).
+ * @param {string|number} [options.specular=0xffffff] - The color of specular highlights.
+ * @param {number} [options.reflectivity=1] - The reflectivity of the material (0 to 1).
+ * @param {THREE.MixOperation} [options.combine=THREE.MixOperation] - The combination operation for the material.
+ * @returns {THREE.MeshPhongMaterial} The created MeshPhongMaterial.
+ */
+export function createMeshPhongMaterial({
+  color = DEFAULT_COLOR,
+  wireframe = false,
+  transparent = false,
+  opacity = 1,
+  side = THREE.DoubleSide,
+  envMap = null,
+  shininess = 100,
+  specular = 0xffffff,
+  reflectivity = 1,
+  combine = THREE.MixOperation
+} = {}) {
+  return new THREE.MeshPhongMaterial({
+    color: newThreeColour(color),
+    wireframe: wireframe,
+    transparent: transparent,
+    opacity: opacity,
+    side: side,
+    envMap: envMap,
+    shininess: shininess,
+    specular: newThreeColour(specular),
+    reflectivity: reflectivity,
+    combine: combine
+  });
+}
+
 //   /**
 //    * Create a debug material that provides maximum visual information.
 //    * @param {Object} options - Configuration options for the debug material.

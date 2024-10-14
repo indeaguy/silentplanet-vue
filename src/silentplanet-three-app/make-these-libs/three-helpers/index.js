@@ -17,7 +17,8 @@ import {
 import {
     createBasicMeshBasicMaterial,
     createMeshBasicMaterial,
-    createLineBasicMaterial
+    createLineBasicMaterial,
+    createMeshPhongMaterial
 } from './utils/Materials';
 
 import {
@@ -27,6 +28,10 @@ import {
 import {
     createSphericalGridLines
 } from './utils/Lines';
+
+import {
+    loadCubeTexture
+} from './utils/Textures';
 
 export {
     toggleMeshVisibility,
@@ -39,6 +44,8 @@ export {
     createBasicMeshBasicMaterial,
     createMeshBasicMaterial,
     createLineBasicMaterial,
+    createMeshPhongMaterial,
     removePoint,
-    createSphericalGridLines
+    createSphericalGridLines,
+    loadCubeTexture
 }
