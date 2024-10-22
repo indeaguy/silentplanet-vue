@@ -72,19 +72,19 @@ export class SilentPlanetThree {
     });
     this.worldStage.model.scene.add(sphere)
 
-    // grids = this.createGrids()
-    // Object.values(grids).forEach(gridArray => {
-    //   gridArray.forEach(line => {
-    //     this.worldStage.model.scene.add(line)
-    //   })
-    // })
+    grids = this.createGrids()
+    Object.values(grids).forEach(gridArray => {
+      gridArray.forEach(line => {
+        this.worldStage.model.scene.add(line)
+      })
+    })
 
     // @TODO anything added here has to be removed in onBeforeUnmount?
     // @TODO don't load these from scratch every time
-    // const initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis()
+    const initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis()
 
-    // // @TODO n+1 issue here. load them batches
-    // this.loadChildMeshes(initialMeshes)
+    // @TODO n+1 issue here. load them batches
+    this.loadChildMeshes(initialMeshes)
 
     this.meshModifier = createMeshModifier()
 
