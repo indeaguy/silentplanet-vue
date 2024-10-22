@@ -30,7 +30,8 @@ import {
 } from './utils/Lines';
 
 import {
-    loadCubeTexture
+    loadCubeTexture,
+    loadTexture
 } from './utils/Textures';
 
 export {
@@ -47,5 +48,6 @@ export {
     createMeshPhongMaterial,
     removePoint,
     createSphericalGridLines,
-    loadCubeTexture
+    loadCubeTexture,
+    loadTexture
 }

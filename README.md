@@ -89,3 +89,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 The starry sky textures are from [NASA](https://svs.gsfc.nasa.gov/4851/).
 Starry sky cube creation in https://jaxry.github.io/panorama-to-cubemap/
+
+Earth bump map from https://unpkg.com/three-globe@2.33.0/example/img/earth-topology.png

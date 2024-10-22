@@ -7,7 +7,9 @@ import {
   createSphere,
   createSphericalGridLines,
   fadeMaterialColourByCameraDistance,
-  loadCubeTexture
+  loadCubeTexture,
+  loadTexture,
+  newThreeColour
 } from './make-these-libs/three-helpers'
 import { loadAndCreatePertinentRegionMeshesFromRedis } from '../silentplanet-three-app/services/GeosMeshService'
 import { StarrySky } from './make-these-libs/three-world-stage/modules/StarrySky/StarrySky';
@@ -43,9 +45,13 @@ export class SilentPlanetThree {
     this.initializeStarrySky();
 
     const envMap = this.starrySky.getEnvMap();
+    const bumpMap = loadTexture(import.meta.env.VITE_APP_EARTH_BUMP_MAP_PATH);
+    const bumpScale = 1000;
+    const specular = newThreeColour('grey');
 
     // Observers!
     this.worldStage.addResizeObserver(this);
+
 
     // Adding to the inital scene
     sphereMaterial = createMeshPhongMaterial({
@@ -53,7 +59,10 @@ export class SilentPlanetThree {
       wireframe: configInstance.settings.SPHERE.WIREFRAME,
       transparent: configInstance.settings.SPHERE.TRANSPARENT,
       opacity: configInstance.settings.SPHERE.OPACITY,
-      envMap: envMap
+      envMap: envMap,
+      bumpMap: bumpMap,
+      bumpScale: bumpScale,
+      specular: specular
     });
     sphere = createSphere({
       radius: configInstance.settings.SPHERE.RADIUS,
@@ -63,19 +72,19 @@ export class SilentPlanetThree {
     });
     this.worldStage.model.scene.add(sphere)
 
-    grids = this.createGrids()
-    Object.values(grids).forEach(gridArray => {
-      gridArray.forEach(line => {
-        this.worldStage.model.scene.add(line)
-      })
-    })
+    // grids = this.createGrids()
+    // Object.values(grids).forEach(gridArray => {
+    //   gridArray.forEach(line => {
+    //     this.worldStage.model.scene.add(line)
+    //   })
+    // })
 
     // @TODO anything added here has to be removed in onBeforeUnmount?
     // @TODO don't load these from scratch every time
-    const initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis()
+    // const initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis()
 
-    // @TODO n+1 issue here. load them batches
-    this.loadChildMeshes(initialMeshes)
+    // // @TODO n+1 issue here. load them batches
+    // this.loadChildMeshes(initialMeshes)
 
     this.meshModifier = createMeshModifier()
 
