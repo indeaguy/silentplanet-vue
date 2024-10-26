@@ -44,6 +44,20 @@ export class MeshModifierModel {
   }
 
   /**
+   * Add a material to a state
+   * @param {string} stateName 
+   * @param {THREE.Material} material 
+   * @returns {void}
+   */
+  addMaterialToState(stateName, material) {
+    if (!this.states.has(stateName)) {
+      this.addState(stateName);
+    }
+    const state = this.states.get(stateName);
+    state.material = material;
+  }
+
+  /**
    * Get a state
    * @param {string} stateName 
    * @returns {object}

@@ -5,6 +5,15 @@ export class MeshModifierController {
     this.model = model;
   }
 
+  /**
+   * Sets the colour of a mesh to a specific state colour or a custom colour
+   * 
+   * @param {THREE.Mesh} mesh 
+   * @param {string} stateName 
+   * @param {number|false} colour 
+   * @param {boolean} updateState 
+   * @returns {void}
+   */
   setColour(mesh, stateName, colour = false, updateState = false) {
     const state = this.model.getState(stateName);
     if (!state) {
@@ -34,41 +43,29 @@ export class MeshModifierController {
   }
 
   /**
+   * Sets the material of a mesh to a specific state material or a custom material
    * 
-   * @param {THREE.Mesh} intersectedMesh 
+   * @param {THREE.Mesh} mesh 
    * @param {string} stateName 
-   * @param {function} callback 
+   * @param {THREE.Material|false} material 
+   * @param {boolean} updateState 
    * @returns {void}
-   * 
-   * @example
-   * handleIntersection(mesh, 'selected', () => {
-   *   console.log('Intersection with mesh');
-   * });
-   * @todo why is this not used?
    */
-  async handleIntersection(intersectedMesh, stateName, callback = null) {
-    // if (this.model.intersected !== intersectedMesh) {
-    //   if (intersectedMesh) {
-    //     this.setColour(intersectedMesh, 'default');
-    //   }
+  setMaterial(mesh, stateName, material = false, updateState = false) {
+    const state = this.model.getState(stateName);
+    if (!state) {
+      console.error(`State '${stateName}' does not exist`);
+      return;
+    }
 
-    //   if (this.model.intersected) {
-    //     const prevState = this.model.getIntersectedState();
-    //     this.setColour(this.model.intersected, prevState);
-    //   }
+    const materialToUse = material === false ? state.material : material;
 
-    //   this.model.setIntersected(intersectedMesh, stateName);
-    // }
+    if (mesh.material !== materialToUse) {
+      mesh.material = materialToUse;
+    }
 
-    // if (callback) {
-    //   await callback();
-    // }
-  }
-
-  resetIntersected() {
-    // if (this.model.intersected) {
-    //   this.setColour(this.model.intersected, 'default');
-    //   this.model.resetIntersected();
-    // }
+    if (updateState) {
+      this.model.addMaterialToState(stateName, materialToUse);
+    }
   }
 }

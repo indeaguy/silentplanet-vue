@@ -20,7 +20,7 @@ export class SilentPlanetThree {
     this.worldStage = null;
     this.threePolysStore = threePolysStore;
     this.elementId = elementId;
-    this.meshModifier = null;
+    this.meshStates = null;
     this.starrySky = null;
 
     // @TODO maybe don't do this.
@@ -86,7 +86,7 @@ export class SilentPlanetThree {
     // @TODO n+1 issue here. load them batches
     this.loadChildMeshes(initialMeshes)
 
-    this.meshModifier = createMeshModifier()
+    this.meshStates = createMeshModifier()
 
     this.worldStage.model.renderables.push(this)
 
@@ -204,9 +204,9 @@ export class SilentPlanetThree {
         hoveredRegion?.regionId &&
         hoveredRegion.regionId == this.threePolysStore.selectedMesh.regionId
       ) {
-        this.meshModifier.setColour(hoveredRegion, 'selectedEvent')
+        this.meshStates.setColour(hoveredRegion, 'selectedEvent')
       } else {
-        this.meshModifier.setColour(hoveredRegion, 'event')
+        this.meshStates.setColour(hoveredRegion, 'event')
       }
     }
   
@@ -219,9 +219,9 @@ export class SilentPlanetThree {
         this.threePolysStore?.selectedMesh?.regionId &&
         this.threePolysStore.hoveredMesh.regionId == this.threePolysStore.selectedMesh.regionId
       ) {
-        this.meshModifier.setColour(this.threePolysStore.hoveredMesh, 'selected')
+        this.meshStates.setColour(this.threePolysStore.hoveredMesh, 'selected')
       } else {
-        this.meshModifier.setColour(this.threePolysStore.hoveredMesh, 'default')
+        this.meshStates.setColour(this.threePolysStore.hoveredMesh, 'default')
       }
     }
   
@@ -245,14 +245,14 @@ export class SilentPlanetThree {
       return false
     }
 
-    this.meshModifier.setColour(clickedRegion, 'selectedEvent')
+    this.meshStates.setColour(clickedRegion, 'selectedEvent')
   
     if (
       this.threePolysStore?.selectedMesh?.regionId &&
       (!clickedRegion?.regionId ||
         clickedRegion.regionId !== this.threePolysStore.selectedMesh.regionId)
     ) {
-      this.meshModifier.setColour(this.threePolysStore.selectedMesh, 'default')
+      this.meshStates.setColour(this.threePolysStore.selectedMesh, 'default')
     }
   
     this.threePolysStore.drillTo(this.threePolysStore.selectedMesh.regionId || 0, clickedRegion.regionId)

@@ -18,7 +18,8 @@ import {
     createBasicMeshBasicMaterial,
     createMeshBasicMaterial,
     createLineBasicMaterial,
-    createMeshPhongMaterial
+    createMeshPhongMaterial,
+    createGlowingMeshPhongMaterial
 } from './utils/Materials';
 
 import {
@@ -46,6 +47,7 @@ export {
     createMeshBasicMaterial,
     createLineBasicMaterial,
     createMeshPhongMaterial,
+    createGlowingMeshPhongMaterial,
     removePoint,
     createSphericalGridLines,
     loadCubeTexture,

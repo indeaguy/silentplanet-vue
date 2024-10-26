@@ -102,6 +102,54 @@ export function createMeshPhongMaterial({
   });
 }
 
+/**
+ * Create a MeshPhongMaterial with a glow effect.
+ * 
+ * @param {Object} options - Configuration options for the material.
+ * @param {string|number} [options.color=DEFAULT_COLOR] - The color of the material (hex string or number).
+ * @param {string|number} [options.glowColor=0xffffff] - The color of the glow effect (hex string or number).
+ * @param {number} [options.glowIntensity=1] - The intensity of the glow effect (0 to 1).
+ * @param {boolean} [options.wireframe=false] - Whether to display the material as a wireframe.
+ * @param {boolean} [options.transparent=true] - Whether the material is transparent.
+ * @param {number} [options.opacity=1] - The opacity of the material (0 to 1).
+ * @param {THREE.Side} [options.side=THREE.DoubleSide] - Which side of the geometry to render.
+ * @param {THREE.CubeTexture} [options.envMap=null] - The environment map to use for reflection.
+ * @param {number} [options.shininess=100] - How shiny the material appears (0 to 100).
+ * @param {string|number} [options.specular=0xffffff] - The color of specular highlights.
+ * @param {number} [options.reflectivity=1] - The reflectivity of the material (0 to 1).
+ * @returns {THREE.MeshPhongMaterial} The created MeshPhongMaterial with glow effect.
+ */
+export function createGlowingMeshPhongMaterial({
+  color = DEFAULT_COLOR,
+  glowColor = 0xffffff,
+  glowIntensity = 1,
+  wireframe = false,
+  transparent = true,
+  opacity = 1,
+  side = THREE.DoubleSide,
+  envMap = null,
+  shininess = 100,
+  specular = 0xffffff,
+  reflectivity = 1
+} = {}) {
+  const material = new THREE.MeshPhongMaterial({
+    color: newThreeColour(color),
+    wireframe: wireframe,
+    transparent: transparent,
+    opacity: opacity,
+    side: side,
+    envMap: envMap,
+    shininess: shininess,
+    specular: newThreeColour(specular),
+    reflectivity: reflectivity,
+    emissive: newThreeColour(glowColor),
+    emissiveIntensity: glowIntensity
+  });
+
+  return material;
+}
+
+
 //   /**
 //    * Create a debug material that provides maximum visual information.
 //    * @param {Object} options - Configuration options for the debug material.
