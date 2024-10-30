@@ -7,13 +7,20 @@ let globe, threePolysStore
 const resizeObserver = ref(null)
 
 onMounted(async () => {
-
-  // STORE ADAPTER! ThreePolysStore is the only thing that the SilentPlanetThreeApp needs of Vue.
+  console.log('BaseGlobe mounted')
   threePolysStore = useThreePolysStore()
   globe = new SilentPlanetThree('base-globe', threePolysStore)
   await globe.initialize()
+  console.log('Globe initialized:', globe)
 
   setupEventListeners()
+})
+
+// Expose globe instance to parent components
+defineExpose({
+  get globe() {
+    return globe
+  }
 })
 
 // @TODO prevent memory leaks!

@@ -23,8 +23,8 @@ export class SilentPlanetThree {
     this.elementId = elementId;
     this.meshStates = null;
     this.starrySky = null;
+    this.uiMeshes = [];
 
-    // @TODO maybe don't do this.
     // Bind the methods to ensure correct 'this' context
     this.handleHoverEvent = this.handleHoverEvent.bind(this);
     this.handleClickEvent = this.handleClickEvent.bind(this);
@@ -280,8 +280,29 @@ export class SilentPlanetThree {
     // Update any globe-specific properties that depend on size
   }
 
+  /**
+   * Add a UI mesh to the scene
+   * @param {THREE.Mesh} mesh 
+   */
+  addUIMesh(mesh) {
+    this.uiMeshes.push(mesh);
+    this.worldStage.model.scene.add(mesh);
+  }
+
+  /**
+   * Remove a UI mesh from the scene
+   * @param {THREE.Mesh} mesh 
+   */
+  removeUIMesh(mesh) {
+    const index = this.uiMeshes.indexOf(mesh);
+    if (index > -1) {
+      this.uiMeshes.splice(index, 1);
+      this.worldStage.model.scene.remove(mesh);
+    }
+  }
+
   render() {
-    var cameraDistance = this.worldStage.model.camera.position.length()
+    var cameraDistance = this.worldStage.model.camera.position.length();
 
     Object.values(this.gridMaterials).forEach(({ material, config }) => {
       fadeMaterialColourByCameraDistance(
@@ -293,7 +314,14 @@ export class SilentPlanetThree {
         config.FADE_END * (configInstance.settings.CAMERA.MIN_ZOOM_DISTANCE + configInstance.settings.CAMERA.MAX_ZOOM_DISTANCE),
         config.FADE_SPEED
       );
-    })
+    });
+
+    // Update UI meshes to face camera
+    this.uiMeshes.forEach(mesh => {
+      if (mesh.lookAt) {
+        mesh.lookAt(this.worldStage.model.camera.position);
+      }
+    });
 
     // Update starry sky
     if (this.starrySky) {

@@ -7,6 +7,10 @@ export const useThreePolysStore = defineStore('ThreePolysStoreMeshes', {
     selectedMesh: {},
     hoveredMesh: {},
     openedMeshIds: [],
+    modalPosition: {
+      screen: { x: 0, y: 0 },
+      normalized: { x: 0, y: 0 }
+    }
   }),
   actions: {
     addMesh(mesh) {
@@ -135,5 +139,10 @@ export const useThreePolysStore = defineStore('ThreePolysStoreMeshes', {
         this.setSelectedMesh(toRegion) // @TODO affects reactivity?
       }
     },
+    updateModalPosition(position) {
+      this.modalPosition = position
+      // You can use this position data to update your Three.js scene
+      // For example, you could use it to position a marker or update a raycaster
+    }
   }
 })
