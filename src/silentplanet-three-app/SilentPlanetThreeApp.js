@@ -1,6 +1,7 @@
 import { configInstance } from './services/silentplanet-rust-geo';
 import { getWorldStageController, createMeshModifier } from './make-these-libs/three-world-stage';
 import {
+  createGlowingMeshPhongMaterial,
   createLineBasicMaterial,
   createMeshBasicMaterial,
   createMeshPhongMaterial,
@@ -86,7 +87,34 @@ export class SilentPlanetThree {
     // @TODO n+1 issue here. load them batches
     this.loadChildMeshes(initialMeshes)
 
-    this.meshStates = createMeshModifier()
+    this.meshStates = createMeshModifier({
+      default: createMeshBasicMaterial({
+        color: 0x87cefa, // Changed from 0x00ff00 (green) to 0x87cefa (blue)
+        transparent: true,
+        opacity: 0.5
+      }),
+      event: createGlowingMeshPhongMaterial({
+        color: 0x87cefa, // Changed to orange (0x87cefa)
+        glowColor: 0x87cefa, // Changed to orange (0x87cefa)
+        glowIntensity: 100,
+        transparent: true,
+        opacity: 0.7
+      }),
+      selected: createGlowingMeshPhongMaterial({
+        color: 0xFFD700, // Changed to orange (0xFFD700)
+        glowColor: 0xFFD700, // Changed to orange (0xFFD700)
+        glowIntensity: 0.5,
+        transparent: true,
+        opacity: 0.7
+      }),
+      selectedEvent: createGlowingMeshPhongMaterial({
+        color: 0xFFD700, // Changed to a lighter orange (gold, 0xFFD700)
+        glowColor: 0xFFD700, // Changed to a lighter orange (gold, 0xFFD700)
+        glowIntensity: 100,
+        transparent: true,
+        opacity: 0.8
+      })
+    });
 
     this.worldStage.model.renderables.push(this)
 
@@ -184,78 +212,62 @@ export class SilentPlanetThree {
   }
 
   /**
-   * 
+   * Handles hover events for regions
    * @param {THREE.Mesh} hoveredRegion 
-   * @returns {void}
    */
   handleHoverEvent(hoveredRegion) {
-    if (!this.threePolysStore) {
-      console.warn('threePolysStore is not initialized in handleHoverEvent');
-      return;
+    const store = this.threePolysStore;
+    const prevHovered = store?.hoveredMesh;
+    const selected = store?.selectedMesh;
+
+    // Handle new hover
+    if (hoveredRegion?.regionId && hoveredRegion.regionId !== prevHovered?.regionId) {
+      const isSelected = hoveredRegion.regionId === selected?.regionId;
+      this.meshStates.setMaterial(hoveredRegion, isSelected ? 'selectedEvent' : 'event');
     }
 
-    if (
-      hoveredRegion?.regionId &&
-      (!this.threePolysStore?.hoveredMesh?.regionId ||
-        hoveredRegion.regionId !== this.threePolysStore.hoveredMesh.regionId)
-    ) {
-      if (
-        this.threePolysStore?.selectedMesh?.regionId &&
-        hoveredRegion?.regionId &&
-        hoveredRegion.regionId == this.threePolysStore.selectedMesh.regionId
-      ) {
-        this.meshStates.setColour(hoveredRegion, 'selectedEvent')
-      } else {
-        this.meshStates.setColour(hoveredRegion, 'event')
-      }
+    // Handle hover exit
+    if (prevHovered?.regionId && (!hoveredRegion?.regionId || hoveredRegion.regionId !== prevHovered.regionId)) {
+      const isSelected = prevHovered.regionId === selected?.regionId;
+      this.meshStates.setMaterial(prevHovered, isSelected ? 'selected' : 'default');
     }
-  
-    if (
-      this.threePolysStore?.hoveredMesh?.regionId &&
-      (!hoveredRegion?.regionId ||
-        hoveredRegion.regionId !== this.threePolysStore.hoveredMesh.regionId)
-    ) {
-      if (
-        this.threePolysStore?.selectedMesh?.regionId &&
-        this.threePolysStore.hoveredMesh.regionId == this.threePolysStore.selectedMesh.regionId
-      ) {
-        this.meshStates.setColour(this.threePolysStore.hoveredMesh, 'selected')
-      } else {
-        this.meshStates.setColour(this.threePolysStore.hoveredMesh, 'default')
-      }
-    }
-  
-    this.threePolysStore.setHoveredMesh(hoveredRegion, () => {
-      // do nothing for now
-    })
+
+    // Update store
+    store.setHoveredMesh(hoveredRegion, () => {
+      // Callback function (currently empty)
+    });
   }
 
   /**
-   * 
+   * Handles click events for regions
    * @param {THREE.Mesh} clickedRegion 
-   * @returns {void}
+   * @returns {boolean}
    */
   handleClickEvent(clickedRegion) {
     if (!this.threePolysStore) {
       console.warn('threePolysStore is not initialized in handleClickEvent');
-      return;
+      return false;
     }
 
-    if (!clickedRegion || !clickedRegion.regionId) {
-      return false
+    if (!clickedRegion?.regionId) {
+      return false;
     }
 
-    this.meshStates.setColour(clickedRegion, 'selectedEvent')
-  
-    if (
-      this.threePolysStore?.selectedMesh?.regionId &&
-      (!clickedRegion?.regionId ||
-        clickedRegion.regionId !== this.threePolysStore.selectedMesh.regionId)
-    ) {
-      this.meshStates.setColour(this.threePolysStore.selectedMesh, 'default')
+    const store = this.threePolysStore;
+    const prevSelected = store.selectedMesh;
+
+    // Set color for clicked region
+    this.meshStates.setMaterial(clickedRegion, 'selectedEvent');
+
+    // Reset color for previously selected region if different
+    if (prevSelected?.regionId && prevSelected.regionId !== clickedRegion.regionId) {
+      this.meshStates.setMaterial(prevSelected, 'default');
     }
-  
-    this.threePolysStore.drillTo(this.threePolysStore.selectedMesh.regionId || 0, clickedRegion.regionId)
+
+    // Update store
+    store.drillTo(prevSelected?.regionId || 0, clickedRegion.regionId);
+
+    return true;
   }
 
   /**
