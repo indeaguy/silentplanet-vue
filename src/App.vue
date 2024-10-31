@@ -6,7 +6,14 @@ import { RouterLink, RouterView } from 'vue-router'
 
 <template>
   <header>
-    <img alt="Silent Planet logo" class="logo" src="@/assets/logo.svg" width="100" height="100" />
+    <img 
+      alt="Silent Planet logo" 
+      class="logo" 
+      src="@/assets/logo.svg" 
+      width="30" 
+      height="39"
+      aria-hidden="true" />
+    <h1>Silent Planet</h1>
   </header>
 
   <RouterView />
@@ -25,5 +32,17 @@ import { RouterLink, RouterView } from 'vue-router'
 header {
   line-height: 1.5;
   max-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  width: 100%;
+  padding: 1rem 0;
+}
+
+h1 {
+  font-weight: 500;
+  font-size: .8rem;
+  color: var(--color-heading);
 }
 </style>
