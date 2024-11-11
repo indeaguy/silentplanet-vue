@@ -91,3 +91,7 @@ The starry sky textures are from [NASA](https://svs.gsfc.nasa.gov/4851/).
 Starry sky cube creation in https://jaxry.github.io/panorama-to-cubemap/
 
 Earth bump map from https://unpkg.com/three-globe@2.33.0/example/img/earth-topology.png
+
+Landmasses from https://www.naturalearthdata.com/downloads/10m-physical-vectors/
+https://visibleearth.nasa.gov/collection/1484/blue-marble
+https://mapshaper.org/

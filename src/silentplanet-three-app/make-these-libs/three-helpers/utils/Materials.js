@@ -25,6 +25,7 @@ export function createBasicMeshBasicMaterial(color = DEFAULT_COLOR, wireframe = 
  * @param {boolean} [options.transparent=false] - Whether the material is transparent.
  * @param {number} [options.opacity=1] - The opacity of the material (0 to 1).
  * @param {THREE.Side} [options.side=THREE.DoubleSide] - Which side of the geometry to render.
+ * @param {THREE.Texture} [options.map=null] - The texture map to use for the material.
  * @returns {THREE.MeshBasicMaterial} The created MeshBasicMaterial.
  */
 export function createMeshBasicMaterial({
@@ -33,13 +34,21 @@ export function createMeshBasicMaterial({
   transparent = false,
   opacity = 1,
   side = THREE.DoubleSide,
+  map = null,
+  depthWrite = true,
+  depthTest = true,
+  alphaTest = 0.1
 } = {}) {
   return new THREE.MeshBasicMaterial({
     color: newThreeColour(color),
     side: side,
     wireframe: wireframe,
     transparent: transparent,
-    opacity: opacity
+    opacity: opacity,
+    map: map,
+    depthWrite: depthWrite,
+    depthTest: depthTest,
+    alphaTest: alphaTest
   });
 }
 
@@ -98,7 +107,9 @@ export function createMeshPhongMaterial({
     reflectivity: reflectivity,
     combine: combine,
     bumpMap: bumpMap,
-    bumpScale: bumpScale
+    bumpScale: bumpScale,
+    depthWrite: !transparent,
+    depthTest: true
   });
 }
 
@@ -130,7 +141,11 @@ export function createGlowingMeshPhongMaterial({
   envMap = null,
   shininess = 100,
   specular = 0xffffff,
-  reflectivity = 1
+  reflectivity = 1,
+  alphaTest = 0.1,
+  depthWrite = true,
+  depthTest = true,
+  renderOrder = 0
 } = {}) {
   const material = new THREE.MeshPhongMaterial({
     color: newThreeColour(color),
@@ -143,7 +158,11 @@ export function createGlowingMeshPhongMaterial({
     specular: newThreeColour(specular),
     reflectivity: reflectivity,
     emissive: newThreeColour(glowColor),
-    emissiveIntensity: glowIntensity
+    emissiveIntensity: glowIntensity,
+    alphaTest: alphaTest,
+    depthWrite: depthWrite,
+    depthTest: depthTest,
+    renderOrder: renderOrder
   });
 
   return material;

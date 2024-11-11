@@ -31,6 +31,7 @@ import {
 } from './utils/Lines';
 
 import {
+    loadCubeTextureAsync,
     loadCubeTexture,
     loadTexture
 } from './utils/Textures';
@@ -50,6 +51,7 @@ export {
     createGlowingMeshPhongMaterial,
     removePoint,
     createSphericalGridLines,
+    loadCubeTextureAsync,
     loadCubeTexture,
     loadTexture
 }

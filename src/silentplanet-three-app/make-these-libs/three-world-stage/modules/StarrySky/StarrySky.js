@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadCubeTextureAsync } from '../../../three-helpers';
 
 /**
  * @class StarrySky
@@ -25,23 +26,18 @@ export class StarrySky {
     this.envMap = envMap;
   }
 
-  initialize(texturePaths) {
+  async initialize(texturePaths) {
     if (!texturePaths || texturePaths.length !== 6) {
       console.error('Invalid texture paths for starry sky');
       return;
     }
 
-    const loader = new THREE.CubeTextureLoader();
-    loader.load(texturePaths,
-      (texture) => {
-        this.envMap = texture;
-        this.scene.background = this.envMap;
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading starry sky textures:', error);
-      }
-    );
+    try {
+      this.envMap = await loadCubeTextureAsync(texturePaths);
+      this.scene.background = this.envMap;
+    } catch (error) {
+      console.error('Error loading starry sky textures:', error);
+    }
   }
 
   update() {

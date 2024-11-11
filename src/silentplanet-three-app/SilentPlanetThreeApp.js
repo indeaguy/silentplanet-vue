@@ -14,6 +14,7 @@ import {
 } from './make-these-libs/three-helpers'
 import { loadAndCreatePertinentRegionMeshesFromRedis } from '../silentplanet-three-app/services/GeosMeshService'
 import { StarrySky } from './make-these-libs/three-world-stage/modules/StarrySky/StarrySky';
+import * as THREE from 'three';
 
 export class SilentPlanetThree {
   constructor(elementId, threePolysStore) {
@@ -63,7 +64,7 @@ export class SilentPlanetThree {
       envMap: envMap,
       bumpMap: bumpMap,
       bumpScale: bumpScale,
-      specular: specular
+      specular: specular,
     });
     sphere = createSphere({
       radius: configInstance.settings.SPHERE.RADIUS,
@@ -71,7 +72,31 @@ export class SilentPlanetThree {
       heightSegments: configInstance.settings.SPHERE.HEIGHT_SEGMENTS,
       material: sphereMaterial
     });
+    sphere.renderOrder = 1;
     this.worldStage.model.scene.add(sphere)
+
+    // Create inner sphere with transparent texture
+    const innerTexture = loadTexture('/src/assets/images/landmass/blue-earth-4096-2048.png');
+    innerTexture.transparent = true;
+
+    const innerSphereMaterial = createMeshBasicMaterial({
+      map: innerTexture,
+      transparent: true,
+      side: THREE.FrontSide,
+      color: 0xffffff,
+      depthWrite: true,
+      depthTest: true,
+      alphaTest: 0.1
+    });
+    
+    const innerSphere = createSphere({
+      radius: configInstance.settings.SPHERE.RADIUS * 0.999,
+      widthSegments: configInstance.settings.SPHERE.WIDTH_SEGMENTS,
+      heightSegments: configInstance.settings.SPHERE.HEIGHT_SEGMENTS,
+      material: innerSphereMaterial
+    });
+    innerSphere.renderOrder = 0;
+    this.worldStage.model.scene.add(innerSphere);
 
     grids = this.createGrids()
     Object.values(grids).forEach(gridArray => {
@@ -91,28 +116,40 @@ export class SilentPlanetThree {
       default: createMeshBasicMaterial({
         color: 0x87cefa, // Changed from 0x00ff00 (green) to 0x87cefa (blue)
         transparent: true,
-        opacity: 0.5
+        opacity: 0.7,
+        depthWrite: true,
+        depthTest: true,
+        renderOrder: 2
       }),
       event: createGlowingMeshPhongMaterial({
         color: 0x87cefa, // Changed to orange (0x87cefa)
         glowColor: 0x87cefa, // Changed to orange (0x87cefa)
         glowIntensity: 100,
         transparent: true,
-        opacity: 0.7
+        opacity: 0.8,
+        depthWrite: true,
+        depthTest: true,
+        renderOrder: 2
       }),
       selected: createGlowingMeshPhongMaterial({
         color: 0xFFD700, // Changed to orange (0xFFD700)
         glowColor: 0xFFD700, // Changed to orange (0xFFD700)
         glowIntensity: 0.5,
         transparent: true,
-        opacity: 0.7
+        opacity: 0.7,
+        depthWrite: true,
+        depthTest: true,
+        renderOrder: 2
       }),
       selectedEvent: createGlowingMeshPhongMaterial({
         color: 0xFFD700, // Changed to a lighter orange (gold, 0xFFD700)
         glowColor: 0xFFD700, // Changed to a lighter orange (gold, 0xFFD700)
         glowIntensity: 100,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.8,
+        depthWrite: true,
+        depthTest: true,
+        renderOrder: 2
       })
     });
 
