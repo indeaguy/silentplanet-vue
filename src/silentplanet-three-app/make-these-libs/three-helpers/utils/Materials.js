@@ -144,8 +144,7 @@ export function createGlowingMeshPhongMaterial({
   reflectivity = 1,
   alphaTest = 0.1,
   depthWrite = true,
-  depthTest = true,
-  renderOrder = 0
+  depthTest = true
 } = {}) {
   const material = new THREE.MeshPhongMaterial({
     color: newThreeColour(color),
@@ -161,8 +160,7 @@ export function createGlowingMeshPhongMaterial({
     emissiveIntensity: glowIntensity,
     alphaTest: alphaTest,
     depthWrite: depthWrite,
-    depthTest: depthTest,
-    renderOrder: renderOrder
+    depthTest: depthTest
   });
 
   return material;

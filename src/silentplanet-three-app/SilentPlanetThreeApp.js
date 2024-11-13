@@ -67,7 +67,7 @@ export class SilentPlanetThree {
       specular: specular,
     });
     sphere = createSphere({
-      radius: configInstance.settings.SPHERE.RADIUS,
+      radius: configInstance.settings.SPHERE.RADIUS + 0.001,
       widthSegments: configInstance.settings.SPHERE.WIDTH_SEGMENTS,
       heightSegments: configInstance.settings.SPHERE.HEIGHT_SEGMENTS,
       material: sphereMaterial
