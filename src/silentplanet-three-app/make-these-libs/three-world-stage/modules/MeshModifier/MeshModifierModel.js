@@ -72,6 +72,10 @@ export class MeshModifierModel {
     return this.states.get(stateName);
   }
 
+  getStateMaterial(stateName) {
+    return this.getState(stateName).material;
+  }
+
   setIntersected(mesh) {
     this.intersected = mesh;
   }

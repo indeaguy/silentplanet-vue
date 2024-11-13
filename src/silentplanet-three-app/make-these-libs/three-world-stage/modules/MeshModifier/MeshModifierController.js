@@ -68,4 +68,13 @@ export class MeshModifierController {
       this.model.addMaterialToState(stateName, materialToUse);
     }
   }
+
+  /**
+   * Get the material for a state
+   * @param {string} stateName 
+   * @returns {THREE.Material}
+   */
+  getStateMaterial(stateName) {
+    return this.model.getStateMaterial(stateName);
+  }
 }

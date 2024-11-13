@@ -28,21 +28,10 @@ export {
  * });
  */
 export function createMeshModifier(stateProperties = {}) {
-  // Default properties (colors)
-  const defaultProperties = {
-    default: 0xf279a8,
-    event: 0xffc0cb,
-    selected: 0x0051e6,
-    selectedEvent: 0x005aff
-  };
-
-  // Merge provided properties with default properties
-  const mergedProperties = { ...defaultProperties, ...stateProperties };
-
   const model = new MeshModifierModel();
   
   // Add states and colors/materials to the model
-  Object.entries(mergedProperties).forEach(([stateName, property]) => {
+  Object.entries(stateProperties).forEach(([stateName, property]) => {
     model.addState(stateName);
     if (property instanceof THREE.Material) {
       model.addMaterialToState(stateName, property);

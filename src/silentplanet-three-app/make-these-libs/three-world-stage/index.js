@@ -1,6 +1,6 @@
 // Import main components
 import { WorldStageController, getWorldStageController } from './modules/WorldStage';
-import { createMeshModifier } from './modules/MeshModifier';
+import { createMeshModifier} from './modules/MeshModifier';
 import { RayTracerController } from './modules/RayTracer';
 
 // Import utility functions or classes if needed

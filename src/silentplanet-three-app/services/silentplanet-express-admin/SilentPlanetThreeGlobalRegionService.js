@@ -1,4 +1,3 @@
-// Globe.js and Scene.js
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { getCartesianGeometryData } from './SilentPlanetCartesianGeometryService.js'
@@ -8,28 +7,24 @@ import { createSphere, removePoint } from '../../make-these-libs/three-helpers'
 // @TODO separate this concern
 import { configInstance } from '../silentplanet-rust-geo';
 
-// @TODO: there's some SAUCE here, protect this logic in the backend
-
 /**
    * Generate a globe mesh based on the provided geojson data.
    *
    * @param {object} data - The data to be mapped onto the globe in geojson format.
    * @param {boolean} visible - Whether the mesh should be visible.
-   * @param {object} config - The configuration object.
+   * @param {THREE.Material} material - The material to be used for the mesh.
    * @return {object} || false An object containing the generated meshes and polygonMeshes.
    */
 export function mapGeoJsonDataToGlobe(
     data,
     visible = true,
+    material = null
   ) {
 
-    // @TODO use typescript for this
     if (!data || !data.features || !data.properties.name || !data.properties.regionId) return false
 
-    let radius = configInstance.settings.SPHERE.RADIUS
     let color = parseInt(configInstance.settings.POLYGONS.COLOR, 16)
     let wireframeOnly = configInstance.settings.POLYGONS.WIREFRAME_ONLY ?? false;
-    let altitude = configInstance.settings.POLYGONS.RISE ?? 0;
     let centerPosition = new THREE.Vector3(
       configInstance.settings.SPHERE.CENTER[0], 
       configInstance.settings.SPHERE.CENTER[1], 
@@ -60,8 +55,6 @@ export function mapGeoJsonDataToGlobe(
         let coordinates = [polygon[0]] // @TODO lets create this array elsewhere
 
         coordinates.forEach(coordinates => {
-          // @TODO some config here
-            //console.log("Creating geometry for coordinates:", coordinates);
 
             // This is where some magic happens
             const geometry = createBufferGeometryFromLatLonPairs(coordinates);
@@ -86,16 +79,8 @@ export function mapGeoJsonDataToGlobe(
 
     let mergedGoJsonFeatureMeshes = mergeGeometries(totalCombinedGeometry, false)
 
-    // @TODO use createStandardMeshMaterial instead
-    let meshMaterial = new THREE.MeshBasicMaterial({
-      color: color,
-      side: THREE.DoubleSide,
-      wireframe: wireframeOnly
-    })
-
     let totalCombinedMeshes = new THREE.Mesh(
-      mergedGoJsonFeatureMeshes,
-      meshMaterial
+      mergedGoJsonFeatureMeshes
     )
 
     if (!totalCombinedMeshes.geometry) {
@@ -122,7 +107,7 @@ export function mapGeoJsonDataToGlobe(
     const intersectionCSG = boundingSphereCsg.subtract(totalCombinedMeshesCsg);
 
     // Convert the CSG result back to a THREE mesh
-    const intersectionMesh = CSG.toMesh(intersectionCSG, boundingSphere.matrix, meshMaterial);
+    const intersectionMesh = CSG.toMesh(intersectionCSG, boundingSphere.matrix, material);
 
     // Adding all the data.properties from the geojson files to the mesh object
     Object.assign(intersectionMesh, data.properties);

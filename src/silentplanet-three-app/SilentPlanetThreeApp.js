@@ -105,16 +105,17 @@ export class SilentPlanetThree {
       })
     })
 
-    // @TODO anything added here has to be removed in onBeforeUnmount?
-    // @TODO don't load these from scratch every time
-    const initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis()
-
-    // @TODO n+1 issue here. load them batches
-    this.loadChildMeshes(initialMeshes)
-
     this.meshStates = createMeshModifier({
+      initial: createMeshBasicMaterial({
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.7,
+        depthWrite: true,
+        depthTest: true,
+        renderOrder: 2
+      }),
       default: createMeshBasicMaterial({
-        color: 0x87cefa, // Changed from 0x00ff00 (green) to 0x87cefa (blue)
+        color: 0x87cefa,
         transparent: true,
         opacity: 0.7,
         depthWrite: true,
@@ -122,8 +123,8 @@ export class SilentPlanetThree {
         renderOrder: 2
       }),
       event: createGlowingMeshPhongMaterial({
-        color: 0x87cefa, // Changed to orange (0x87cefa)
-        glowColor: 0x87cefa, // Changed to orange (0x87cefa)
+        color: 0x87cefa,
+        glowColor: 0x87cefa,
         glowIntensity: 100,
         transparent: true,
         opacity: 0.8,
@@ -132,8 +133,8 @@ export class SilentPlanetThree {
         renderOrder: 2
       }),
       selected: createGlowingMeshPhongMaterial({
-        color: 0xFFD700, // Changed to orange (0xFFD700)
-        glowColor: 0xFFD700, // Changed to orange (0xFFD700)
+        color: 0xFFD700,
+        glowColor: 0xFFD700,
         glowIntensity: 0.5,
         transparent: true,
         opacity: 0.7,
@@ -142,8 +143,8 @@ export class SilentPlanetThree {
         renderOrder: 2
       }),
       selectedEvent: createGlowingMeshPhongMaterial({
-        color: 0xFFD700, // Changed to a lighter orange (gold, 0xFFD700)
-        glowColor: 0xFFD700, // Changed to a lighter orange (gold, 0xFFD700)
+        color: 0xFFD700,
+        glowColor: 0xFFD700,
         glowIntensity: 100,
         transparent: true,
         opacity: 0.8,
@@ -152,6 +153,14 @@ export class SilentPlanetThree {
         renderOrder: 2
       })
     });
+
+    // @TODO anything added here has to be removed in onBeforeUnmount?
+    // @TODO don't load these from scratch every time
+    // @TODO use object literal property value shorthand with default values
+    const initialMeshes = await loadAndCreatePertinentRegionMeshesFromRedis(1, true, this.meshStates.getStateMaterial('initial'))
+
+    // @TODO n+1 issue here. load them batches
+    this.loadChildMeshes(initialMeshes)
 
     this.worldStage.model.renderables.push(this)
 
@@ -223,7 +232,7 @@ export class SilentPlanetThree {
       if (mesh.hasChild && mesh.regionId) {
 
         let childMeshIds = []
-        const childMeshes = await loadAndCreatePertinentRegionMeshesFromRedis(mesh.regionId, false)
+        const childMeshes = await loadAndCreatePertinentRegionMeshesFromRedis(mesh.regionId, false, this.meshStates.getStateMaterial('initial'))
 
         for (const childMesh of childMeshes) {
           // @TODO nested for loop bad code smell
