@@ -2,48 +2,8 @@
 import FilterNav from '../components/FilterNav.vue'
 import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
-import BaseModal from '../components/BaseModal.vue'
-import ClearModal from '../components/ClearModal.vue'
-import MeshBorderModal from '../components/MeshBorderModal.vue'
 import { useThreePolysStore } from '../stores/polys.js'
 import { computed, provide, ref, onMounted, watch } from 'vue'
-
-// Modal controls
-const isModalOpen = ref(false)
-const isClearModalOpen = ref(false)
-const isPositionModalOpen = ref(false)
-const isMeshBorderModalOpen = ref(false)
-const isSphereBorderModalOpen = ref(false)
-
-const toggleModal = () => {
-  isModalOpen.value = !isModalOpen.value
-}
-
-const toggleClearModal = () => {
-  isClearModalOpen.value = !isClearModalOpen.value
-}
-
-const togglePositionModal = () => {
-  isPositionModalOpen.value = !isPositionModalOpen.value
-}
-
-const toggleMeshBorderModal = () => {
-  isMeshBorderModalOpen.value = !isMeshBorderModalOpen.value
-}
-
-const toggleSphereBorderModal = () => {
-  isSphereBorderModalOpen.value = !isSphereBorderModalOpen.value
-}
-
-// Handle position updates
-const handlePositionUpdate = (position) => {
-  // You can access position.screen.x, position.screen.y
-  // and position.normalized.x, position.normalized.y
-  // Pass this to your Three.js scene if needed
-  // if (threePolysStore) {
-  //   threePolysStore.updateModalPosition(position)
-  // }
-}
 
 //const selectedRegion = ref('')
 const threePolysStore = useThreePolysStore()
@@ -103,103 +63,67 @@ onMounted(() => {
 </script>
 
 <template>
-  <main>
-    <RegionContent />
-    <div id="world-container">
+  <div class="home-view">
+    <div class="header-extension">
+      <div class="header-space"></div>
       <FilterNav />
+    </div>
+    <div id="world-container">
       <BaseGlobe 
         ref="globeRef"
         @update-region-id="setSelectedRegion" />
-      
-      <!-- Modal buttons -->
-      <div class="modal-buttons">
-        <button class="modal-toggle-btn" @click="toggleModal">Dark Modal</button>
-        <button class="modal-toggle-btn clear" @click="toggleClearModal">Clear Modal</button>
-        <button class="modal-toggle-btn position" @click="togglePositionModal">Position Modal</button>
-        <button class="modal-toggle-btn mesh-border" @click="toggleMeshBorderModal">Mesh Border Modal</button>
-        <button class="modal-toggle-btn sphere-border" @click="toggleSphereBorderModal">Sphere Border</button>
-      </div>
-      
-      <!-- Modals -->
-      <BaseModal :is-open="isModalOpen" @close="toggleModal">
-        <h2>Dark Modal</h2>
-        <p>This modal has a dark overlay background.</p>
-      </BaseModal>
-
-      <ClearModal :is-open="isClearModalOpen" @close="toggleClearModal">
-        <h2>Clear Modal</h2>
-        <p>This modal has a transparent background.</p>
-      </ClearModal>
-
-      <MeshBorderModal 
-        v-if="worldStage"
-        :world-stage="worldStage"
-        :is-open="isMeshBorderModalOpen" 
-        @close="toggleMeshBorderModal"
-        @position-update="handlePositionUpdate">
-        <p>Move this modal to see the Three.js mesh border!</p>
-      </MeshBorderModal>
     </div>
-  </main>
+    <div class="region-content-wrapper">
+      <RegionContent />
+    </div>
+  </div>
 </template>
 
 <style scoped>
-#world-container {
-  color: white;
+.home-view {
+  width: 100vw;
+  height: 100vh;
   position: relative;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: rgb(var(--color-background-rgb));
 }
 
-.modal-buttons {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  gap: 10px;
+.header-extension {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   z-index: 100;
+  background: rgba(var(--color-background-rgb), 20);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-.modal-toggle-btn {
-  padding: 0.5rem 1rem;
-  background-color: hsla(160, 100%, 37%, 1);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.header-space {
+  height: 3rem;
 }
 
-.modal-toggle-btn.clear {
-  background-color: hsla(200, 100%, 37%, 1);
+#world-container {
+  position: fixed;
+  top: 5rem;
+  left: 0;
+  width: 100vw;
+  height: calc(100vh - 4rem);
+  z-index: 1;
 }
 
-.modal-toggle-btn:hover {
-  background-color: hsla(160, 100%, 37%, 0.8);
+.region-content-wrapper {
+  position: fixed;
+  top: 8rem;
+  right: 1rem;
+  z-index: 101;
+  max-width: 400px;
 }
 
-.modal-toggle-btn.clear:hover {
-  background-color: hsla(200, 100%, 37%, 0.8);
-}
-
-.modal-toggle-btn.position {
-  background-color: hsla(300, 100%, 37%, 1);
-}
-
-.modal-toggle-btn.position:hover {
-  background-color: hsla(300, 100%, 37%, 0.8);
-}
-
-.modal-toggle-btn.mesh-border {
-  background-color: hsla(260, 100%, 37%, 1);
-}
-
-.modal-toggle-btn.mesh-border:hover {
-  background-color: hsla(260, 100%, 37%, 0.8);
-}
-
-.modal-toggle-btn.sphere-border {
-  background-color: hsla(220, 100%, 37%, 1);
-}
-
-.modal-toggle-btn.sphere-border:hover {
-  background-color: hsla(220, 100%, 37%, 0.8);
+:deep(#world-container > *) {
+  width: 100%;
+  height: 100%;
 }
 </style>

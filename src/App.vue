@@ -4,11 +4,13 @@
 import { RouterLink, RouterView } from 'vue-router'
 import { useUserStore } from './stores/user'
 import { ref } from 'vue'
+import BaseModal from './components/modals/BaseModal.vue'
 
 const userStore = useUserStore()
 const email = ref('')
 const password = ref('')
 const isSignUp = ref(false)
+const isAuthModalOpen = ref(false)
 
 const handleSignIn = async () => {
   try {
@@ -35,20 +37,36 @@ const handleSignOut = async () => {
 const toggleMode = () => {
   isSignUp.value = !isSignUp.value
 }
+
+const toggleAuthModal = () => {
+  isAuthModalOpen.value = !isAuthModalOpen.value
+}
 </script>
 
 <template>
-  <header>
-    <img 
-      alt="Silent Planet logo" 
-      class="logo" 
-      src="@/assets/logo.svg" 
-      width="30" 
-      height="39"
-      aria-hidden="true" />
-    <h1>Silent Planet</h1>
+  <header class="overlay-header">
+    <div class="brand">
+      <img 
+        alt="Silent Planet logo" 
+        class="logo" 
+        src="@/assets/logo.svg" 
+        width="30" 
+        height="39"
+        aria-hidden="true" />
+      <h1>Silent Planet</h1>
+    </div>
 
-    <div v-if="!userStore.user" class="auth-container">
+    <div v-if="!userStore.user" class="auth-button-container">
+      <button @click="toggleAuthModal">Sign In</button>
+    </div>
+    <div v-else class="auth-button-container">
+      <span>{{ userStore.user.email }}</span>
+      <button @click="handleSignOut">Sign Out</button>
+    </div>
+  </header>
+
+  <BaseModal :is-open="isAuthModalOpen" @close="toggleAuthModal">
+    <div class="auth-container">
       <div v-if="userStore.error" class="error-message">
         {{ userStore.error }}
       </div>
@@ -70,11 +88,7 @@ const toggleMode = () => {
         {{ isSignUp ? 'Already have an account?' : 'Need an account?' }}
       </button>
     </div>
-    <div v-else class="auth-container">
-      <span>{{ userStore.user.email }}</span>
-      <button @click="handleSignOut">Sign Out</button>
-    </div>
-  </header>
+  </BaseModal>
 
   <RouterView />
 
@@ -94,10 +108,30 @@ header {
   max-height: 100vh;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: .2rem;
+  justify-content: space-between;
   width: 100%;
-  padding: 1rem 0;
+  padding: 0.3rem 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 101;
+  background: none;
+  backdrop-filter: none;
+}
+
+:deep(main) {
+  padding-top: 4rem;
+}
+
+.brand {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 101;
 }
 
 h1 {
@@ -107,14 +141,20 @@ h1 {
   letter-spacing: .8rem;
 }
 
+.auth-button-container {
+  margin-left: auto;
+  padding-right: 1rem;
+  position: relative;
+  z-index: 101;
+}
+
 .auth-container {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   align-items: stretch;
-  margin-left: auto;
-  padding-right: 1rem;
-  min-width: 250px;
+  width: 300px;
+  padding: 1rem;
 }
 
 .auth-container input {

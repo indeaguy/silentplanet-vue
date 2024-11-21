@@ -9,7 +9,7 @@ const emit = defineEmits(['update-region-id'])
 const selectedValue = ref(selectedRegion) // Initialize with the injected value
 // Watch for changes in the selection and emit an event
 
-// @TODO Don't need this watch, it's being handled be the reference
+// @TODO Don't need this watch, it's being handled by the reference
 watch(selectedValue, (newValue) => {
   emit('update-region-id', newValue)
 })

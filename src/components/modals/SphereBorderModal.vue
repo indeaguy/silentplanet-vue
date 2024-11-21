@@ -15,7 +15,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import * as THREE from 'three'
-import { createMeshBasicMaterial } from '../silentplanet-three-app/make-these-libs/three-helpers'
+import { createMeshBasicMaterial } from '../../silentplanet-three-app/make-these-libs/three-helpers'
 
 const props = defineProps({
   isOpen: {
