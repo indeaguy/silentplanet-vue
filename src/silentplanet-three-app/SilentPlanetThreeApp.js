@@ -15,6 +15,7 @@ import {
 import { loadAndCreatePertinentRegionMeshesFromRedis } from '../silentplanet-three-app/services/GeosMeshService'
 import { StarrySky } from './make-these-libs/three-world-stage/modules/StarrySky/StarrySky';
 import * as THREE from 'three';
+import { formatCameraData } from './make-these-libs/three-helpers/utils/Camera';
 
 export class SilentPlanetThree {
   constructor(elementId, threePolysStore) {
@@ -25,6 +26,7 @@ export class SilentPlanetThree {
     this.meshStates = null;
     this.starrySky = null;
     this.uiMeshes = [];
+    this.cameraData = null;
 
     // Bind the methods to ensure correct 'this' context
     this.handleHoverEvent = this.handleHoverEvent.bind(this);
@@ -177,6 +179,8 @@ export class SilentPlanetThree {
     if (starryTexturePaths && starryTexturePaths.length === 6) {
 
       // envMap
+      // @TODO this is a cube texture, not a cube map
+      // @TODO maybe use this elsewhere also
       const envMap = loadCubeTexture(starryTexturePaths);
       this.starrySky = new StarrySky(this.worldStage.model.scene, this.worldStage.model.camera, envMap);
       this.starrySky.initialize(starryTexturePaths);
@@ -373,5 +377,13 @@ export class SilentPlanetThree {
     if (this.starrySky) {
       this.starrySky.update();
     }
+
+    // Instead of updating DOM, just store the formatted camera data
+    this.cameraData = formatCameraData(this.worldStage.model.camera);
+  }
+
+  // Add getter for camera data
+  getCameraData() {
+    return this.cameraData;
   }
 }

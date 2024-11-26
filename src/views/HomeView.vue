@@ -4,6 +4,8 @@ import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
 import { useThreePolysStore } from '../stores/polys.js'
 import { computed, provide, ref, onMounted, watch } from 'vue'
+import CameraDataDisplay from '@/components/modals/CameraDataDisplay.vue'
+import DataDisplay from '@/components/modals/DataDisplay.vue'
 
 //const selectedRegion = ref('')
 const threePolysStore = useThreePolysStore()
@@ -60,6 +62,11 @@ watch(() => globeRef.value?.globe, (newGlobe) => {
 onMounted(() => {
   console.log('HomeView mounted, globe ref:', globeRef.value)
 })
+
+// Add this one new function for DataDisplay
+const getCameraData = () => {
+  return worldStage.value?.getCameraData()
+}
 </script>
 
 <template>
@@ -76,6 +83,12 @@ onMounted(() => {
     <div class="region-content-wrapper">
       <RegionContent />
     </div>
+    <DataDisplay 
+      v-if="worldStage"
+      :data-source="getCameraData"
+      :use-matrix-style="true"
+      :custom-styles="{ bottom: '10px' }"
+    />
   </div>
 </template>
 
