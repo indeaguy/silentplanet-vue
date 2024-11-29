@@ -140,20 +140,16 @@ const handleFocusOut = (event) => {
 }
 
 const selectSuggestion = (suggestion) => {
-  console.log('🎯 Selecting suggestion:', {
-    suggestion,
-    currentIndex: currentWordIndex.value,
-    currentQuery: searchQuery.value
-  })
-  
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
   
   if (currentWordIndex.value === 0) {
     // When selecting first word, preserve second word if it exists
     const secondWord = words[1] || ''
     searchQuery.value = suggestion + (secondWord ? ` ${secondWord}` : ' ')
-    showSuggestions.value = true
-    cursorPosition.value = searchQuery.value.length // Changed back to full length
+    
+    // Only show suggestions if second word isn't set yet
+    showSuggestions.value = !secondWord
+    cursorPosition.value = searchQuery.value.length
   } else {
     // When selecting second word, preserve first word
     const firstWord = words[0] || ''
