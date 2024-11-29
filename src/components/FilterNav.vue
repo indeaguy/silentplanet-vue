@@ -21,38 +21,35 @@ const firstWordSuggestions = ['Best', 'Worst']
 const secondWordSuggestions = ['music', 'ad']
 const showSuggestions = ref(false)
 
+const cursorPosition = ref(0)
+
 const currentWordIndex = computed(() => {
-  const cursorPos = document.activeElement?.selectionStart || 0
-  const words = searchQuery.value.split(' ').filter(word => word.length > 0)
+  const fullText = searchQuery.value
+  const words = fullText.split(' ')
   
-  console.log('Cursor position:', cursorPos)
-  console.log('Current search query:', searchQuery.value)
-  console.log('Words:', words)
+  console.log('Computing word index - Cursor:', cursorPosition.value)
+  console.log('Computing word index - Full text:', fullText)
   
-  // If first word is complete and a space, and cursor is after it,
-  // we're working with the second word
-  if (words.length === 1 && 
-      firstWordSuggestions.includes(words[0]) && 
-      searchQuery.value.endsWith(' ')) {
-    return 1
-  }
-  
-  // Track position through the string to find which word the cursor is near
-  let charCount = 0
+  let position = 0
   for (let i = 0; i < words.length; i++) {
-    const wordStart = charCount
-    const wordEnd = charCount + words[i].length
+    const word = words[i]
+    const wordStart = position
+    const wordEnd = position + word.length
     
-    console.log('Word ${i}:', words[i], 'Start:', wordStart, 'End:', wordEnd, 'Cursor:', cursorPos)
+    console.log(`Word "${word}": ${wordStart}-${wordEnd}, Cursor: ${cursorPosition.value}`)
     
-    if (cursorPos >= wordStart && cursorPos <= wordEnd + 1) { // +1 to include space after word
+    if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
       return i
     }
-    charCount += words[i].length + 1 // +1 for space
+    
+    // Move position past word and the space
+    position = wordEnd + 1
   }
   
-  // If cursor is beyond last word and we have a first word
-  if (words.length === 1 && firstWordSuggestions.includes(words[0])) {
+  // If cursor is at a space after a complete first word
+  if (words.length === 1 && 
+      firstWordSuggestions.includes(words[0]) && 
+      cursorPosition.value > words[0].length) {
     return 1
   }
   
@@ -79,18 +76,14 @@ const filteredSuggestions = computed(() => {
 })
 
 const handleClick = (event) => {
-  // Get the position of the click in the input
-  const cursorPosition = event.target.selectionStart
-  console.log('🖱️ Click handler - Cursor position:', cursorPosition)
-  console.log('🖱️ Click handler - Current word index:', currentWordIndex.value)
+  cursorPosition.value = event.target.selectionStart
+  console.log('🖱️ Click handler - New cursor position:', cursorPosition.value)
   showSuggestions.value = true
 }
 
 const handleInput = (event) => {
-  // Get current cursor position from the event target
-  const cursorPosition = event.target.selectionStart
-  console.log('⌨️ Input handler - Cursor position:', cursorPosition)
-  console.log('⌨️ Input handler - Current word index:', currentWordIndex.value)
+  cursorPosition.value = event.target.selectionStart
+  console.log('⌨️ Input handler - New cursor position:', cursorPosition.value)
   
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
   if (words.length <= 2) {
@@ -115,19 +108,17 @@ const selectSuggestion = (suggestion) => {
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
   const firstWord = words[0] || ''
   
-  // Always preserve first word when selecting second word
-  if (firstWordSuggestions.includes(firstWord)) {
-    if (currentWordIndex.value === 0) {
-      searchQuery.value = suggestion + ' '
-      showSuggestions.value = true
-    } else {
-      searchQuery.value = `${firstWord} ${suggestion}`
-      showSuggestions.value = false
-    }
-  } else {
-    // If no valid first word, just set the first word
+  if (currentWordIndex.value === 0) {
+    // When selecting first word, add a space and keep suggestions open
     searchQuery.value = suggestion + ' '
     showSuggestions.value = true
+    // Move cursor to end
+    cursorPosition.value = searchQuery.value.length
+  } else {
+    // When selecting second word, complete the phrase
+    searchQuery.value = firstWord ? `${firstWord} ${suggestion}` : `${suggestion}`
+    showSuggestions.value = false
+    cursorPosition.value = searchQuery.value.length
   }
 }
 </script>
