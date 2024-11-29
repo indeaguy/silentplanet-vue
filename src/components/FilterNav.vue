@@ -1,4 +1,42 @@
 <script setup>
+/**
+ * FilterNav Component Requirements:
+ * 
+ * Input Field:
+ * - Allows two-word combinations (e.g., "Best music", "Worst ad")
+ * - First word must be from firstWordSuggestions list
+ * - Second word must be from secondWordSuggestions list
+ * 
+ * Suggestion Behavior:
+ * 1. Word Selection:
+ *    - Shows suggestions based on cursor position in input
+ *    - After selecting first word, keeps first word suggestions visible
+ *    - Only shows second word suggestions when:
+ *      a) User clicks in second word position
+ *      b) User moves cursor to second word position
+ *    - When changing first word with second word present:
+ *      - Preserves the second word
+ *      - Updates only the first word
+ * 
+ * 2. Keyboard Navigation:
+ *    - Up/Down arrows navigate through suggestions
+ *    - Enter key selects highlighted suggestion
+ *    - Navigating up past first suggestion clears selection
+ *    - Shift+Up moves cursor to start of input
+ *    - Shift+Down moves cursor to end of input
+ * 
+ * 3. Cursor Position:
+ *    - Tracks cursor position to determine active word
+ *    - Updates suggestions based on which word is being edited
+ *    - Supports arrow key navigation within input text
+ *    - After selecting first word, cursor stays at end of first word
+ * 
+ * Visual Feedback:
+ * - Highlights currently selected suggestion
+ * - Shows appropriate suggestions filtered by current input
+ * - Maintains proper spacing between words
+ */
+
 import { inject, defineEmits, ref, watch, computed } from 'vue'
 
 // Selected Region Id
@@ -102,9 +140,11 @@ const handleFocusOut = (event) => {
 }
 
 const selectSuggestion = (suggestion) => {
-  console.log('Current word index:', currentWordIndex.value)
-  console.log('Current search query:', searchQuery.value)
-  console.log('Words:', searchQuery.value.split(' ').filter(word => word.length > 0))
+  console.log('🎯 Selecting suggestion:', {
+    suggestion,
+    currentIndex: currentWordIndex.value,
+    currentQuery: searchQuery.value
+  })
   
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
   
@@ -113,7 +153,7 @@ const selectSuggestion = (suggestion) => {
     const secondWord = words[1] || ''
     searchQuery.value = suggestion + (secondWord ? ` ${secondWord}` : ' ')
     showSuggestions.value = true
-    cursorPosition.value = searchQuery.value.length
+    cursorPosition.value = searchQuery.value.length // Changed back to full length
   } else {
     // When selecting second word, preserve first word
     const firstWord = words[0] || ''
@@ -127,27 +167,24 @@ const selectSuggestion = (suggestion) => {
 const selectedSuggestionIndex = ref(-1)
 
 // Modify handleKeyup to handle arrow navigation and selection
-const handleKeydown = (event) => {  // Changed to keydown for better control
-  // Handle cursor movement with shift key
-  if (event.shiftKey) {
-    if (event.key === 'ArrowUp') {
-      cursorPosition.value = 0
-      event.target.setSelectionRange(0, 0)
-      return
-    }
-    if (event.key === 'ArrowDown') {
-      const length = searchQuery.value.length
-      cursorPosition.value = length
-      event.target.setSelectionRange(length, length)
-      return
+const handleKeyup = (event) => {
+  // Update cursor position for all key events
+  if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    cursorPosition.value = event.target.selectionStart
+    console.log('⌨️ Arrow key - Cursor position:', cursorPosition.value)
+    
+    // Show suggestions when cursor moves to valid position
+    const words = searchQuery.value.split(' ').filter(word => word.length > 0)
+    if (words.length <= 2) {
+      showSuggestions.value = true
     }
   }
-
-  // Handle suggestion navigation
+  
+  // Existing suggestion navigation code...
   if (showSuggestions.value && filteredSuggestions.value.length > 0) {
     switch (event.key) {
       case 'ArrowDown':
-        event.preventDefault() // Prevent cursor movement
+        event.preventDefault()
         selectedSuggestionIndex.value = Math.min(
           selectedSuggestionIndex.value + 1,
           filteredSuggestions.value.length - 1
@@ -155,13 +192,12 @@ const handleKeydown = (event) => {  // Changed to keydown for better control
         break
         
       case 'ArrowUp':
-        event.preventDefault() // Prevent cursor movement
+        event.preventDefault()
         selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
         break
         
       case 'Enter':
         if (selectedSuggestionIndex.value >= 0) {
-          event.preventDefault()
           selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
           selectedSuggestionIndex.value = -1
         }
@@ -183,7 +219,7 @@ const handleKeydown = (event) => {  // Changed to keydown for better control
         :placeholder="currentWordIndex === 0 ? 'Best/Worst...' : 'Best music/ad...'"
         @input="handleInput"
         @click="handleClick"
-        @keydown="handleKeydown"
+        @keydown="handleKeyup"
         @focus="handleInput"
       >
       <div v-if="showSuggestions && filteredSuggestions.length" class="suggestions">
