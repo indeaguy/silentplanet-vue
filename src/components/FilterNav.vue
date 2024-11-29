@@ -10,26 +10,29 @@
  * Suggestion Behavior:
  * 1. Word Selection:
  *    - Shows suggestions based on cursor position in input
- *    - After selecting first word, keeps first word suggestions visible
- *    - Only shows second word suggestions when:
- *      a) User clicks in second word position
- *      b) User moves cursor to second word position
+ *    - After selecting first word:
+ *      a) If second word isn't set, show second word suggestions
+ *      b) If second word is set, don't show any suggestions automatically
  *    - When changing first word with second word present:
  *      - Preserves the second word
  *      - Updates only the first word
+ *      - Maintains cursor position
+ *      - Doesn't show suggestions automatically
  * 
  * 2. Keyboard Navigation:
- *    - Up/Down arrows navigate through suggestions
+ *    - Up/Down arrows navigate through suggestions when suggestions are visible
+ *    - Down arrow shows suggestions for current word position when suggestions are hidden
  *    - Enter key selects highlighted suggestion
  *    - Navigating up past first suggestion clears selection
  *    - Shift+Up moves cursor to start of input
  *    - Shift+Down moves cursor to end of input
+ *    - Left/Right arrows update suggestions based on cursor position
  * 
  * 3. Cursor Position:
  *    - Tracks cursor position to determine active word
  *    - Updates suggestions based on which word is being edited
  *    - Supports arrow key navigation within input text
- *    - After selecting first word, cursor stays at end of first word
+ *    - Maintains cursor position after selecting a word (doesn't jump to end)
  * 
  * Visual Feedback:
  * - Highlights currently selected suggestion
@@ -162,8 +165,8 @@ const selectSuggestion = (suggestion) => {
 // Add new ref for tracking selected suggestion
 const selectedSuggestionIndex = ref(-1)
 
-// Modify handleKeyup to handle arrow navigation and selection
-const handleKeyup = (event) => {
+// Modify handleKeydown to handle arrow navigation and selection
+const handleKeydown = (event) => {
   // Update cursor position for all key events
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
     cursorPosition.value = event.target.selectionStart
@@ -175,30 +178,42 @@ const handleKeyup = (event) => {
       showSuggestions.value = true
     }
   }
-  
-  // Existing suggestion navigation code...
-  if (showSuggestions.value && filteredSuggestions.value.length > 0) {
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault()
-        selectedSuggestionIndex.value = Math.min(
-          selectedSuggestionIndex.value + 1,
-          filteredSuggestions.value.length - 1
-        )
-        break
-        
-      case 'ArrowUp':
-        event.preventDefault()
-        selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
-        break
-        
-      case 'Enter':
-        if (selectedSuggestionIndex.value >= 0) {
-          selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
-          selectedSuggestionIndex.value = -1
-        }
-        break
+
+  // Handle cursor movement with shift key
+  if (event.shiftKey) {
+    if (event.key === 'ArrowUp') {
+      cursorPosition.value = 0
+      event.target.setSelectionRange(0, 0)
+      return
     }
+    if (event.key === 'ArrowDown') {
+      const length = searchQuery.value.length
+      cursorPosition.value = length
+      event.target.setSelectionRange(length, length)
+      return
+    }
+  }
+
+  // Handle suggestion navigation
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    if (!showSuggestions.value) {
+      // Show suggestions when pressing down arrow
+      showSuggestions.value = true
+      selectedSuggestionIndex.value = -1
+    } else {
+      selectedSuggestionIndex.value = Math.min(
+        selectedSuggestionIndex.value + 1,
+        filteredSuggestions.value.length - 1
+      )
+    }
+  } else if (event.key === 'ArrowUp' && showSuggestions.value) {
+    event.preventDefault()
+    selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
+  } else if (event.key === 'Enter' && selectedSuggestionIndex.value >= 0) {
+    event.preventDefault()
+    selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
+    selectedSuggestionIndex.value = -1
   }
 }
 </script>
@@ -215,7 +230,7 @@ const handleKeyup = (event) => {
         :placeholder="currentWordIndex === 0 ? 'Best/Worst...' : 'Best music/ad...'"
         @input="handleInput"
         @click="handleClick"
-        @keydown="handleKeyup"
+        @keydown="handleKeydown"
         @focus="handleInput"
       >
       <div v-if="showSuggestions && filteredSuggestions.length" class="suggestions">
