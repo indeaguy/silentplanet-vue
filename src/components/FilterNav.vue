@@ -79,6 +79,7 @@ const handleClick = (event) => {
   cursorPosition.value = event.target.selectionStart
   console.log('🖱️ Click handler - New cursor position:', cursorPosition.value)
   showSuggestions.value = true
+  selectedSuggestionIndex.value = -1
 }
 
 const handleInput = (event) => {
@@ -106,19 +107,66 @@ const selectSuggestion = (suggestion) => {
   console.log('Words:', searchQuery.value.split(' ').filter(word => word.length > 0))
   
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-  const firstWord = words[0] || ''
   
   if (currentWordIndex.value === 0) {
-    // When selecting first word, add a space and keep suggestions open
-    searchQuery.value = suggestion + ' '
+    // When selecting first word, preserve second word if it exists
+    const secondWord = words[1] || ''
+    searchQuery.value = suggestion + (secondWord ? ` ${secondWord}` : ' ')
     showSuggestions.value = true
-    // Move cursor to end
     cursorPosition.value = searchQuery.value.length
   } else {
-    // When selecting second word, complete the phrase
+    // When selecting second word, preserve first word
+    const firstWord = words[0] || ''
     searchQuery.value = firstWord ? `${firstWord} ${suggestion}` : `${suggestion}`
     showSuggestions.value = false
     cursorPosition.value = searchQuery.value.length
+  }
+}
+
+// Add new ref for tracking selected suggestion
+const selectedSuggestionIndex = ref(-1)
+
+// Modify handleKeyup to handle arrow navigation and selection
+const handleKeydown = (event) => {  // Changed to keydown for better control
+  // Handle cursor movement with shift key
+  if (event.shiftKey) {
+    if (event.key === 'ArrowUp') {
+      cursorPosition.value = 0
+      event.target.setSelectionRange(0, 0)
+      return
+    }
+    if (event.key === 'ArrowDown') {
+      const length = searchQuery.value.length
+      cursorPosition.value = length
+      event.target.setSelectionRange(length, length)
+      return
+    }
+  }
+
+  // Handle suggestion navigation
+  if (showSuggestions.value && filteredSuggestions.value.length > 0) {
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault() // Prevent cursor movement
+        selectedSuggestionIndex.value = Math.min(
+          selectedSuggestionIndex.value + 1,
+          filteredSuggestions.value.length - 1
+        )
+        break
+        
+      case 'ArrowUp':
+        event.preventDefault() // Prevent cursor movement
+        selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
+        break
+        
+      case 'Enter':
+        if (selectedSuggestionIndex.value >= 0) {
+          event.preventDefault()
+          selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
+          selectedSuggestionIndex.value = -1
+        }
+        break
+    }
   }
 }
 </script>
@@ -135,14 +183,18 @@ const selectSuggestion = (suggestion) => {
         :placeholder="currentWordIndex === 0 ? 'Best/Worst...' : 'Best music/ad...'"
         @input="handleInput"
         @click="handleClick"
+        @keydown="handleKeydown"
         @focus="handleInput"
       >
       <div v-if="showSuggestions && filteredSuggestions.length" class="suggestions">
         <div 
-          v-for="suggestion in filteredSuggestions" 
+          v-for="(suggestion, index) in filteredSuggestions" 
           :key="suggestion"
           class="suggestion-item"
+          :class="{ 'suggestion-selected': index === selectedSuggestionIndex }"
           @mousedown.prevent="selectSuggestion(suggestion)"
+          @mouseover="selectedSuggestionIndex = index"
+          @mouseout="selectedSuggestionIndex = -1"
           tabindex="0"
         >
           {{ suggestion }}
@@ -231,5 +283,14 @@ const selectSuggestion = (suggestion) => {
 /* Optional: highlight the first word differently */
 .terminal-input::first-line {
   color: #00ff00;
+}
+
+.suggestion-selected {
+  background: rgba(0, 255, 0, 0.2);
+}
+
+/* Optional: Add a subtle transition */
+.suggestion-item {
+  transition: background-color 0.1s ease;
 }
 </style>
