@@ -58,8 +58,8 @@ watch(selectedValue, (newValue) => {
 // @TODO add validation for the existence of selectedRegion.name
 
 const searchQuery = ref('')
-const firstWordSuggestions = ['Best', 'Worst']
-const secondWordSuggestions = ['music', 'ad']
+const firstWordSuggestions = ['best', 'new', 'random', 'most undisliked']
+const secondWordSuggestions = ['music','art', 'poem', 'post', 'ad']
 const showSuggestions = ref(false)
 
 const cursorPosition = ref(0)
