@@ -10,6 +10,7 @@
  * Suggestion Behavior:
  * 1. Word Selection:
  *    - Shows suggestions based on cursor position in input
+ *    - Shows suggestions whenever a word is clicked
  *    - After selecting first word:
  *      a) If second word isn't set, show second word suggestions
  *      b) If second word is set, don't show any suggestions automatically
@@ -27,12 +28,14 @@
  *    - Shift+Up moves cursor to start of input
  *    - Shift+Down moves cursor to end of input
  *    - Left/Right arrows update suggestions based on cursor position
+ *    - Cursor position determines which word's suggestions are shown
  * 
  * 3. Cursor Position:
  *    - Tracks cursor position to determine active word
  *    - Updates suggestions based on which word is being edited
  *    - Supports arrow key navigation within input text
  *    - Maintains cursor position after selecting a word (doesn't jump to end)
+ *    - Shows correct word suggestions based on cursor position relative to space character
  * 
  * Visual Feedback:
  * - Highlights currently selected suggestion
@@ -100,6 +103,8 @@ const filteredSuggestions = computed(() => {
 const handleClick = (event) => {
   cursorPosition.value = event.target.selectionStart
   console.log('🖱️ Click handler - New cursor position:', cursorPosition.value)
+  
+  // Always show suggestions and reset selection
   showSuggestions.value = true
   selectedSuggestionIndex.value = -1
 }
@@ -208,7 +213,7 @@ const handleKeydown = (event) => {
         type="text"
         v-model="searchQuery"
         class="terminal-input"
-        :placeholder="currentWordIndex === 0 ? 'Best/Worst...' : 'Best music/ad...'"
+        :placeholder="currentWordIndex === 0 ? 'best...' : '...'"
         @input="handleInput"
         @click="handleClick"
         @keydown="handleKeydown"
