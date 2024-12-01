@@ -3,20 +3,20 @@
  * FilterNav Component Requirements:
  * 
  * Input Field:
- * - Allows two-word combinations (e.g., "Best music", "Worst ad")
- * - First word must be from firstWordSuggestions list
- * - Second word must be from secondWordSuggestions list
+ * - Allows multiple-word combinations based on configured sequence
+ * - Each word must be from its corresponding list in wordLists.lists
+ * - Word sequence is defined by wordLists.sequence
  * 
  * Suggestion Behavior:
  * 1. Word Selection:
  *    - Shows suggestions based on cursor position in input
  *    - Shows suggestions whenever a word is clicked
- *    - After selecting first word:
- *      a) If second word isn't set, show second word suggestions
- *      b) If second word is set, don't show any suggestions automatically
- *    - When changing first word with second word present:
- *      - Preserves the second word
- *      - Updates only the first word
+ *    - After selecting a word:
+ *      a) If next word isn't set, show next word suggestions
+ *      b) If next word is set, don't show any suggestions automatically
+ *    - When changing a word with subsequent words present:
+ *      - Preserves subsequent words
+ *      - Updates only the current word
  *      - Maintains cursor position
  *      - Doesn't show suggestions automatically
  * 
@@ -41,6 +41,11 @@
  * - Highlights currently selected suggestion
  * - Shows appropriate suggestions filtered by current input
  * - Maintains proper spacing between words
+ * 
+ * Configuration:
+ * - Uses wordLists object containing:
+ *   - sequence: Array defining the order of word types
+ *   - lists: Object containing named arrays of valid words for each type
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
@@ -61,39 +66,52 @@ watch(selectedValue, (newValue) => {
 // @TODO add validation for the existence of selectedRegion.name
 
 const searchQuery = ref('')
-const firstWordSuggestions = ['best', 'new', 'random', 'most undisliked']
-const secondWordSuggestions = ['music','art', 'poem', 'post', 'ad']
+
+// Replace the wordLists and wordSequence with a single configuration object
+const wordLists = {
+  sequence: ['adjectives', 'contentTypes'],
+  lists: {
+    adjectives: ['best', 'new', 'random', 'most undisliked'],
+    contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
+    // Add more lists as needed
+  }
+}
+
 const showSuggestions = ref(false)
 
 const cursorPosition = ref(0)
 
+// Replace currentWordIndex computed property
 const currentWordIndex = computed(() => {
   const fullText = searchQuery.value
   if (!fullText) return 0
   
-  const spaceIndex = fullText.indexOf(' ')
-  if (spaceIndex === -1) return 0 // No space found, editing first word
+  const words = fullText.split(' ')
+  let position = 0
+  let currentIndex = 0
   
-  // If cursor is before or at the space, we're editing first word
-  if (cursorPosition.value <= spaceIndex) return 0
+  for (let i = 0; i < words.length; i++) {
+    const wordLength = words[i].length
+    if (cursorPosition.value <= position + wordLength) {
+      return i
+    }
+    position += wordLength + 1 // +1 for space
+  }
   
-  // If cursor is after the space, we're editing second word
-  return 1
+  return words.length
 })
 
+// Update filteredSuggestions computed property
 const filteredSuggestions = computed(() => {
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
   const currentWord = words[currentWordIndex.value] || ''
-  const suggestions = currentWordIndex.value === 0 ? firstWordSuggestions : secondWordSuggestions
+  const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
+  const suggestions = wordLists.lists[currentListType] || []
   
-  // If word is complete and clicked, show all suggestions for current word type
-  if (showSuggestions.value && 
-      ((currentWordIndex.value === 0 && firstWordSuggestions.includes(currentWord)) ||
-       (currentWordIndex.value === 1 && secondWordSuggestions.includes(currentWord)))) {
+  if (showSuggestions.value && suggestions.includes(currentWord)) {
     return suggestions
   }
   
-  // Otherwise filter based on input
   if (!currentWord) return suggestions
   return suggestions.filter(s => 
     s.toLowerCase().startsWith(currentWord.toLowerCase())
@@ -109,16 +127,12 @@ const handleClick = (event) => {
   selectedSuggestionIndex.value = -1
 }
 
+// Update handleInput function
 const handleInput = (event) => {
   cursorPosition.value = event.target.selectionStart
-  console.log('⌨️ Input handler - New cursor position:', cursorPosition.value)
   
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-  if (words.length <= 2) {
-    showSuggestions.value = true
-  } else {
-    showSuggestions.value = false
-  }
+  showSuggestions.value = words.length <= wordLists.sequence.length
 }
 
 const handleFocusOut = (event) => {
@@ -128,24 +142,20 @@ const handleFocusOut = (event) => {
   }
 }
 
+// Update selectSuggestion function
 const selectSuggestion = (suggestion) => {
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
+  const newWords = [...words]
+  newWords[currentWordIndex.value] = suggestion
   
-  if (currentWordIndex.value === 0) {
-    // When selecting first word, preserve second word if it exists
-    const secondWord = words[1] || ''
-    searchQuery.value = suggestion + (secondWord ? ` ${secondWord}` : ' ')
-    
-    // Only show suggestions if second word isn't set yet
-    showSuggestions.value = !secondWord
-    cursorPosition.value = searchQuery.value.length
-  } else {
-    // When selecting second word, preserve first word
-    const firstWord = words[0] || ''
-    searchQuery.value = firstWord ? `${firstWord} ${suggestion}` : `${suggestion}`
-    showSuggestions.value = false
-    cursorPosition.value = searchQuery.value.length
+  while (newWords.length <= currentWordIndex.value) {
+    newWords.push('')
   }
+  
+  searchQuery.value = newWords.join(' ') + 
+    (currentWordIndex.value >= wordLists.sequence.length - 1 ? '' : ' ')
+  showSuggestions.value = currentWordIndex.value < wordLists.sequence.length - 1
+  cursorPosition.value = searchQuery.value.length
 }
 
 // Add new ref for tracking selected suggestion
@@ -160,7 +170,7 @@ const handleKeydown = (event) => {
     
     // Show suggestions when cursor moves to valid position
     const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-    if (words.length <= 2) {
+    if (words.length <= wordLists.sequence.length) {
       showSuggestions.value = true
     }
   }
@@ -205,7 +215,11 @@ const handleKeydown = (event) => {
 </script>
 
 <template>
-  <div id="filter-nav" @focusout="handleFocusOut">
+  <div id="filter-nav" 
+    @focusout="handleFocusOut"
+    @mousedown.stop
+    @click.stop
+    @mousemove.stop>
     <p class="content-message">Filter Nav region: {{ selectedRegion.name }}</p>
 
     <div class="terminal-input-container">
