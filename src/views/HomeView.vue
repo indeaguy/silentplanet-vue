@@ -4,8 +4,8 @@ import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
 import { useThreePolysStore } from '../stores/polys.js'
 import { computed, provide, ref, onMounted, watch } from 'vue'
-import CameraDataDisplay from '@/components/modals/CameraDataDisplay.vue'
 import DataDisplay from '@/components/modals/DataDisplay.vue'
+import { useUserStore } from '../stores/user'
 
 //const selectedRegion = ref('')
 const threePolysStore = useThreePolysStore()
@@ -67,6 +67,16 @@ onMounted(() => {
 const getCameraData = () => {
   return worldStage.value?.getCameraData()
 }
+
+// Add this function for the new DataDisplay
+const getUserStoreData = () => {
+  const userStore = useUserStore()
+  return {
+    phraseHistory: userStore.phraseHistory,
+    user: userStore.user,
+    error: userStore.error
+  }
+}
 </script>
 
 <template>
@@ -83,12 +93,26 @@ const getCameraData = () => {
     <div class="region-content-wrapper">
       <RegionContent />
     </div>
-    <DataDisplay 
-      v-if="worldStage"
-      :data-source="getCameraData"
-      :use-matrix-style="true"
-      :custom-styles="{ bottom: '10px' }"
-    />
+    <div class="data-displays">
+      <DataDisplay 
+        v-if="worldStage"
+        :data-source="getCameraData"
+        :use-matrix-style="true"
+        :custom-styles="{ bottom: '10px' }"
+      />
+      <DataDisplay 
+        :data-source="getUserStoreData"
+        :use-matrix-style="true"
+        :custom-styles="{ 
+          bottom: '10px', 
+          right: '150px',
+          width: '100px', 
+          color: '#00ffff',
+          textShadow: '0 0 3px #00ffff',
+          border: '1px solid rgba(0, 255, 255, 0.2)'
+        }"
+      />
+    </div>
   </div>
 </template>
 
@@ -138,5 +162,18 @@ const getCameraData = () => {
 :deep(#world-container > *) {
   width: 100%;
   height: 100%;
+}
+
+.data-displays {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 101;
+  pointer-events: none;
+}
+
+.data-displays :deep(*) {
+  pointer-events: auto;
 }
 </style>

@@ -49,6 +49,7 @@
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
+import { useUserStore } from '../stores/user'
 
 // Selected Region Id
 const selectedRegion = inject('selectedRegion')
@@ -142,8 +143,11 @@ const handleFocusOut = (event) => {
   }
 }
 
+// Add store initialization after other refs
+const userStore = useUserStore()
+
 // Update selectSuggestion function
-const selectSuggestion = (suggestion) => {
+const selectSuggestion = async (suggestion) => {
   const words = searchQuery.value.split(' ').filter(word => word.length > 0)
   const newWords = [...words]
   newWords[currentWordIndex.value] = suggestion
@@ -154,6 +158,10 @@ const selectSuggestion = (suggestion) => {
   
   searchQuery.value = newWords.join(' ') + 
     (currentWordIndex.value >= wordLists.sequence.length - 1 ? '' : ' ')
+  
+  // Store the selected phrase in history
+  await userStore.addPhraseEntry(searchQuery.value, newWords)
+  
   showSuggestions.value = currentWordIndex.value < wordLists.sequence.length - 1
   cursorPosition.value = searchQuery.value.length
 }
