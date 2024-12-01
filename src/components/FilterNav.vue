@@ -40,7 +40,7 @@
  * - Maintains proper spacing between words
  */
 
-import { inject, defineEmits, ref, watch, computed } from 'vue'
+import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
 
 // Selected Region Id
 const selectedRegion = inject('selectedRegion')
@@ -66,35 +66,16 @@ const cursorPosition = ref(0)
 
 const currentWordIndex = computed(() => {
   const fullText = searchQuery.value
-  const words = fullText.split(' ')
+  if (!fullText) return 0
   
-  console.log('Computing word index - Cursor:', cursorPosition.value)
-  console.log('Computing word index - Full text:', fullText)
+  const spaceIndex = fullText.indexOf(' ')
+  if (spaceIndex === -1) return 0 // No space found, editing first word
   
-  let position = 0
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i]
-    const wordStart = position
-    const wordEnd = position + word.length
-    
-    console.log(`Word "${word}": ${wordStart}-${wordEnd}, Cursor: ${cursorPosition.value}`)
-    
-    if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
-      return i
-    }
-    
-    // Move position past word and the space
-    position = wordEnd + 1
-  }
+  // If cursor is before or at the space, we're editing first word
+  if (cursorPosition.value <= spaceIndex) return 0
   
-  // If cursor is at a space after a complete first word
-  if (words.length === 1 && 
-      firstWordSuggestions.includes(words[0]) && 
-      cursorPosition.value > words[0].length) {
-    return 1
-  }
-  
-  return 0
+  // If cursor is after the space, we're editing second word
+  return 1
 })
 
 const filteredSuggestions = computed(() => {
@@ -167,10 +148,10 @@ const selectedSuggestionIndex = ref(-1)
 
 // Modify handleKeydown to handle arrow navigation and selection
 const handleKeydown = (event) => {
-  // Update cursor position for all key events
+  // Update cursor position immediately for arrow keys
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    cursorPosition.value = event.target.selectionStart
-    console.log('⌨️ Arrow key - Cursor position:', cursorPosition.value)
+    // Immediately update cursor position
+    cursorPosition.value = event.target.selectionStart + (event.key === 'ArrowRight' ? 1 : -1)
     
     // Show suggestions when cursor moves to valid position
     const words = searchQuery.value.split(' ').filter(word => word.length > 0)
