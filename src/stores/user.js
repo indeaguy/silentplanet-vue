@@ -7,7 +7,7 @@ export const useUserStore = defineStore('user', {
     error: null,
     phraseHistory: {
       entries: [], // Complete input strings
-      phrases: {}, // Individual phrases by position
+      phrases: {}, // Individual phrases by position - will contain strings
       lastUsed: {} // Timestamp of last use for each phrase
     }
   }),
@@ -51,24 +51,30 @@ export const useUserStore = defineStore('user', {
         throw error
       }
     },
-    async addPhraseEntry(fullString, phraseArray) {
+    async addPhraseEntry(fullString, phraseArray, currentWordIndex) {
       try {
-        // Store the complete entry
-        this.phraseHistory.entries.push(fullString)
+        // Store the complete entry with metadata
+        this.phraseHistory.entries.push({
+          fullString,
+          currentWordIndex,
+          timestamp: Date.now()
+        })
 
-        // Store individual phrases by their position
+        // Create a new phrases object with the current values
+        const newPhrases = {}
         phraseArray.forEach((phrase, index) => {
-          if (!this.phraseHistory.phrases[index]) {
-            this.phraseHistory.phrases[index] = new Set()
-          }
-          this.phraseHistory.phrases[index].add(phrase)
+          if (!phrase || !phrase.trim()) return
+          newPhrases[index] = String(phrase).trim()
           this.phraseHistory.lastUsed[`${index}-${phrase}`] = Date.now()
         })
 
-        // Optionally persist to Supabase here
-        if (this.user) {
-          // await supabase.from('phrase_history').insert(...)
-        }
+        // Update the phrases object atomically
+        this.$patch((state) => {
+          state.phraseHistory.phrases = newPhrases
+        })
+
+        // Debug log
+        console.log('Debug - current phrases:', this.phraseHistory.phrases)
       } catch (error) {
         this.error = error.message
         throw error

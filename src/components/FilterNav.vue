@@ -160,7 +160,7 @@ const selectSuggestion = async (suggestion) => {
     (currentWordIndex.value >= wordLists.sequence.length - 1 ? '' : ' ')
   
   // Store the selected phrase in history
-  await userStore.addPhraseEntry(searchQuery.value, newWords)
+  await userStore.addPhraseEntry(searchQuery.value, newWords, currentWordIndex.value)
   
   showSuggestions.value = currentWordIndex.value < wordLists.sequence.length - 1
   cursorPosition.value = searchQuery.value.length

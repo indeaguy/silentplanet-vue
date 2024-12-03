@@ -72,7 +72,16 @@ const getCameraData = () => {
 const getUserStoreData = () => {
   const userStore = useUserStore()
   return {
-    phraseHistory: userStore.phraseHistory,
+    phraseHistory: {
+      entries: userStore.phraseHistory.entries,
+      phrases: Object.fromEntries(
+        Object.entries(userStore.phraseHistory.phrases).map(([key, set]) => [
+          key,
+          Array.from(set || new Set())
+        ])
+      ),
+      lastUsed: userStore.phraseHistory.lastUsed
+    },
     user: userStore.user,
     error: userStore.error
   }
