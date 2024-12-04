@@ -136,6 +136,24 @@ const handleClick = (event) => {
 const handleInput = (event) => {
   cursorPosition.value = event.target.selectionStart
   const phrases = userStore.phraseHistory.phrases
+  const inputText = event.target.value
+
+  // Check if a phrase is being deleted
+  for (const [index, phraseData] of Object.entries(phrases)) {
+    const { start, end } = phraseData
+    if (cursorPosition.value <= end && cursorPosition.value >= start) {
+      const phrase = inputText.substring(start, end).trim()
+      if (!phrase) {
+        // Remove the phrase if it's empty
+        delete phrases[index]
+        userStore.$patch((state) => {
+          state.phraseHistory.phrases = { ...phrases }
+        })
+      }
+      break
+    }
+  }
+
   showSuggestions.value = Object.keys(phrases).length <= wordLists.sequence.length
 }
 
