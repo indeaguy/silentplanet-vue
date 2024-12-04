@@ -46,6 +46,8 @@
  * - Uses wordLists object containing:
  *   - sequence: Array defining the order of word types
  *   - lists: Object containing named arrays of valid words for each type
+ * 
+ * @TODO: does this really need to be so coupled to the userStore?
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
@@ -84,38 +86,34 @@ const cursorPosition = ref(0)
 
 // Replace currentWordIndex computed property
 const currentWordIndex = computed(() => {
-  const fullText = searchQuery.value
-  if (!fullText) return 0
+  const phrases = userStore.phraseHistory.phrases
+  if (!phrases || Object.keys(phrases).length === 0) return 0
   
-  const words = fullText.split(' ')
-  let position = 0
-  let currentIndex = 0
-  
-  for (let i = 0; i < words.length; i++) {
-    const wordLength = words[i].length
-    if (cursorPosition.value <= position + wordLength) {
-      return i
+  for (const [index, phraseData] of Object.entries(phrases)) {
+    if (cursorPosition.value >= phraseData.start && cursorPosition.value <= phraseData.end) {
+      return parseInt(index)
     }
-    position += wordLength + 1 // +1 for space
   }
   
-  return words.length
+  // If cursor is after the last word, return next index
+  const lastPhrase = phrases[Object.keys(phrases).length - 1]
+  return cursorPosition.value > lastPhrase?.end ? Object.keys(phrases).length : 0
 })
 
 // Update filteredSuggestions computed property
 const filteredSuggestions = computed(() => {
-  const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-  const currentWord = words[currentWordIndex.value] || ''
+  const phrases = userStore.phraseHistory.phrases
+  const currentPhrase = phrases[currentWordIndex.value]?.phrase || ''
   const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
   const suggestions = wordLists.lists[currentListType] || []
   
-  if (showSuggestions.value && suggestions.includes(currentWord)) {
+  if (showSuggestions.value && suggestions.includes(currentPhrase)) {
     return suggestions
   }
   
-  if (!currentWord) return suggestions
+  if (!currentPhrase) return suggestions
   return suggestions.filter(s => 
-    s.toLowerCase().startsWith(currentWord.toLowerCase())
+    s.toLowerCase().startsWith(currentPhrase.toLowerCase())
   )
 })
 
@@ -131,9 +129,8 @@ const handleClick = (event) => {
 // Update handleInput function
 const handleInput = (event) => {
   cursorPosition.value = event.target.selectionStart
-  
-  const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-  showSuggestions.value = words.length <= wordLists.sequence.length
+  const phrases = userStore.phraseHistory.phrases
+  showSuggestions.value = Object.keys(phrases).length <= wordLists.sequence.length
 }
 
 const handleFocusOut = (event) => {
@@ -148,22 +145,31 @@ const userStore = useUserStore()
 
 // Update selectSuggestion function
 const selectSuggestion = async (suggestion) => {
-  const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-  const newWords = [...words]
-  newWords[currentWordIndex.value] = suggestion
+  const phrases = userStore.phraseHistory.phrases
+  const phraseArray = []
+  let fullString = ''
   
-  while (newWords.length <= currentWordIndex.value) {
-    newWords.push('')
+  // Build the new phrase array and string
+  for (let i = 0; i < wordLists.sequence.length; i++) {
+    if (i === currentWordIndex.value) {
+      phraseArray[i] = suggestion
+    } else if (phrases[i]) {
+      phraseArray[i] = phrases[i].phrase
+    } else {
+      phraseArray[i] = ''
+    }
   }
   
-  searchQuery.value = newWords.join(' ') + 
-    (currentWordIndex.value >= wordLists.sequence.length - 1 ? '' : ' ')
+  fullString = phraseArray.filter(p => p).join(' ')
+  if (currentWordIndex.value < wordLists.sequence.length - 1) {
+    fullString += ' '
+  }
   
-  // Store the selected phrase in history
-  await userStore.addPhraseEntry(searchQuery.value, newWords, currentWordIndex.value)
+  searchQuery.value = fullString
+  await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value)
   
   showSuggestions.value = currentWordIndex.value < wordLists.sequence.length - 1
-  cursorPosition.value = searchQuery.value.length
+  cursorPosition.value = fullString.length
 }
 
 // Add new ref for tracking selected suggestion
@@ -177,8 +183,8 @@ const handleKeydown = (event) => {
     cursorPosition.value = event.target.selectionStart + (event.key === 'ArrowRight' ? 1 : -1)
     
     // Show suggestions when cursor moves to valid position
-    const words = searchQuery.value.split(' ').filter(word => word.length > 0)
-    if (words.length <= wordLists.sequence.length) {
+    const phrases = userStore.phraseHistory.phrases
+    if (Object.keys(phrases).length <= wordLists.sequence.length) {
       showSuggestions.value = true
     }
   }
