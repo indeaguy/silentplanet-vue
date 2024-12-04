@@ -74,12 +74,7 @@ const getUserStoreData = () => {
   return {
     phraseHistory: {
       entries: userStore.phraseHistory.entries,
-      phrases: Object.fromEntries(
-        Object.entries(userStore.phraseHistory.phrases).map(([key, set]) => [
-          key,
-          Array.from(set || new Set())
-        ])
-      ),
+      phrases: userStore.phraseHistory.phrases,
       lastUsed: userStore.phraseHistory.lastUsed
     },
     user: userStore.user,

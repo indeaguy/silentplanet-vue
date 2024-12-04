@@ -7,7 +7,10 @@ export const useUserStore = defineStore('user', {
     error: null,
     phraseHistory: {
       entries: [], // Complete input strings
-      phrases: {}, // Individual phrases by position - will contain strings
+      phrases: {
+        // Each position will contain an array of phrase objects
+        // 0: [], 1: [], etc.
+      }, 
       lastUsed: {} // Timestamp of last use for each phrase
     }
   }),
@@ -53,28 +56,31 @@ export const useUserStore = defineStore('user', {
     },
     async addPhraseEntry(fullString, phraseArray, currentWordIndex) {
       try {
-        // Store the complete entry with metadata
         this.phraseHistory.entries.push({
           fullString,
           currentWordIndex,
           timestamp: Date.now()
         })
 
-        // Create a new phrases object with the current values
-        const newPhrases = {}
+        let characterIndex = 0
+        const updatedPhrases = {}
+        
         phraseArray.forEach((phrase, index) => {
           if (!phrase || !phrase.trim()) return
-          newPhrases[index] = String(phrase).trim()
+          
+          updatedPhrases[index] = {
+            phrase,
+            start: characterIndex,
+            end: characterIndex + phrase.length
+          }
+          
           this.phraseHistory.lastUsed[`${index}-${phrase}`] = Date.now()
+          characterIndex += phrase.length + 1 // +1 for the space
         })
 
-        // Update the phrases object atomically
         this.$patch((state) => {
-          state.phraseHistory.phrases = newPhrases
+          state.phraseHistory.phrases = updatedPhrases
         })
-
-        // Debug log
-        console.log('Debug - current phrases:', this.phraseHistory.phrases)
       } catch (error) {
         this.error = error.message
         throw error

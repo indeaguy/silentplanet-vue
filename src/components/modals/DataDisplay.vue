@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
 
 .copy-button {
   position: absolute;
-  top: 2px;
+  bottom: 2px;
   right: 2px;
   padding: 0px 2px;
   background: rgba(0, 255, 0, 0.1);
@@ -132,6 +132,7 @@ onBeforeUnmount(() => {
   transition: opacity 0.2s, background-color 0.2s;
   font-size: 8px;
   line-height: 1.2;
+  top: unset;
 }
 
 .data-display-container:hover .copy-button {
