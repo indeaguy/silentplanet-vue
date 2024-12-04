@@ -9,7 +9,7 @@
  * 
  * Suggestion Behavior:
  * 1. Word Selection:
- *    - Shows suggestions based on cursor position in input
+ *    - Shows suggestions based on cursor position relative to phrase boundaries
  *    - Shows suggestions whenever a word is clicked
  *    - After selecting a word:
  *      a) If next word isn't set, show next word suggestions
@@ -28,14 +28,17 @@
  *    - Shift+Up moves cursor to start of input
  *    - Shift+Down moves cursor to end of input
  *    - Left/Right arrows update suggestions based on cursor position
- *    - Cursor position determines which word's suggestions are shown
+ *    - Cursor position determines which word's suggestions are shown based on phrase boundaries
  * 
  * 3. Cursor Position:
- *    - Tracks cursor position to determine active word
- *    - Updates suggestions based on which word is being edited
+ *    - Uses phraseHistory.phrases to determine word boundaries
+ *    - Each phrase object contains:
+ *      - phrase: The actual word
+ *      - start: Starting cursor position
+ *      - end: Ending cursor position
+ *    - Updates suggestions based on which phrase boundary contains cursor
  *    - Supports arrow key navigation within input text
- *    - Maintains cursor position after selecting a word (doesn't jump to end)
- *    - Shows correct word suggestions based on cursor position relative to space character
+ *    - Maintains cursor position after selecting a word
  * 
  * Visual Feedback:
  * - Highlights currently selected suggestion
@@ -47,7 +50,10 @@
  *   - sequence: Array defining the order of word types
  *   - lists: Object containing named arrays of valid words for each type
  * 
- * @TODO: does this really need to be so coupled to the userStore?
+ * State Management:
+ * - Integrates with userStore to maintain phrase history
+ * - phraseHistory.phrases stores word positions and boundaries
+ * - Uses phrase boundaries instead of spaces for word detection
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
@@ -246,6 +252,9 @@ const handleKeydown = (event) => {
         @click="handleClick"
         @keydown="handleKeydown"
         @focus="handleInput"
+        autocomplete="off"
+        name="filter-search"
+        spellcheck="false"
       >
       <div v-if="showSuggestions && filteredSuggestions.length" class="suggestions">
         <div 
