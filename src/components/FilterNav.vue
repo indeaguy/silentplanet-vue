@@ -223,6 +223,56 @@ const selectedSuggestionIndex = ref(-1)
 
 // Modify handleKeydown to handle arrow navigation and selection
 const handleKeydown = (event) => {
+  if (event.key === 'Backspace') {
+    const phrases = userStore.phraseHistory.phrases
+    const cursorPos = event.target.selectionStart
+    
+    // Find which phrase we're in or at the end of
+    let targetPhraseIndex = null
+    Object.entries(phrases).forEach(([index, phrase]) => {
+      if (cursorPos > phrase.start && cursorPos <= phrase.end + 1) {
+        targetPhraseIndex = parseInt(index)
+      }
+    })
+    
+    console.log('Target phrase index:', targetPhraseIndex)
+    
+    if (targetPhraseIndex !== null) {
+      event.preventDefault()
+      
+      // Create new phrases object without current phrase
+      const updatedPhrases = { ...phrases }
+      delete updatedPhrases[targetPhraseIndex]
+      
+      // Update store
+      userStore.$patch((state) => {
+        state.phraseHistory.phrases = updatedPhrases
+      })
+      
+      // Rebuild search query without the deleted phrase
+      const phraseArray = []
+      Object.entries(updatedPhrases).forEach(([index, data]) => {
+        phraseArray[index] = data.phrase
+      })
+      searchQuery.value = phraseArray.filter(p => p).join(' ')
+      
+      // Move cursor to end of previous word or start
+      const prevPhrase = phrases[targetPhraseIndex - 1]
+      if (prevPhrase) {
+        cursorPosition.value = prevPhrase.end + 1
+        nextTick(() => {
+          event.target.setSelectionRange(prevPhrase.end + 1, prevPhrase.end + 1)
+        })
+      } else {
+        cursorPosition.value = 0
+        nextTick(() => {
+          event.target.setSelectionRange(0, 0)
+        })
+      }
+      return
+    }
+  }
+
   // Update cursor position immediately for arrow keys
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
     // Immediately update cursor position
