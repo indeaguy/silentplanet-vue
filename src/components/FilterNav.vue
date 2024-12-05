@@ -78,10 +78,11 @@ const searchQuery = ref('')
 
 // Replace the wordLists and wordSequence with a single configuration object
 const wordLists = {
-  sequence: ['adjectives', 'contentTypes'],
+  sequence: ['adjectives', 'contentTypes', 'preposition'],
   lists: {
     adjectives: ['best', 'new', 'random', 'most undisliked'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
+    preposition: ['in', 'from'],
     // Add more lists as needed
   },
   addSpaceAfter: ['adjectives'] // Words that should automatically add a space
