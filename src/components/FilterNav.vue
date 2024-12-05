@@ -85,7 +85,7 @@ const wordLists = {
     preposition: ['in', 'from'],
     // Add more lists as needed
   },
-  addSpaceAfter: ['adjectives'] // Words that should automatically add a space
+  addSpaceAfter: ['adjectives', 'contentTypes'] // Words that should automatically add a space
 }
 
 const showSuggestions = ref(false)
