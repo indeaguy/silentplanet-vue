@@ -19,6 +19,13 @@
  *      - Updates only the current word
  *      - Maintains cursor position
  *      - Doesn't show suggestions automatically
+ *    - Stops showing suggestions when:
+ *      a) All available phrases in the sequence are filled
+ *      b) Previous words are not valid phrases
+ *      c) Maximum number of phrases is reached
+ *    - Allows suggestions when:
+ *      a) Starting fresh with no phrases
+ *      b) Current phrase is valid
  * 
  * 2. Keyboard Navigation:
  *    - Up/Down arrows navigate through suggestions when suggestions are visible
@@ -115,20 +122,62 @@ const filteredSuggestions = computed(() => {
   const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
   const suggestions = wordLists.lists[currentListType] || []
   
-  if (showSuggestions.value && suggestions.includes(currentPhrase)) {
+  // Don't show suggestions if we've filled all available phrases
+  if (Object.keys(phrases).length >= wordLists.sequence.length) {
+    return []
+  }
+  
+  // Get the current word being typed based on cursor position
+  const words = searchQuery.value.split(' ')
+  let typedWord = ''
+  let charCount = 0
+  for (let i = 0; i < words.length; i++) {
+    if (charCount <= cursorPosition.value && 
+        cursorPosition.value <= charCount + words[i].length) {
+      typedWord = words[i]
+      break
+    }
+    charCount += words[i].length + 1 // +1 for space
+  }
+  
+  // Allow suggestions if:
+  // 1. Starting fresh (no phrases) OR
+  // 2. Current phrase is valid
+  const isStartingFresh = Object.keys(phrases).length === 0
+  const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase)
+  
+  if (showSuggestions.value && (isStartingFresh || isValidPhrase)) {
+    // Filter suggestions based on typed input
+    if (typedWord) {
+      return suggestions.filter(s => 
+        s.toLowerCase().startsWith(typedWord.toLowerCase())
+      )
+    }
     return suggestions
   }
   
-  if (!currentPhrase) return suggestions
-  return suggestions.filter(s => 
-    s.toLowerCase().startsWith(currentPhrase.toLowerCase())
-  )
+  return []
 })
 
 const updateSuggestionState = (position) => {
   cursorPosition.value = position
   const phrases = userStore.phraseHistory.phrases
-  showSuggestions.value = Object.keys(phrases).length <= wordLists.sequence.length
+  
+  // Don't show suggestions if we've filled all available phrases
+  if (Object.keys(phrases).length >= wordLists.sequence.length) {
+    showSuggestions.value = false
+    return
+  }
+  
+  const currentPhrase = phrases[currentWordIndex.value]?.phrase || ''
+  const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
+  const suggestions = wordLists.lists[currentListType] || []
+  
+  const isStartingFresh = Object.keys(phrases).length === 0
+  const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase)
+  
+  showSuggestions.value = (isStartingFresh || isValidPhrase) && 
+    Object.keys(phrases).length < wordLists.sequence.length
 }
 
 const handleClick = (event) => {
