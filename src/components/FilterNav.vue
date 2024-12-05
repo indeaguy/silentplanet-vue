@@ -83,7 +83,8 @@ const wordLists = {
     adjectives: ['best', 'new', 'random', 'most undisliked'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
     // Add more lists as needed
-  }
+  },
+  addSpaceAfter: ['adjectives'] // Words that should automatically add a space
 }
 
 const showSuggestions = ref(false)
@@ -189,8 +190,16 @@ const selectSuggestion = async (suggestion) => {
   }
   
   fullString = phraseArray.filter(p => p).join(' ')
-  if (currentWordIndex.value < wordLists.sequence.length - 1) {
+  // Add space if current word type is in addSpaceAfter list AND next word isn't set
+  const currentWordType = wordLists.sequence[currentWordIndex.value]
+  const nextWordIndex = currentWordIndex.value + 1
+  const hasNextWord = phraseArray[nextWordIndex] !== undefined && phraseArray[nextWordIndex] !== ''
+  
+  if (wordLists.addSpaceAfter.includes(currentWordType) && !hasNextWord) {
     fullString += ' '
+  } else if (currentWordIndex.value < wordLists.sequence.length - 1) {
+    // Keep existing behavior for last word check
+    //fullString += ' '
   }
   
   searchQuery.value = fullString
