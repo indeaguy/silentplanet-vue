@@ -284,8 +284,6 @@ const handleKeydown = (event) => {
       }
     })
     
-    console.log('Target phrase index:', targetPhraseIndex)
-    
     if (targetPhraseIndex !== null) {
       event.preventDefault()
       
@@ -318,6 +316,9 @@ const handleKeydown = (event) => {
           event.target.setSelectionRange(0, 0)
         })
       }
+      
+      // Ensure suggestions are shown for the current position
+      updateSuggestionState(cursorPosition.value)
       return
     }
   }
