@@ -123,18 +123,19 @@ const filteredSuggestions = computed(() => {
   )
 })
 
-const handleClick = (event) => {
-  cursorPosition.value = event.target.selectionStart
-  console.log('🖱️ Click handler - New cursor position:', cursorPosition.value)
-  
-  // Always show suggestions and reset selection
-  showSuggestions.value = true
-  selectedSuggestionIndex.value = -1
+const updateSuggestionState = (position) => {
+  cursorPosition.value = position
+  const phrases = userStore.phraseHistory.phrases
+  showSuggestions.value = Object.keys(phrases).length <= wordLists.sequence.length
 }
 
-// Update handleInput function
+const handleClick = (event) => {
+  updateSuggestionState(event.target.selectionStart)
+}
+
 const handleInput = (event) => {
-  cursorPosition.value = event.target.selectionStart
+  updateSuggestionState(event.target.selectionStart)
+  
   const phrases = userStore.phraseHistory.phrases
   const inputText = event.target.value
 
@@ -158,8 +159,6 @@ const handleInput = (event) => {
       break
     }
   }
-
-  showSuggestions.value = Object.keys(phrases).length <= wordLists.sequence.length
 }
 
 const handleFocusOut = (event) => {
@@ -294,7 +293,6 @@ const handleKeydown = (event) => {
         @input="handleInput"
         @click="handleClick"
         @keydown="handleKeydown"
-        @focus="handleInput"
         autocomplete="off"
         name="filter-search"
         spellcheck="false"
