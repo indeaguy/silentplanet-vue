@@ -140,25 +140,33 @@ const handleInput = (event) => {
   
   const phrases = userStore.phraseHistory.phrases
   const inputText = event.target.value
+  const phrasesToDelete = []
 
-  // Check if a phrase is being deleted
+  // Check all phrases that might be affected by the deletion
   for (const [index, phraseData] of Object.entries(phrases)) {
     const { start, end } = phraseData
-    if (cursorPosition.value <= end && cursorPosition.value >= start) {
-      const phrase = inputText.substring(start, end).trim()
-      if (!phrase) {
-        // Remove the phrase from the input field
-        delete phrases[index]
-        userStore.$patch((state) => {
-          state.phraseHistory.phrases = { ...phrases }
-        })
-        
-        // Update the input field to remove the phrase
-        const beforePhrase = inputText.substring(0, start).trim()
-        const afterPhrase = inputText.substring(end).trim()
-        searchQuery.value = `${beforePhrase} ${afterPhrase}`.trim()
-      }
-      break
+    // Check if any part of the phrase was in the deleted region
+    const phraseText = inputText.substring(start, end).trim()
+    if (!phraseText) {
+      phrasesToDelete.push(index)
+    }
+  }
+
+  // If any phrases need to be deleted
+  if (phrasesToDelete.length > 0) {
+    const updatedPhrases = { ...phrases }
+    phrasesToDelete.forEach(index => {
+      delete updatedPhrases[index]
+    })
+
+    // Update the store with the remaining phrases
+    userStore.$patch((state) => {
+      state.phraseHistory.phrases = updatedPhrases
+    })
+
+    // If all phrases were deleted, just set searchQuery to empty
+    if (Object.keys(updatedPhrases).length === 0) {
+      searchQuery.value = ''
     }
   }
 }
