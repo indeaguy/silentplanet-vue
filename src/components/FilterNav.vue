@@ -144,11 +144,16 @@ const handleInput = (event) => {
     if (cursorPosition.value <= end && cursorPosition.value >= start) {
       const phrase = inputText.substring(start, end).trim()
       if (!phrase) {
-        // Remove the phrase if it's empty
+        // Remove the phrase from the input field
         delete phrases[index]
         userStore.$patch((state) => {
           state.phraseHistory.phrases = { ...phrases }
         })
+        
+        // Update the input field to remove the phrase
+        const beforePhrase = inputText.substring(0, start).trim()
+        const afterPhrase = inputText.substring(end).trim()
+        searchQuery.value = `${beforePhrase} ${afterPhrase}`.trim()
       }
       break
     }
@@ -248,6 +253,26 @@ const handleKeydown = (event) => {
     event.preventDefault()
     selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
     selectedSuggestionIndex.value = -1
+  }
+
+  // Handle escape key to restore the last deleted phrase
+  if (event.key === 'Escape') {
+    const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
+    if (lastEntry) {
+      searchQuery.value = lastEntry.fullString
+      userStore.$patch((state) => {
+        state.phraseHistory.phrases = lastEntry.phraseArray.reduce((acc, phrase, index) => {
+          if (phrase) {
+            acc[index] = {
+              phrase,
+              start: acc[index - 1] ? acc[index - 1].end + 1 : 0,
+              end: (acc[index - 1] ? acc[index - 1].end + 1 : 0) + phrase.length
+            }
+          }
+          return acc
+        }, {})
+      })
+    }
   }
 }
 </script>
