@@ -87,7 +87,7 @@ const searchQuery = ref('')
 const wordLists = {
   sequence: ['adjectives', 'contentTypes', 'preposition'],
   lists: {
-    adjectives: ['best', 'new', 'random', 'most undisliked'],
+    adjectives: ['best', 'new', 'random', 'most undisliked', 'most cheese flavored'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
     preposition: ['in', 'from'],
     // Add more lists as needed
@@ -131,9 +131,13 @@ const filteredSuggestions = computed(() => {
   const words = searchQuery.value.split(' ')
   let typedWord = ''
   let charCount = 0
+  
+  // Find the word at cursor position, accounting for spaces
   for (let i = 0; i < words.length; i++) {
-    if (charCount <= cursorPosition.value && 
-        cursorPosition.value <= charCount + words[i].length) {
+    const wordStart = charCount
+    const wordEnd = charCount + words[i].length
+    
+    if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
       typedWord = words[i]
       break
     }
@@ -150,7 +154,7 @@ const filteredSuggestions = computed(() => {
     // Filter suggestions based on typed input
     if (typedWord) {
       return suggestions.filter(s => 
-        s.toLowerCase().startsWith(typedWord.toLowerCase())
+        s.toLowerCase().includes(typedWord.toLowerCase())
       )
     }
     return suggestions
@@ -176,8 +180,19 @@ const updateSuggestionState = (position) => {
   const isStartingFresh = Object.keys(phrases).length === 0
   const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase)
   
-  showSuggestions.value = (isStartingFresh || isValidPhrase) && 
+  // Set showSuggestions first
+  const shouldShowSuggestions = (isStartingFresh || isValidPhrase) && 
     Object.keys(phrases).length < wordLists.sequence.length
+
+  // Only update if the value is changing to avoid triggering the watcher unnecessarily
+  if (showSuggestions.value !== shouldShowSuggestions) {
+    showSuggestions.value = shouldShowSuggestions
+  }
+
+  // If showing suggestions, ensure first option is selected
+  if (shouldShowSuggestions && suggestions.length > 0) {
+    selectedSuggestionIndex.value = 0
+  }
 }
 
 const handleClick = (event) => {
@@ -194,26 +209,22 @@ const handleInput = (event) => {
   // Check all phrases that might be affected by the deletion
   for (const [index, phraseData] of Object.entries(phrases)) {
     const { start, end } = phraseData
-    // Check if any part of the phrase was in the deleted region
     const phraseText = inputText.substring(start, end).trim()
     if (!phraseText) {
       phrasesToDelete.push(index)
     }
   }
 
-  // If any phrases need to be deleted
   if (phrasesToDelete.length > 0) {
     const updatedPhrases = { ...phrases }
     phrasesToDelete.forEach(index => {
       delete updatedPhrases[index]
     })
 
-    // Update the store with the remaining phrases
     userStore.$patch((state) => {
       state.phraseHistory.phrases = updatedPhrases
     })
 
-    // If all phrases were deleted, just set searchQuery to empty
     if (Object.keys(updatedPhrases).length === 0) {
       searchQuery.value = ''
     }
@@ -269,6 +280,15 @@ const selectSuggestion = async (suggestion) => {
 
 // Add new ref for tracking selected suggestion
 const selectedSuggestionIndex = ref(-1)
+
+// Update the watcher to be more aggressive about selecting the first option
+watch([showSuggestions, filteredSuggestions], ([show, suggestions]) => {
+  if (show && suggestions.length > 0) {
+    selectedSuggestionIndex.value = 0
+  } else {
+    selectedSuggestionIndex.value = -1
+  }
+}, { immediate: true })
 
 // Modify handleKeydown to handle arrow navigation and selection
 const handleKeydown = (event) => {
@@ -354,9 +374,8 @@ const handleKeydown = (event) => {
   if (event.key === 'ArrowDown') {
     event.preventDefault()
     if (!showSuggestions.value) {
-      // Show suggestions when pressing down arrow
       showSuggestions.value = true
-      selectedSuggestionIndex.value = -1
+      // The watcher will handle selecting the first suggestion
     } else {
       selectedSuggestionIndex.value = Math.min(
         selectedSuggestionIndex.value + 1,
@@ -365,7 +384,11 @@ const handleKeydown = (event) => {
     }
   } else if (event.key === 'ArrowUp' && showSuggestions.value) {
     event.preventDefault()
-    selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
+    if (selectedSuggestionIndex.value <= 0) {
+      selectedSuggestionIndex.value = -1  // Clear selection
+    } else {
+      selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
+    }
   } else if (event.key === 'Enter' && selectedSuggestionIndex.value >= 0) {
     event.preventDefault()
     selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
