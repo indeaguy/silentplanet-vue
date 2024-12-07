@@ -232,6 +232,10 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   
   // Reset selection
   selectedSuggestionIndex.value = -1
+  
+  // Add this: Force update suggestion state after selection
+  await nextTick()
+  updateSuggestionState(cursorPosition.value)
 }
 
 // Update filteredSuggestions computed property
