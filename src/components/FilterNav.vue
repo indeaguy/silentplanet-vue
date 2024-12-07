@@ -28,7 +28,19 @@
  *      a) Starting fresh with no phrases
  *      b) Current phrase is valid
  * 
- * 2. Keyboard Navigation:
+ * 2. Custom Phrases:
+ *    - Allows adding custom phrases when no exact match exists
+ *    - Custom phrases are stored per word type in customPhrases
+ *    - Custom phrases are properly removed when:
+ *      a) Backspacing over the phrase
+ *      b) Manually deleting the phrase
+ *      c) Replacing with a different phrase
+ *    - Shows "+" icon next to custom phrase suggestions
+ *    - Maintains spaces within multi-word custom phrases
+ *    - Prevents duplicate custom phrases
+ *    - Only offers custom phrase option when no partial matches exist
+ * 
+ * 3. Keyboard Navigation:
  *    - Up/Down arrows navigate through suggestions when suggestions are visible
  *    - Down arrow shows suggestions for current word position when suggestions are hidden
  *    - Enter key selects highlighted suggestion
@@ -38,13 +50,15 @@
  *    - Shift+Down moves cursor to end of input
  *    - Left/Right arrows update suggestions based on cursor position
  *    - Cursor position determines which word's suggestions are shown based on phrase boundaries
+ *    - Backspace removes entire phrases when cursor is within phrase boundaries
  * 
- * 3. Cursor Position:
+ * 4. Cursor Position:
  *    - Uses phraseHistory.phrases to determine word boundaries
  *    - Each phrase object contains:
  *      - phrase: The actual word
  *      - start: Starting cursor position
  *      - end: Ending cursor position
+ *      - isCustom: Whether this is a custom phrase
  *    - Updates suggestions based on which phrase boundary contains cursor
  *    - Supports arrow key navigation within input text
  *    - Maintains cursor position after selecting a word
@@ -53,16 +67,20 @@
  * - Highlights currently selected suggestion
  * - Shows appropriate suggestions filtered by current input
  * - Maintains proper spacing between words
+ * - Indicates custom phrases with "+" icon
  * 
  * Configuration:
  * - Uses wordLists object containing:
  *   - sequence: Array defining the order of word types
  *   - lists: Object containing named arrays of valid words for each type
+ *   - addSpaceAfter: Array of word types that should auto-add spaces
  * 
  * State Management:
  * - Integrates with userStore to maintain phrase history
  * - phraseHistory.phrases stores word positions and boundaries
+ * - phraseHistory.customPhrases tracks custom phrases by list type
  * - Uses phrase boundaries instead of spaces for word detection
+ * - Maintains last used timestamps for phrase suggestions
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
