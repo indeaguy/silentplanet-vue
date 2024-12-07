@@ -7,11 +7,9 @@ export const useUserStore = defineStore('user', {
     error: null,
     phraseHistory: {
       entries: [], // Complete input strings
-      phrases: {
-        // Each position will contain an array of phrase objects
-        // 0: [], 1: [], etc.
-      }, 
-      lastUsed: {} // Timestamp of last use for each phrase
+      phrases: {}, 
+      lastUsed: {},
+      customPhrases: {} // New property to track custom phrases by list type
     }
   }),
   actions: {
@@ -54,7 +52,7 @@ export const useUserStore = defineStore('user', {
         throw error
       }
     },
-    async addPhraseEntry(fullString, phraseArray, currentWordIndex) {
+    async addPhraseEntry(fullString, phraseArray, currentWordIndex, customListType = null) {
       try {
         this.phraseHistory.entries.push({
           fullString,
@@ -71,12 +69,26 @@ export const useUserStore = defineStore('user', {
           updatedPhrases[index] = {
             phrase,
             start: characterIndex,
-            end: characterIndex + phrase.length
+            end: characterIndex + phrase.length,
+            isCustom: index === currentWordIndex && customListType !== null // Track if this is a custom phrase
           }
           
           this.phraseHistory.lastUsed[`${index}-${phrase}`] = Date.now()
-          characterIndex += phrase.length + 1 // +1 for the space
+          characterIndex += phrase.length + 1
         })
+
+        // Track custom phrase in the new customPhrases property
+        if (customListType) {
+          if (!this.phraseHistory.customPhrases[customListType]) {
+            this.phraseHistory.customPhrases[customListType] = new Set()
+          }
+          this.phraseHistory.customPhrases[customListType].add(phraseArray[currentWordIndex])
+        }
+
+        let soup = {
+          phrases: updatedPhrases,
+          customPhrases: this.phraseHistory.customPhrases
+        }
 
         this.$patch((state) => {
           state.phraseHistory.phrases = updatedPhrases
