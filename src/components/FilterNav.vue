@@ -117,11 +117,109 @@ const currentWordIndex = computed(() => {
   return cursorPosition.value > lastPhrase?.end ? Object.keys(phrases).length : 0
 })
 
+// Add this debug helper
+const debugState = computed(() => ({
+  currentWordIndex: currentWordIndex.value,
+  phrases: userStore.phraseHistory.phrases,
+  typedWord: searchQuery.value,
+  cursorPosition: cursorPosition.value
+}))
+
+// Helper function to get current input at cursor
+const getCurrentInputAtCursor = () => {
+  const phrases = userStore.phraseHistory.phrases
+  const words = searchQuery.value.split(' ')
+  let charCount = 0
+  
+  // Find the current phrase we're typing
+  for (let i = 0; i < words.length; i++) {
+    const wordStart = charCount
+    const wordEnd = charCount + words[i].length
+    
+    if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
+      // Only return words after the last complete phrase
+      const lastPhraseIndex = currentWordIndex.value - 1
+      const lastPhrase = phrases[lastPhraseIndex]
+      
+      if (lastPhrase) {
+        // Get only the text after the last complete phrase
+        const startPos = lastPhrase.end + 1
+        return searchQuery.value.substring(startPos).trim()
+      }
+      
+      return words[i]
+    }
+    charCount += words[i].length + 1
+  }
+  
+  // If cursor is at the end, return everything after the last complete phrase
+  const lastPhraseIndex = currentWordIndex.value - 1
+  const lastPhrase = phrases[lastPhraseIndex]
+  if (lastPhrase) {
+    return searchQuery.value.substring(lastPhrase.end + 1).trim()
+  }
+  
+  return words[words.length - 1] || ''
+}
+
+// Update selectSuggestion function
+const selectSuggestion = async (suggestion, customListType = null) => {
+  const phrases = userStore.phraseHistory.phrases
+  const phraseArray = []
+  let fullString = ''
+  
+  // If suggestion is an object, get its text
+  const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
+  
+  // Build the new phrase array and string
+  for (let i = 0; i < wordLists.sequence.length; i++) {
+    if (i === currentWordIndex.value) {
+      phraseArray[i] = suggestionText
+    } else if (phrases[i]) {
+      phraseArray[i] = phrases[i].phrase
+    }
+  }
+  
+  fullString = phraseArray.filter(p => p).join(' ')
+  
+  // Determine if this is a custom phrase
+  const currentListType = wordLists.sequence[currentWordIndex.value]
+  const isCustom = !wordLists.lists[currentListType].includes(suggestionText)
+  
+  if (isCustom) {
+    customListType = currentListType
+  }
+  
+  // Add space if needed
+  if (wordLists.addSpaceAfter.includes(currentListType) || 
+      isCustom || 
+      currentWordIndex.value < wordLists.sequence.length - 1) {
+    fullString += ' '
+  }
+  
+  // Update the store first
+  await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType)
+  
+  // Then update the UI
+  searchQuery.value = fullString
+  cursorPosition.value = fullString.length
+  
+  // Always show suggestions for next phrase unless we're at the end
+  const shouldShowSuggestions = currentWordIndex.value < wordLists.sequence.length - 1
+  
+  // Force suggestions to close and reopen if needed
+  showSuggestions.value = false
+  await nextTick()
+  showSuggestions.value = shouldShowSuggestions
+  
+  // Reset selection
+  selectedSuggestionIndex.value = -1
+}
+
 // Update filteredSuggestions computed property
 const filteredSuggestions = computed(() => {
   const phrases = userStore.phraseHistory.phrases
-  const currentPhrase = phrases[currentWordIndex.value]?.phrase || ''
-  const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
+  const currentListType = wordLists.sequence[currentWordIndex.value]
   const suggestions = wordLists.lists[currentListType] || []
   
   // Don't show suggestions if we've filled all available phrases
@@ -129,40 +227,46 @@ const filteredSuggestions = computed(() => {
     return []
   }
   
-  // Get the current word being typed based on cursor position
-  const words = searchQuery.value.split(' ')
-  let typedWord = ''
-  let charCount = 0
+  // Get current input at cursor position
+  const currentInput = getCurrentInputAtCursor()
   
-  // Find the word at cursor position, accounting for spaces
-  for (let i = 0; i < words.length; i++) {
-    const wordStart = charCount
-    const wordEnd = charCount + words[i].length
-    
-    if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
-      typedWord = words[i]
-      break
-    }
-    charCount += words[i].length + 1 // +1 for space
+  if (!showSuggestions.value) {
+    return []
   }
   
-  // Allow suggestions if:
-  // 1. Starting fresh (no phrases) OR
-  // 2. Current phrase is valid
-  const isStartingFresh = Object.keys(phrases).length === 0
-  const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase)
-  
-  if (showSuggestions.value && (isStartingFresh || isValidPhrase)) {
-    // Filter suggestions based on typed input
-    if (typedWord) {
-      return suggestions.filter(s => 
-        s.toLowerCase().includes(typedWord.toLowerCase())
-      )
-    }
+  // Check if we're at a word boundary (just after a selected word)
+  const previousWord = phrases[currentWordIndex.value - 1]
+  const isAtWordBoundary = previousWord && 
+    cursorPosition.value === previousWord.end + 1
+
+  // If we're at a word boundary, show all suggestions for next word
+  if (isAtWordBoundary) {
     return suggestions
   }
   
-  return []
+  // Otherwise, filter suggestions based on input
+  if (currentInput) {
+    const searchTerm = currentInput.trimEnd().toLowerCase()
+    const matchingSuggestions = suggestions.filter(s => 
+      s.toLowerCase().includes(searchTerm)
+    )
+    
+    const hasExactMatch = suggestions.some(s => 
+      s.toLowerCase() === searchTerm.toLowerCase()
+    )
+    const isSelectedPhrase = phrases[currentWordIndex.value]?.phrase === searchTerm
+    
+    if (searchTerm && !hasExactMatch && !isSelectedPhrase) {
+      matchingSuggestions.push({
+        text: searchTerm,
+        isCustom: true
+      })
+    }
+    
+    return matchingSuggestions
+  }
+  
+  return suggestions
 })
 
 const updateSuggestionState = (position) => {
@@ -214,6 +318,19 @@ const handleInput = (event) => {
     const phraseText = inputText.substring(start, end).trim()
     if (!phraseText) {
       phrasesToDelete.push(index)
+      
+      // If it's a custom phrase, remove it from customPhrases
+      if (phraseData.isCustom) {
+        const listType = wordLists.sequence[index]
+        if (userStore.phraseHistory.customPhrases[listType]) {
+          userStore.phraseHistory.customPhrases[listType].delete(phraseData.phrase)
+          
+          // If the Set is empty, remove the entire list type entry
+          if (userStore.phraseHistory.customPhrases[listType].size === 0) {
+            delete userStore.phraseHistory.customPhrases[listType]
+          }
+        }
+      }
     }
   }
 
@@ -225,6 +342,8 @@ const handleInput = (event) => {
 
     userStore.$patch((state) => {
       state.phraseHistory.phrases = updatedPhrases
+      // Also update the customPhrases in the same patch
+      state.phraseHistory.customPhrases = { ...userStore.phraseHistory.customPhrases }
     })
 
     if (Object.keys(updatedPhrases).length === 0) {
@@ -242,46 +361,6 @@ const handleFocusOut = (event) => {
 
 // Add store initialization after other refs
 const userStore = useUserStore()
-
-// Update selectSuggestion function
-const selectSuggestion = async (suggestion, customListType = null) => {
-  const phrases = userStore.phraseHistory.phrases
-  const phraseArray = []
-  let fullString = ''
-  
-  // Build the new phrase array and string
-  for (let i = 0; i < wordLists.sequence.length; i++) {
-    if (i === currentWordIndex.value) {
-      phraseArray[i] = suggestion
-    } else if (phrases[i]) {
-      phraseArray[i] = phrases[i].phrase
-    } else {
-      phraseArray[i] = ''
-    }
-  }
-  
-  fullString = phraseArray.filter(p => p).join(' ')
-  
-  // Always add space if:
-  // 1. Current word type is in addSpaceAfter list OR
-  // 2. It's a custom phrase OR
-  // 3. It's not the last word in sequence
-  const currentWordType = wordLists.sequence[currentWordIndex.value]
-  const isLastWord = currentWordIndex.value === wordLists.sequence.length - 1
-  const isCustomPhrase = customListType !== null
-  
-  if (wordLists.addSpaceAfter.includes(currentWordType) || 
-      isCustomPhrase || 
-      !isLastWord) {
-    fullString += ' '
-  }
-  
-  searchQuery.value = fullString
-  await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType)
-  
-  showSuggestions.value = currentWordIndex.value < wordLists.sequence.length - 1
-  cursorPosition.value = fullString.length
-}
 
 // Add new ref for tracking selected suggestion
 const selectedSuggestionIndex = ref(-1)
@@ -443,65 +522,86 @@ const handleKeydown = (event) => {
     }
     
     if (typedWord) {
-      event.preventDefault()
-      // If it matches a suggestion, use it normally
-      const matchingSuggestion = suggestions.find(s => 
-        s.toLowerCase() === typedWord.toLowerCase()
+      // Find any matching suggestions (including partial matches)
+      const matchingSuggestions = suggestions.filter(s => 
+        s.toLowerCase().includes(typedWord.toLowerCase())
       )
-      
-      if (matchingSuggestion) {
-        selectSuggestion(matchingSuggestion)
-      } else {
-        // Check if previous word was a custom phrase
-        const prevIndex = currentWordIndex.value - 1
-        const prevPhrase = phrases[prevIndex]
+
+      // Only prevent default and handle if:
+      // 1. There's an exact match OR
+      // 2. There are no matching suggestions at all (allowing custom phrase)
+      if (matchingSuggestions.length === 0 || 
+          matchingSuggestions.some(s => s.toLowerCase() === typedWord.toLowerCase())) {
+        event.preventDefault()
         
-        // If previous phrase is custom AND current word isn't in suggestions, append to previous
-        if (prevPhrase?.isCustom && !suggestions.some(s => 
+        const exactMatch = suggestions.find(s => 
           s.toLowerCase() === typedWord.toLowerCase()
-        )) {
-          // Append to previous custom phrase
-          const combinedPhrase = `${prevPhrase.phrase} ${typedWord}`
-          const prevListType = wordLists.sequence[prevIndex]
+        )
+        
+        if (exactMatch) {
+          selectSuggestion(exactMatch)
+        } else if (matchingSuggestions.length === 0) {
+          // Only handle custom phrases if there are no matching suggestions
+          const prevIndex = currentWordIndex.value - 1
+          const prevPhrase = phrases[prevIndex]
           
-          // Remove the current word from the input
-          const updatedPhrases = { ...phrases }
-          delete updatedPhrases[currentWordIndex.value]
-          
-          // Update the previous phrase
-          updatedPhrases[prevIndex] = {
-            ...prevPhrase,
-            phrase: combinedPhrase,
-            end: prevPhrase.start + combinedPhrase.length
+          if (prevPhrase?.isCustom && !suggestions.some(s => 
+            s.toLowerCase() === typedWord.toLowerCase()
+          )) {
+            // Append to previous custom phrase
+            const combinedPhrase = `${prevPhrase.phrase} ${typedWord}`
+            const prevListType = wordLists.sequence[prevIndex]
+            
+            // Remove the current word from the input
+            const updatedPhrases = { ...phrases }
+            delete updatedPhrases[currentWordIndex.value]
+            
+            // Update the previous phrase
+            updatedPhrases[prevIndex] = {
+              ...prevPhrase,
+              phrase: combinedPhrase,
+              end: prevPhrase.start + combinedPhrase.length
+            }
+            
+            // Update store
+            userStore.$patch((state) => {
+              state.phraseHistory.phrases = updatedPhrases
+            })
+            
+            // Update custom phrases
+            if (!userStore.phraseHistory.customPhrases[prevListType]) {
+              userStore.phraseHistory.customPhrases[prevListType] = new Set()
+            }
+            userStore.phraseHistory.customPhrases[prevListType].delete(prevPhrase.phrase)
+            userStore.phraseHistory.customPhrases[prevListType].add(combinedPhrase)
+            
+            // Update search query
+            const phraseArray = []
+            Object.entries(updatedPhrases).forEach(([index, data]) => {
+              phraseArray[index] = data.phrase
+            })
+            searchQuery.value = phraseArray.filter(p => p).join(' ') + ' '
+            cursorPosition.value = searchQuery.value.length
+          } else {
+            selectSuggestion(typedWord, currentListType)
           }
-          
-          // Update store
-          userStore.$patch((state) => {
-            state.phraseHistory.phrases = updatedPhrases
-          })
-          
-          // Update custom phrases
-          if (!userStore.phraseHistory.customPhrases[prevListType]) {
-            userStore.phraseHistory.customPhrases[prevListType] = new Set()
-          }
-          userStore.phraseHistory.customPhrases[prevListType].delete(prevPhrase.phrase)
-          userStore.phraseHistory.customPhrases[prevListType].add(combinedPhrase)
-          
-          // Update search query
-          const phraseArray = []
-          Object.entries(updatedPhrases).forEach(([index, data]) => {
-            phraseArray[index] = data.phrase
-          })
-          searchQuery.value = phraseArray.filter(p => p).join(' ') + ' '
-          cursorPosition.value = searchQuery.value.length
-        } else {
-          // If it's a new custom word, add it normally
-          selectSuggestion(typedWord, currentListType)
         }
-        return
       }
     }
   }
+}
+
+// Add these helper functions
+const getSuggestionKey = (suggestion) => {
+  return typeof suggestion === 'string' ? suggestion : suggestion.text
+}
+
+const getSuggestionText = (suggestion) => {
+  return typeof suggestion === 'string' ? suggestion : suggestion.text
+}
+
+const isCustomSuggestion = (suggestion) => {
+  return typeof suggestion === 'object' && suggestion.isCustom
 }
 </script>
 
@@ -529,15 +629,19 @@ const handleKeydown = (event) => {
       <div v-if="showSuggestions && filteredSuggestions.length" class="suggestions">
         <div 
           v-for="(suggestion, index) in filteredSuggestions" 
-          :key="suggestion"
+          :key="getSuggestionKey(suggestion)"
           class="suggestion-item"
-          :class="{ 'suggestion-selected': index === selectedSuggestionIndex }"
-          @mousedown.prevent="selectSuggestion(suggestion)"
+          :class="{
+            'suggestion-selected': index === selectedSuggestionIndex,
+            'custom-suggestion': isCustomSuggestion(suggestion)
+          }"
+          @mousedown.prevent="selectSuggestion(getSuggestionText(suggestion))"
           @mouseover="selectedSuggestionIndex = index"
           @mouseout="selectedSuggestionIndex = -1"
           tabindex="0"
         >
-          {{ suggestion }}
+          <span v-if="isCustomSuggestion(suggestion)" class="custom-icon">+</span>
+          {{ getSuggestionText(suggestion) }}
         </div>
       </div>
     </div>
