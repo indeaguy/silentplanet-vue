@@ -87,7 +87,7 @@ const searchQuery = ref('')
 const wordLists = {
   sequence: ['adjectives', 'contentTypes', 'preposition'],
   lists: {
-    adjectives: ['best', 'new', 'random', 'most undisliked', 'most cheese flavored'],
+    adjectives: ['best', 'new', 'new cheese', 'random', 'most undisliked', 'most cheese flavored'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
     preposition: ['in', 'from'],
     // Add more lists as needed
@@ -412,6 +412,40 @@ const handleKeydown = (event) => {
           return acc
         }, {})
       })
+    }
+  }
+
+  // Add space key handling before other key checks
+  if (event.key === ' ') {
+    const phrases = userStore.phraseHistory.phrases
+    const currentListType = wordLists.sequence[currentWordIndex.value]
+    const suggestions = wordLists.lists[currentListType] || []
+    
+    // Get the current word being typed
+    const words = searchQuery.value.split(' ')
+    let typedWord = ''
+    let charCount = 0
+    
+    for (let i = 0; i < words.length; i++) {
+      const wordStart = charCount
+      const wordEnd = charCount + words[i].length
+      
+      if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
+        typedWord = words[i]
+        break
+      }
+      charCount += words[i].length + 1
+    }
+    
+    // Check if typed word exactly matches a suggestion
+    const matchingSuggestion = suggestions.find(s => 
+      s.toLowerCase() === typedWord.toLowerCase()
+    )
+    
+    if (matchingSuggestion) {
+      event.preventDefault()
+      selectSuggestion(matchingSuggestion)
+      return
     }
   }
 }
