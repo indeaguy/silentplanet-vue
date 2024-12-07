@@ -11,6 +11,7 @@
  * 1. Word Selection:
  *    - Shows suggestions based on cursor position relative to phrase boundaries
  *    - Shows suggestions whenever a word is clicked
+ *    - Filters suggestions to include matches anywhere in the word (not just prefix matches)
  *    - After selecting a word:
  *      a) If next word isn't set, show next word suggestions
  *      b) If next word is set, don't show any suggestions automatically
@@ -31,6 +32,7 @@
  *    - Up/Down arrows navigate through suggestions when suggestions are visible
  *    - Down arrow shows suggestions for current word position when suggestions are hidden
  *    - Enter key selects highlighted suggestion
+ *    - Space key selects exact matching suggestion for current word
  *    - Navigating up past first suggestion clears selection
  *    - Shift+Up moves cursor to start of input
  *    - Shift+Down moves cursor to end of input
