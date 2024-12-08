@@ -422,29 +422,26 @@ const handleKeydown = (event) => {
         state.phraseHistory.phrases = updatedPhrases
       })
       
-      // Rebuild search query without the deleted phrase
+      // Rebuild search query, adding spaces after each phrase that:
+      // 1. Is in addSpaceAfter list OR
+      // 2. Has a subsequent phrase position available
       const phraseArray = []
       Object.entries(updatedPhrases).forEach(([index, data]) => {
         phraseArray[index] = data.phrase
+        if (wordLists.addSpaceAfter.includes(wordLists.sequence[index]) || 
+            parseInt(index) < wordLists.sequence.length - 1) {
+          phraseArray[index] += ' '
+        }
       })
-      searchQuery.value = phraseArray.filter(p => p).join(' ')
+      searchQuery.value = phraseArray.filter(p => p).join('')
       
-      // Move cursor to end of previous word or start
-      const prevPhrase = phrases[targetPhraseIndex - 1]
-      if (prevPhrase) {
-        cursorPosition.value = prevPhrase.end + 1
-        nextTick(() => {
-          event.target.setSelectionRange(prevPhrase.end + 1, prevPhrase.end + 1)
-        })
-      } else {
-        cursorPosition.value = 0
-        nextTick(() => {
-          event.target.setSelectionRange(0, 0)
-        })
-      }
+      // Show suggestions for the deleted position
+      showSuggestions.value = true
+      cursorPosition.value = searchQuery.value.length
+      nextTick(() => {
+        event.target.setSelectionRange(searchQuery.value.length, searchQuery.value.length)
+      })
       
-      // Ensure suggestions are shown for the current position
-      updateSuggestionState(cursorPosition.value)
       return
     }
   }
