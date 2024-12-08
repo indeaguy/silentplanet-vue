@@ -6,6 +6,10 @@
  * - Allows multiple-word combinations based on configured sequence
  * - Each word must be from its corresponding list in wordLists.lists
  * - Word sequence is defined by wordLists.sequence
+ * - Maintains proper spacing between phrases:
+ *   a) Adds space after phrases in wordLists.addSpaceAfter
+ *   b) Adds space after any phrase that has subsequent positions available
+ *   c) Preserves trailing spaces when deleting phrases
  * 
  * Suggestion Behavior:
  * 1. Word Selection:
