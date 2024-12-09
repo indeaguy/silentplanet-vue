@@ -109,14 +109,15 @@ const searchQuery = ref('')
 
 // Replace the wordLists and wordSequence with a single configuration object
 const wordLists = {
-  sequence: ['adjectives', 'contentTypes', 'preposition'],
+  sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
   lists: {
     adjectives: ['best', 'new', 'new cheese', 'random', 'most undisliked', 'most cheese flavored'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
     preposition: ['in', 'from'],
+    location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
     // Add more lists as needed
   },
-  addSpaceAfter: ['adjectives', 'contentTypes'] // Words that should automatically add a space
+  addSpaceAfter: ['adjectives', 'contentTypes', 'preposition'] // Words that should automatically add a space
 }
 
 const showSuggestions = ref(false)
@@ -193,6 +194,10 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   // If suggestion is an object, get its text
   const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
   
+  // Get current list type, defaulting to last sequence type if beyond bounds
+  const currentListType = wordLists.sequence[currentWordIndex.value] || 
+    wordLists.sequence[wordLists.sequence.length - 1]
+  
   // Build the new phrase array and string
   for (let i = 0; i < wordLists.sequence.length; i++) {
     if (i === currentWordIndex.value) {
@@ -204,15 +209,16 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   
   fullString = phraseArray.filter(p => p).join(' ')
   
-  // Determine if this is a custom phrase
-  const currentListType = wordLists.sequence[currentWordIndex.value]
-  const isCustom = !wordLists.lists[currentListType].includes(suggestionText)
+  // Determine if this is a custom phrase - handle case where we're beyond sequence bounds
+  const isCustom = currentListType ? 
+    !wordLists.lists[currentListType].includes(suggestionText) : 
+    true
   
   if (isCustom) {
-    customListType = currentListType
+    customListType = customListType || currentListType
   }
   
-  // Add space if needed
+  // Add space if needed - modified to always add space for custom phrases
   if (wordLists.addSpaceAfter.includes(currentListType) || 
       isCustom || 
       currentWordIndex.value < wordLists.sequence.length - 1) {
