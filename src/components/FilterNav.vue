@@ -46,6 +46,7 @@
  *      c) Replacing with a different phrase
  *    - Shows "+" icon next to custom phrase suggestions
  *    - Maintains spaces within multi-word custom phrases
+ *    - Allows freely adding spaces to custom phrases without requiring matches
  *    - Prevents duplicate custom phrases
  *    - Only offers custom phrase option when no partial matches exist
  * 
@@ -539,23 +540,15 @@ const handleKeydown = (event) => {
         s.toLowerCase() === typedWord.toLowerCase()
       )
 
-      // Only commit the phrase if:
-      // 1. It's an exact match AND there are no longer matching phrases
-      // 2. OR there are no matching suggestions at all (custom phrase)
+      // Only commit if it's an exact match with no longer matches
       const hasLongerMatches = matchingSuggestions.some(s => 
         s.toLowerCase().startsWith(typedWord.toLowerCase()) && 
         s.toLowerCase() !== typedWord.toLowerCase()
       )
 
-      if ((exactMatch && !hasLongerMatches) || matchingSuggestions.length === 0) {
+      if (exactMatch && !hasLongerMatches) {
         event.preventDefault()
-        
-        if (exactMatch) {
-          selectSuggestion(exactMatch)
-        } else {
-          // Handle custom phrase logic...
-          // [existing custom phrase handling code remains the same]
-        }
+        selectSuggestion(exactMatch)
       }
     }
   }
