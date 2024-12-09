@@ -10,6 +10,7 @@
  *   a) Adds space after phrases in wordLists.addSpaceAfter
  *   b) Adds space after any phrase that has subsequent positions available
  *   c) Preserves trailing spaces when deleting phrases
+ *   d) Preserves trailing spaces when filtering suggestions
  * 
  * Suggestion Behavior:
  * 1. Word Selection:
@@ -31,6 +32,10 @@
  *    - Allows suggestions when:
  *      a) Starting fresh with no phrases
  *      b) Current phrase is valid
+ *    - Space key behavior:
+ *      a) Only commits phrase on exact match when no longer matches exist
+ *      b) Preserves partial matches for multi-word phrases (e.g., "new cheese")
+ *      c) Allows continued typing for partial matches
  * 
  * 2. Custom Phrases:
  *    - Allows adding custom phrases when no exact match exists
