@@ -151,38 +151,18 @@ const debugState = computed(() => ({
 // Helper function to get current input at cursor
 const getCurrentInputAtCursor = () => {
   const phrases = userStore.phraseHistory.phrases
-  const words = searchQuery.value.split(' ')
-  let charCount = 0
-  
-  // Find the current phrase we're typing
-  for (let i = 0; i < words.length; i++) {
-    const wordStart = charCount
-    const wordEnd = charCount + words[i].length
-    
-    if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
-      // Only return words after the last complete phrase
-      const lastPhraseIndex = currentWordIndex.value - 1
-      const lastPhrase = phrases[lastPhraseIndex]
-      
-      if (lastPhrase) {
-        // Get only the text after the last complete phrase
-        const startPos = lastPhrase.end + 1
-        return searchQuery.value.substring(startPos).trim()
-      }
-      
-      return words[i]
-    }
-    charCount += words[i].length + 1
-  }
-  
-  // If cursor is at the end, return everything after the last complete phrase
+  // Instead of splitting by spaces, we'll work with the raw string
   const lastPhraseIndex = currentWordIndex.value - 1
   const lastPhrase = phrases[lastPhraseIndex]
+  
   if (lastPhrase) {
-    return searchQuery.value.substring(lastPhrase.end + 1).trim()
+    // Get text after the last complete phrase, preserving spaces
+    const startPos = lastPhrase.end + 1
+    return searchQuery.value.substring(startPos)
   }
   
-  return words[words.length - 1] || ''
+  // If no previous phrase, return the entire input
+  return searchQuery.value
 }
 
 // Update selectSuggestion function
@@ -254,37 +234,30 @@ const filteredSuggestions = computed(() => {
   const currentListType = wordLists.sequence[currentWordIndex.value]
   const suggestions = wordLists.lists[currentListType] || []
   
-  // Don't show suggestions if we've filled all available phrases
-  if (Object.keys(phrases).length >= wordLists.sequence.length) {
+  if (!showSuggestions.value || Object.keys(phrases).length >= wordLists.sequence.length) {
     return []
   }
   
-  // Get current input at cursor position
   const currentInput = getCurrentInputAtCursor()
   
-  if (!showSuggestions.value) {
-    return []
-  }
-  
-  // Check if we're at a word boundary (just after a selected word)
+  // Check if we're at a word boundary
   const previousWord = phrases[currentWordIndex.value - 1]
   const isAtWordBoundary = previousWord && 
     cursorPosition.value === previousWord.end + 1
 
-  // If we're at a word boundary, show all suggestions for next word
   if (isAtWordBoundary) {
     return suggestions
   }
   
-  // Otherwise, filter suggestions based on input
   if (currentInput) {
+    // Use trimEnd() only for the comparison, not for determining if input exists
     const searchTerm = currentInput.trimEnd().toLowerCase()
     const matchingSuggestions = suggestions.filter(s => 
       s.toLowerCase().includes(searchTerm)
     )
     
     const hasExactMatch = suggestions.some(s => 
-      s.toLowerCase() === searchTerm.toLowerCase()
+      s.toLowerCase() === searchTerm
     )
     const isSelectedPhrase = phrases[currentWordIndex.value]?.phrase === searchTerm
     
