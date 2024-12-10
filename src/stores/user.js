@@ -60,34 +60,36 @@ export const useUserStore = defineStore('user', {
           timestamp: Date.now()
         })
 
+        // Keep existing phrases and add/update the new one
+        const updatedPhrases = { ...this.phraseHistory.phrases }
         let characterIndex = 0
-        const updatedPhrases = {}
-        
-        phraseArray.forEach((phrase, index) => {
-          if (!phrase || !phrase.trim()) return
-          
-          updatedPhrases[index] = {
-            phrase,
-            start: characterIndex,
-            end: characterIndex + phrase.length,
-            isCustom: index === currentWordIndex && customListType !== null // Track if this is a custom phrase
+
+        // Process phrases in order to maintain correct character positions
+        for (let i = 0; i < phraseArray.length; i++) {
+          const phrase = phraseArray[i]
+          if (!phrase || !phrase.trim()) continue
+
+          // Only update if it's the current word or doesn't exist yet
+          if (i === currentWordIndex || !updatedPhrases[i]) {
+            updatedPhrases[i] = {
+              phrase,
+              start: characterIndex,
+              end: characterIndex + phrase.length,
+              isCustom: i === currentWordIndex ? customListType !== null : updatedPhrases[i]?.isCustom
+            }
+            
+            this.phraseHistory.lastUsed[`${i}-${phrase}`] = Date.now()
           }
           
-          this.phraseHistory.lastUsed[`${index}-${phrase}`] = Date.now()
-          characterIndex += phrase.length + 1
-        })
+          characterIndex = updatedPhrases[i].end + 1
+        }
 
-        // Track custom phrase in the new customPhrases property
+        // Track custom phrase if applicable
         if (customListType) {
           if (!this.phraseHistory.customPhrases[customListType]) {
             this.phraseHistory.customPhrases[customListType] = new Set()
           }
           this.phraseHistory.customPhrases[customListType].add(phraseArray[currentWordIndex])
-        }
-
-        let soup = {
-          phrases: updatedPhrases,
-          customPhrases: this.phraseHistory.customPhrases
         }
 
         this.$patch((state) => {

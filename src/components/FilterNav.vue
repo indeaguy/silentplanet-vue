@@ -359,6 +359,17 @@ const handleKeydown = (event) => {
     if (targetPhraseIndex !== null) {
       event.preventDefault()
       
+      // Get the phrase being deleted and its list type
+      const deletedPhrase = phrases[targetPhraseIndex]
+      const listType = wordLists.sequence[targetPhraseIndex]
+      
+      // If it was a custom phrase, remove it from customPhrases
+      if (deletedPhrase.isCustom && userStore.phraseHistory.customPhrases[listType]) {
+        userStore.$patch((state) => {
+          state.phraseHistory.customPhrases[listType].delete(deletedPhrase.phrase)
+        })
+      }
+      
       // Create new phrases object without current phrase
       const updatedPhrases = { ...phrases }
       delete updatedPhrases[targetPhraseIndex]
