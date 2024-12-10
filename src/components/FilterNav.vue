@@ -11,6 +11,7 @@
  *   b) Adds space after any phrase that has subsequent positions available
  *   c) Preserves trailing spaces when deleting phrases
  *   d) Preserves trailing spaces when filtering suggestions
+ *   e) Custom phrases follow same spacing rules as regular phrases based on addSpaceAfter
  * 
  * Suggestion Behavior:
  * 1. Word Selection:
@@ -120,12 +121,13 @@ const searchQuery = ref('')
 
 // Replace the wordLists and wordSequence with a single configuration object
 const wordLists = {
-  sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
+  sequence: ['adjectives', 'contentTypes', 'preposition', 'location', 'query'],
   lists: {
     adjectives: ['best', 'new', 'new cheese', 'random', 'most undisliked', 'most cheese flavored'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
     preposition: ['in', 'from'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
+    query: ['created on', 'created between'],
     // Add more lists as needed
   },
   addSpaceAfter: ['adjectives', 'contentTypes', 'preposition'] // Words that should automatically add a space
@@ -210,8 +212,7 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   }
   
   // Add space if needed - modified to respect addSpaceAfter rules for all phrases
-  if (wordLists.addSpaceAfter.includes(currentListType) || 
-      currentWordIndex.value < wordLists.sequence.length - 1) {
+  if ((wordLists.addSpaceAfter.includes(currentListType) &&  wordLists.addSpaceAfter.includes(currentListType))) {
     fullString += ' '
   }
   
@@ -234,6 +235,7 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   selectedSuggestionIndex.value = -1
   
   // Add this: Force update suggestion state after selection
+  // @TODO bad code smell?
   await nextTick()
   updateSuggestionState(cursorPosition.value)
 }
@@ -288,12 +290,6 @@ const updateSuggestionState = (position) => {
   cursorPosition.value = position
   const phrases = userStore.phraseHistory.phrases
   
-  // Don't show suggestions if we've filled all available phrases
-  if (Object.keys(phrases).length >= wordLists.sequence.length) {
-    showSuggestions.value = false
-    return
-  }
-  
   const currentPhrase = phrases[currentWordIndex.value]?.phrase || ''
   const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
   const suggestions = wordLists.lists[currentListType] || []
@@ -301,11 +297,21 @@ const updateSuggestionState = (position) => {
   const isStartingFresh = Object.keys(phrases).length === 0
   const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase)
   
-  // Set showSuggestions first
-  const shouldShowSuggestions = (isStartingFresh || isValidPhrase) && 
-    Object.keys(phrases).length < wordLists.sequence.length
+  // Check if cursor is at the start of a phrase
+  const hasLeadingSpace = position === 0 || searchQuery.value[position - 1] === ' '
+  const isExactMatch = currentPhrase && phrases[currentWordIndex.value]?.phrase === currentPhrase
+  
+  // Only show suggestions if:
+  // 1. Starting fresh, OR
+  // 2. Has a leading space and not an exact match, OR
+  // 3. Has a valid phrase but not an exact match
+  const shouldShowSuggestions = (
+    isStartingFresh || 
+    (hasLeadingSpace && !isExactMatch) ||
+    (isValidPhrase && !isExactMatch)
+  ) && Object.keys(phrases).length < wordLists.sequence.length
 
-  // Only update if the value is changing to avoid triggering the watcher unnecessarily
+  // Only update if the value is changing
   if (showSuggestions.value !== shouldShowSuggestions) {
     showSuggestions.value = shouldShowSuggestions
   }
