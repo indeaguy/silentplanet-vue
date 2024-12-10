@@ -91,6 +91,11 @@
  * - phraseHistory.customPhrases tracks custom phrases by list type
  * - Uses phrase boundaries instead of spaces for word detection
  * - Maintains last used timestamps for phrase suggestions
+ * - When adding/updating phrases:
+ *   a) Preserves existing phrase metadata for untouched phrases
+ *   b) Updates character positions sequentially to maintain proper boundaries
+ *   c) Only modifies isCustom flag for the current word being changed
+ *   d) Maintains proper spacing and positioning for the entire sequence
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
@@ -204,9 +209,8 @@ const selectSuggestion = async (suggestion, customListType = null) => {
     customListType = customListType || currentListType
   }
   
-  // Add space if needed - modified to always add space for custom phrases
+  // Add space if needed - modified to respect addSpaceAfter rules for all phrases
   if (wordLists.addSpaceAfter.includes(currentListType) || 
-      isCustom || 
       currentWordIndex.value < wordLists.sequence.length - 1) {
     fullString += ' '
   }
