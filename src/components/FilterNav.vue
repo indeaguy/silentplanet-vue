@@ -37,6 +37,23 @@
  *      a) Only commits phrase on exact match when no longer matches exist
  *      b) Preserves partial matches for multi-word phrases (e.g., "new cheese")
  *      c) Allows continued typing for partial matches
+ *    - Special Down Arrow Behavior:
+ *      When cursor is on an existing selected phrase with:
+ *      a) No leading space before cursor position AND
+ *      b) Currently selected phrase matches the one in store
+ *      Then:
+ *      1. First down arrow press:
+ *         - Show ALL available options for that phrase type
+ *         - Select first option
+ *      2. Subsequent down arrow presses:
+ *         - Navigate through all available options
+ *      3. If user starts typing:
+ *         - Clear the current phrase
+ *         - Return to normal filtered suggestion behavior
+ *      4. If user hits escape:
+ *         - Restore previous phrase state
+ *      5. If input loses focus:
+ *         - Reset to normal suggestion behavior
  * 
  * 2. Custom Phrases:
  *    - Allows adding custom phrases when no exact match exists
