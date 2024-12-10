@@ -12,6 +12,8 @@
  *   c) Preserves trailing spaces when deleting phrases
  *   d) Preserves trailing spaces when filtering suggestions
  *   e) Custom phrases follow same spacing rules as regular phrases based on addSpaceAfter
+ *   f) @TODO When backspacing at a space between phrases, should clear the phrase 
+ *      to the right of the cursor instead of removing the space
  * 
  * Suggestion Behavior:
  * 1. Word Selection:
