@@ -318,49 +318,6 @@ const handleClick = (event) => {
 
 const handleInput = (event) => {
   updateSuggestionState(event.target.selectionStart)
-  
-  const phrases = userStore.phraseHistory.phrases
-  const inputText = event.target.value
-  const phrasesToDelete = []
-
-  // Check all phrases that might be affected by the deletion
-  for (const [index, phraseData] of Object.entries(phrases)) {
-    const { start, end } = phraseData
-    const phraseText = inputText.substring(start, end).trim()
-    if (!phraseText) {
-      phrasesToDelete.push(index)
-      
-      // If it's a custom phrase, remove it from customPhrases
-      if (phraseData.isCustom) {
-        const listType = wordLists.sequence[index]
-        if (userStore.phraseHistory.customPhrases[listType]) {
-          userStore.phraseHistory.customPhrases[listType].delete(phraseData.phrase)
-          
-          // If the Set is empty, remove the entire list type entry
-          if (userStore.phraseHistory.customPhrases[listType].size === 0) {
-            delete userStore.phraseHistory.customPhrases[listType]
-          }
-        }
-      }
-    }
-  }
-
-  if (phrasesToDelete.length > 0) {
-    const updatedPhrases = { ...phrases }
-    phrasesToDelete.forEach(index => {
-      delete updatedPhrases[index]
-    })
-
-    userStore.$patch((state) => {
-      state.phraseHistory.phrases = updatedPhrases
-      // Also update the customPhrases in the same patch
-      state.phraseHistory.customPhrases = { ...userStore.phraseHistory.customPhrases }
-    })
-
-    if (Object.keys(updatedPhrases).length === 0) {
-      searchQuery.value = ''
-    }
-  }
 }
 
 const handleFocusOut = (event) => {
