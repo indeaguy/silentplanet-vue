@@ -123,7 +123,7 @@ const searchQuery = ref('')
 const wordLists = {
   sequence: ['adjectives', 'contentTypes', 'preposition', 'location', 'query'],
   lists: {
-    adjectives: ['best', 'new', 'new cheese', 'random', 'most undisliked', 'most cheese flavored'],
+    adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most disliked'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
     preposition: ['in', 'from'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
@@ -240,6 +240,9 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   updateSuggestionState(cursorPosition.value)
 }
 
+// Add a new ref to track when we want to show all suggestions
+const showAllSuggestions = ref(false)
+
 // Update filteredSuggestions computed property
 const filteredSuggestions = computed(() => {
   const phrases = userStore.phraseHistory.phrases
@@ -248,6 +251,11 @@ const filteredSuggestions = computed(() => {
   
   if (!showSuggestions.value || Object.keys(phrases).length >= wordLists.sequence.length) {
     return []
+  }
+
+  // If showAllSuggestions is true, return all suggestions for current type
+  if (showAllSuggestions.value) {
+    return suggestions
   }
   
   const currentInput = getCurrentInputAtCursor()
@@ -443,6 +451,35 @@ const handleKeydown = (event) => {
   // Handle suggestion navigation
   if (event.key === 'ArrowDown') {
     event.preventDefault()
+    const phrases = userStore.phraseHistory.phrases
+    const currentPhrase = phrases[currentWordIndex.value]
+    const position = event.target.selectionStart
+    const hasLeadingSpace = position === 0 || searchQuery.value[position - 1] === ' '
+
+    // Check if cursor is within a selected phrase and there's no leading space
+    if (!hasLeadingSpace && currentPhrase) {
+      if (!showAllSuggestions.value) {
+        // First down arrow press - show all suggestions
+        showAllSuggestions.value = true
+        showSuggestions.value = true
+        selectedSuggestionIndex.value = 0
+        
+        // Add one-time event listener to reset state when input loses focus
+        const resetState = () => {
+          showAllSuggestions.value = false
+          event.target.removeEventListener('blur', resetState)
+        }
+        event.target.addEventListener('blur', resetState, { once: true })
+      } else {
+        // Subsequent down arrow presses - navigate through suggestions
+        selectedSuggestionIndex.value = Math.min(
+          selectedSuggestionIndex.value + 1,
+          filteredSuggestions.value.length - 1
+        )
+      }
+      return
+    }
+
     if (!showSuggestions.value) {
       showSuggestions.value = true
       // The watcher will handle selecting the first suggestion
@@ -529,6 +566,11 @@ const handleKeydown = (event) => {
         selectSuggestion(exactMatch)
       }
     }
+  }
+
+  // Reset showAllSuggestions when user starts typing
+  if (event.key.length === 1 || event.key === 'Backspace') {
+    showAllSuggestions.value = false
   }
 }
 
