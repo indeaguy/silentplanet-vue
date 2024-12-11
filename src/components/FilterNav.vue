@@ -231,7 +231,7 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   }
   
   // Add space if needed - modified to respect addSpaceAfter rules for all phrases
-  if ((wordLists.addSpaceAfter.includes(currentListType) &&  wordLists.addSpaceAfter.includes(currentListType))) {
+  if (wordLists.addSpaceAfter.includes(currentListType)) {
     fullString += ' '
   }
   
@@ -547,44 +547,34 @@ const handleKeydown = (event) => {
     const currentListType = wordLists.sequence[currentWordIndex.value]
     const suggestions = wordLists.lists[currentListType] || []
     
-    // Get the current word being typed
-    const words = searchQuery.value.split(' ')
-    let typedWord = ''
-    let charCount = 0
-    
-    for (let i = 0; i < words.length; i++) {
-      const wordStart = charCount
-      const wordEnd = charCount + words[i].length
-      
-      if (cursorPosition.value >= wordStart && cursorPosition.value <= wordEnd) {
-        typedWord = words[i]
-        break
-      }
-      charCount += words[i].length + 1
+    // Check if we're at the end of a valid phrase
+    const currentPhrase = phrases[currentWordIndex.value]
+    const isAtPhraseEnd = currentPhrase && 
+      cursorPosition.value === currentPhrase.end + 1
+
+    // If we're at the end of a valid phrase, allow the space
+    if (isAtPhraseEnd) {
+      return // Allow the space by not preventing default
     }
     
-    if (typedWord) {
-      // Find any matching suggestions (including partial matches)
-      const matchingSuggestions = suggestions.filter(s => 
-        s.toLowerCase().startsWith(typedWord.toLowerCase())
-      )
-      
+    // Get the current word being typed (only if not at a phrase end)
+    const currentInput = getCurrentInputAtCursor().trim()
+    
+    if (currentInput) {
       // Find exact matches
       const exactMatch = suggestions.find(s => 
-        s.toLowerCase() === typedWord.toLowerCase()
+        s.toLowerCase() === currentInput.toLowerCase()
       )
 
-      // Only commit if it's an exact match with no longer matches
-      const hasLongerMatches = matchingSuggestions.some(s => 
-        s.toLowerCase().startsWith(typedWord.toLowerCase()) && 
-        s.toLowerCase() !== typedWord.toLowerCase()
-      )
-
-      if (exactMatch && !hasLongerMatches) {
-        event.preventDefault()
+      // Only prevent default and select if it's an exact match
+      if (exactMatch) {
         selectSuggestion(exactMatch)
+        return
       }
     }
+    
+    // Allow the space in all other cases
+    return
   }
 
   // Reset showAllSuggestions when user starts typing
