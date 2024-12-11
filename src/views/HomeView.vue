@@ -81,7 +81,8 @@ const getUserStoreData = () => {
           key, 
           Array.from(set)
         ])
-      )
+      ),
+      selectedPhrase: userStore.phraseHistory.selectedPhrase
     },
     user: userStore.user,
     error: userStore.error

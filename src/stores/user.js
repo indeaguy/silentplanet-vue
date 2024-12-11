@@ -9,7 +9,14 @@ export const useUserStore = defineStore('user', {
       entries: [], // Complete input strings
       phrases: {}, 
       lastUsed: {},
-      customPhrases: {} // New property to track custom phrases by list type
+      customPhrases: {}, // New property to track custom phrases by list type
+      selectedPhrase: {  // New property to track current phrase
+        index: null,
+        phrase: null,
+        start: null,
+        end: null,
+        isCustom: false
+      }
     }
   }),
   actions: {
@@ -108,6 +115,22 @@ export const useUserStore = defineStore('user', {
                  (this.phraseHistory.lastUsed[`${position}-${a}`] || 0)
         })
         .slice(0, limit)
+    },
+    async updateSelectedPhrase(index, phrase, start, end, isCustom = false) {
+      try {
+        this.$patch((state) => {
+          state.phraseHistory.selectedPhrase = {
+            index,
+            phrase,
+            start,
+            end,
+            isCustom
+          }
+        })
+      } catch (error) {
+        this.error = error.message
+        throw error
+      }
     }
   }
 }) 

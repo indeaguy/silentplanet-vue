@@ -140,20 +140,18 @@ const searchQuery = ref('')
 
 // Replace the wordLists and wordSequence with a single configuration object
 const wordLists = {
-  sequence: ['adjectives', 'contentTypes', 'preposition', 'location', 'query'],
+  sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
   lists: {
     adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most disliked'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
-    preposition: ['in', 'from'],
+    preposition: ['in', 'from', 'created on', 'created between'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
-    query: ['created on', 'created between'],
     // Add more lists as needed
   },
   addSpaceAfter: ['adjectives', 'preposition'] // Words that should automatically add a space
 }
 
 const showSuggestions = ref(false)
-
 const cursorPosition = ref(0)
 
 // Replace currentWordIndex computed property
@@ -262,6 +260,17 @@ const selectSuggestion = async (suggestion, customListType = null) => {
 // Add a new ref to track when we want to show all suggestions
 const showAllSuggestions = ref(false)
 
+// Add new ref to track which phrase we're showing all suggestions for
+const showingAllSuggestionsForIndex = ref(null)
+
+// Update resetSuggestionState
+const resetSuggestionState = () => {
+  showAllSuggestions.value = false
+  showSuggestions.value = false
+  selectedSuggestionIndex.value = -1
+  showingAllSuggestionsForIndex.value = null
+}
+
 // Update filteredSuggestions computed property
 const filteredSuggestions = computed(() => {
   const phrases = userStore.phraseHistory.phrases
@@ -272,9 +281,10 @@ const filteredSuggestions = computed(() => {
     return []
   }
 
-  // If showAllSuggestions is true, return all suggestions for current type
-  if (showAllSuggestions.value) {
-    return suggestions
+  // If showAllSuggestions is true, return ALL suggestions for current type
+  if (showAllSuggestions.value && currentListType) {
+    console.log('Showing all suggestions for:', currentListType) // Debug log
+    return wordLists.lists[currentListType]
   }
   
   const currentInput = getCurrentInputAtCursor()
@@ -313,48 +323,70 @@ const filteredSuggestions = computed(() => {
   return suggestions
 })
 
-const updateSuggestionState = (position) => {
+// Update updateSuggestionState function
+const updateSuggestionState = async (position) => {
+  const previousIndex = currentWordIndex.value
   cursorPosition.value = position
-  const phrases = userStore.phraseHistory.phrases
   
-  const currentPhrase = phrases[currentWordIndex.value]?.phrase || ''
-  const currentListType = wordLists.sequence[currentWordIndex.value] || wordLists.sequence[wordLists.sequence.length - 1]
+  // If we moved to a different phrase, reset suggestion state
+  if (previousIndex !== currentWordIndex.value) {
+    resetSuggestionState()
+  }
+  
+  const phrases = userStore.phraseHistory.phrases
+  const currentPhrase = phrases[currentWordIndex.value]
+  
+  // Update the selected phrase in the store
+  if (currentPhrase) {
+    await userStore.updateSelectedPhrase(
+      currentWordIndex.value,
+      currentPhrase.phrase,
+      currentPhrase.start,
+      currentPhrase.end,
+      currentPhrase.isCustom
+    )
+  } else {
+    // Clear selected phrase if cursor is not within any phrase
+    await userStore.updateSelectedPhrase(null, null, null, null, false)
+  }
+
+  // Rest of the function remains the same...
+  const currentListType = wordLists.sequence[currentWordIndex.value]
   const suggestions = wordLists.lists[currentListType] || []
   
   const isStartingFresh = Object.keys(phrases).length === 0
-  const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase)
+  const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase.phrase)
   
-  // Check if cursor is at the start of a phrase
   const hasLeadingSpace = position === 0 || searchQuery.value[position - 1] === ' '
-  const isExactMatch = currentPhrase && phrases[currentWordIndex.value]?.phrase === currentPhrase
+  const isExactMatch = currentPhrase && phrases[currentWordIndex.value]?.phrase === currentPhrase.phrase
   
-  // Only show suggestions if:
-  // 1. Starting fresh, OR
-  // 2. Has a leading space and not an exact match, OR
-  // 3. Has a valid phrase but not an exact match
   const shouldShowSuggestions = (
     isStartingFresh || 
     (hasLeadingSpace && !isExactMatch) ||
     (isValidPhrase && !isExactMatch)
   ) && Object.keys(phrases).length < wordLists.sequence.length
 
-  // Only update if the value is changing
   if (showSuggestions.value !== shouldShowSuggestions) {
     showSuggestions.value = shouldShowSuggestions
   }
 
-  // If showing suggestions, ensure first option is selected
   if (shouldShowSuggestions && suggestions.length > 0) {
     selectedSuggestionIndex.value = 0
   }
 }
 
-const handleClick = (event) => {
-  updateSuggestionState(event.target.selectionStart)
+const handleClick = async (event) => {
+  // Wait for the browser to update the selection
+  await nextTick()
+  const clickPosition = event.target.selectionStart
+  await updateSuggestionState(clickPosition)
 }
 
-const handleInput = (event) => {
-  updateSuggestionState(event.target.selectionStart)
+// Update handleInput to reset state when typing
+const handleInput = async (event) => {
+  resetSuggestionState() // Reset state when user starts typing
+  const inputPosition = event.target.selectionStart
+  await updateSuggestionState(inputPosition)
 }
 
 const handleFocusOut = (event) => {
@@ -400,6 +432,9 @@ const handleKeydown = (event) => {
       const deletedPhrase = phrases[targetPhraseIndex]
       const listType = wordLists.sequence[targetPhraseIndex]
       
+      // Store the position where we'll put the cursor after deletion
+      const newCursorPosition = deletedPhrase.start
+      
       // If it was a custom phrase, remove it from customPhrases
       if (deletedPhrase.isCustom && userStore.phraseHistory.customPhrases[listType]) {
         userStore.$patch((state) => {
@@ -416,9 +451,7 @@ const handleKeydown = (event) => {
         state.phraseHistory.phrases = updatedPhrases
       })
       
-      // Rebuild search query, adding spaces after each phrase that:
-      // 1. Is in addSpaceAfter list OR
-      // 2. Has a subsequent phrase position available
+      // Rebuild search query
       const phraseArray = []
       Object.entries(updatedPhrases).forEach(([index, data]) => {
         phraseArray[index] = data.phrase
@@ -431,9 +464,11 @@ const handleKeydown = (event) => {
       
       // Show suggestions for the deleted position
       showSuggestions.value = true
-      cursorPosition.value = searchQuery.value.length
+      cursorPosition.value = newCursorPosition
+      
+      // Set cursor position to start of deleted phrase
       nextTick(() => {
-        event.target.setSelectionRange(searchQuery.value.length, searchQuery.value.length)
+        event.target.setSelectionRange(newCursorPosition, newCursorPosition)
       })
       
       return
@@ -442,14 +477,13 @@ const handleKeydown = (event) => {
 
   // Update cursor position immediately for arrow keys
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    // Immediately update cursor position
-    cursorPosition.value = event.target.selectionStart + (event.key === 'ArrowRight' ? 1 : -1)
-    
-    // Show suggestions when cursor moves to valid position
-    const phrases = userStore.phraseHistory.phrases
-    if (Object.keys(phrases).length <= wordLists.sequence.length) {
-      showSuggestions.value = true
-    }
+    // Wait for the browser to update the selection
+    nextTick(() => {
+      const newPosition = event.target.selectionStart
+      cursorPosition.value = newPosition
+      updateSuggestionState(newPosition)
+    })
+    return
   }
 
   // Handle cursor movement with shift key
@@ -471,21 +505,40 @@ const handleKeydown = (event) => {
   if (event.key === 'ArrowDown') {
     event.preventDefault()
     const phrases = userStore.phraseHistory.phrases
-    const currentPhrase = phrases[currentWordIndex.value]
     const position = event.target.selectionStart
-    const hasLeadingSpace = position === 0 || searchQuery.value[position - 1] === ' '
+    
+    // Determine which phrase we're in based on cursor position
+    let currentPhrase = null
+    let phraseIndex = null
+    
+    Object.entries(phrases).forEach(([index, phrase]) => {
+      if (position >= phrase.start && position <= phrase.end) {
+        currentPhrase = phrase
+        phraseIndex = parseInt(index)
+      }
+    })
 
-    // Check if cursor is within a selected phrase and there's no leading space
-    if (!hasLeadingSpace && currentPhrase) {
+    // Check if cursor is within a phrase
+    if (currentPhrase) {
+      console.log('Cursor in phrase:', currentPhrase, 'at index:', phraseIndex)
+      
+      // If we're showing all suggestions for a different phrase, reset
+      if (showingAllSuggestionsForIndex.value !== null && 
+          showingAllSuggestionsForIndex.value !== phraseIndex) {
+        resetSuggestionState()
+      }
+      
       if (!showAllSuggestions.value) {
         // First down arrow press - show all suggestions
         showAllSuggestions.value = true
         showSuggestions.value = true
         selectedSuggestionIndex.value = 0
+        showingAllSuggestionsForIndex.value = phraseIndex
+        console.log('Showing all suggestions for index:', phraseIndex)
         
         // Add one-time event listener to reset state when input loses focus
         const resetState = () => {
-          showAllSuggestions.value = false
+          resetSuggestionState()
           event.target.removeEventListener('blur', resetState)
         }
         event.target.addEventListener('blur', resetState, { once: true })
@@ -499,9 +552,9 @@ const handleKeydown = (event) => {
       return
     }
 
+    // Regular suggestion behavior
     if (!showSuggestions.value) {
       showSuggestions.value = true
-      // The watcher will handle selecting the first suggestion
     } else {
       selectedSuggestionIndex.value = Math.min(
         selectedSuggestionIndex.value + 1,
@@ -595,6 +648,16 @@ const getSuggestionText = (suggestion) => {
 const isCustomSuggestion = (suggestion) => {
   return typeof suggestion === 'object' && suggestion.isCustom
 }
+
+// Also add a watch for showAllSuggestions changes
+watch(showAllSuggestions, (newValue) => {
+  console.log('showAllSuggestions changed:', newValue) // Debug log
+})
+
+// Add debug watch
+watch([showAllSuggestions, showingAllSuggestionsForIndex], ([showAll, forIndex]) => {
+  console.log('State changed:', { showAll, forIndex, currentIndex: currentWordIndex.value })
+})
 </script>
 
 <template>
