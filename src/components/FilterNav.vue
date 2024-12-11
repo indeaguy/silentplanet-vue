@@ -597,21 +597,32 @@ const handleKeydown = (event) => {
   // Handle escape key to restore the last deleted phrase
   if (event.key === 'Escape') {
     const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
-    if (lastEntry) {
+    if (lastEntry?.fullString) {
+      // Split the full string into phrases
+      const phrases = lastEntry.fullString.trim().split(/\s+/)
+      
+      // Reconstruct the phrase array and update the store
       searchQuery.value = lastEntry.fullString
       userStore.$patch((state) => {
-        state.phraseHistory.phrases = lastEntry.phraseArray.reduce((acc, phrase, index) => {
+        state.phraseHistory.phrases = phrases.reduce((acc, phrase, index) => {
           if (phrase) {
+            // Calculate start position based on the full string
+            const start = lastEntry.fullString.indexOf(phrase)
             acc[index] = {
               phrase,
-              start: acc[index - 1] ? acc[index - 1].end + 1 : 0,
-              end: (acc[index - 1] ? acc[index - 1].end + 1 : 0) + phrase.length
+              start,
+              end: start + phrase.length,
+              listType: index === lastEntry.currentWordIndex ? lastEntry.listType : null
             }
           }
           return acc
         }, {})
       })
     }
+    
+    // Reset suggestion state after restoring
+    showSuggestions.value = false
+    selectedSuggestionIndex.value = -1
   }
 
   // Add space key handling before other key checks
