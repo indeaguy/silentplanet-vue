@@ -149,7 +149,7 @@ const wordLists = {
     query: ['created on', 'created between'],
     // Add more lists as needed
   },
-  addSpaceAfter: ['adjectives', 'contentTypes', 'preposition'] // Words that should automatically add a space
+  addSpaceAfter: ['adjectives', 'preposition'] // Words that should automatically add a space
 }
 
 const showSuggestions = ref(false)
@@ -620,7 +620,7 @@ const isCustomSuggestion = (suggestion) => {
         type="text"
         v-model="searchQuery"
         class="terminal-input"
-        :placeholder="currentWordIndex === 0 ? 'best...' : '...'"
+        :placeholder="currentWordIndex === 0 ? 'most popular post' : '...'"
         @input="handleInput"
         @click="handleClick"
         @keydown="handleKeydown"
