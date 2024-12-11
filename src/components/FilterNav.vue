@@ -116,6 +116,25 @@
  *   b) Updates character positions sequentially to maintain proper boundaries
  *   c) Only modifies isCustom flag for the current word being changed
  *   d) Maintains proper spacing and positioning for the entire sequence
+ * 
+ * 5. Selected Phrase Tracking:
+ *    - Maintains selectedPhrase in userStore with:
+ *      - index: Position in sequence
+ *      - phrase: The actual text
+ *      - start: Starting cursor position
+ *      - end: Ending cursor position
+ *      - isCustom: Whether it's a custom phrase
+ *    - Updates selectedPhrase when:
+ *      a) Cursor moves within phrase boundaries
+ *      b) New phrase is selected
+ *      c) Phrase is deleted
+ *    - Clears selectedPhrase when:
+ *      a) Cursor moves outside phrase boundaries
+ *      b) Input is cleared
+ *    - Uses selectedPhrase for:
+ *      a) Determining current phrase under cursor
+ *      b) Validating phrase boundaries
+ *      c) Supporting special down arrow behavior
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
@@ -144,7 +163,7 @@ const wordLists = {
   lists: {
     adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most disliked'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
-    preposition: ['in', 'from', 'created on', 'created between'],
+    preposition: ['in', 'from', 'created', 'created between'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
     // Add more lists as needed
   },
