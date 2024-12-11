@@ -10,13 +10,7 @@ export const useUserStore = defineStore('user', {
       phrases: {}, 
       lastUsed: {},
       customPhrases: {}, // New property to track custom phrases by list type
-      selectedPhrase: {  // New property to track current phrase
-        index: null,
-        phrase: null,
-        start: null,
-        end: null,
-        isCustom: false
-      }
+      selectedPhrase: {}
     }
   }),
   actions: {
@@ -59,12 +53,13 @@ export const useUserStore = defineStore('user', {
         throw error
       }
     },
-    async addPhraseEntry(fullString, phraseArray, currentWordIndex, customListType = null) {
+    async addPhraseEntry(fullString, phraseArray, currentWordIndex, customListType = null, listType = null) {
       try {
         this.phraseHistory.entries.push({
           fullString,
           currentWordIndex,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          listType
         })
 
         // Keep existing phrases and add/update the new one
@@ -82,7 +77,9 @@ export const useUserStore = defineStore('user', {
               phrase,
               start: characterIndex,
               end: characterIndex + phrase.length,
-              isCustom: i === currentWordIndex ? customListType !== null : updatedPhrases[i]?.isCustom
+              isCustom: i === currentWordIndex ? customListType !== null : updatedPhrases[i]?.isCustom,
+              listType: listType,
+              listTypeIndex: i
             }
             
             this.phraseHistory.lastUsed[`${i}-${phrase}`] = Date.now()
@@ -116,7 +113,7 @@ export const useUserStore = defineStore('user', {
         })
         .slice(0, limit)
     },
-    async updateSelectedPhrase(index, phrase, start, end, isCustom = false) {
+    async updateSelectedPhrase(index, phrase, start, end, isCustom = false, listType = null) {
       try {
         this.$patch((state) => {
           state.phraseHistory.selectedPhrase = {
@@ -124,7 +121,8 @@ export const useUserStore = defineStore('user', {
             phrase,
             start,
             end,
-            isCustom
+            isCustom,
+            listType
           }
         })
       } catch (error) {

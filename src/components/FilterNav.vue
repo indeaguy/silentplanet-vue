@@ -253,7 +253,7 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   }
   
   // Update the store first
-  await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType)
+  await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType, currentListType)
   
   // Then update the UI
   searchQuery.value = fullString
@@ -354,6 +354,7 @@ const updateSuggestionState = async (position) => {
   
   const phrases = userStore.phraseHistory.phrases
   const currentPhrase = phrases[currentWordIndex.value]
+  const currentListType = wordLists.sequence[currentWordIndex.value]
   
   // Update the selected phrase in the store
   if (currentPhrase) {
@@ -362,15 +363,15 @@ const updateSuggestionState = async (position) => {
       currentPhrase.phrase,
       currentPhrase.start,
       currentPhrase.end,
-      currentPhrase.isCustom
+      currentPhrase.isCustom,
+      currentListType
     )
   } else {
     // Clear selected phrase if cursor is not within any phrase
-    await userStore.updateSelectedPhrase(null, null, null, null, false)
+    await userStore.updateSelectedPhrase(null, null, null, null, false, null)
   }
 
   // Rest of the function remains the same...
-  const currentListType = wordLists.sequence[currentWordIndex.value]
   const suggestions = wordLists.lists[currentListType] || []
   
   const isStartingFresh = Object.keys(phrases).length === 0
