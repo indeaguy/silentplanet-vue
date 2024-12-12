@@ -162,7 +162,7 @@ const wordLists = {
   sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
   lists: {
     adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most disliked'],
-    contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
+    contentTypes: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
     preposition: ['in', 'from', 'today', 'this week', 'created', 'created between'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
     // Add more lists as needed
