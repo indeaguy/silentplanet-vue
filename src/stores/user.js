@@ -55,13 +55,6 @@ export const useUserStore = defineStore('user', {
     },
     async addPhraseEntry(fullString, phraseArray, currentWordIndex, customListType = null, listType = null) {
       try {
-        this.phraseHistory.entries.push({
-          fullString,
-          currentWordIndex,
-          timestamp: Date.now(),
-          listType
-        })
-
         // Keep existing phrases and add/update the new one
         const updatedPhrases = { ...this.phraseHistory.phrases }
         let characterIndex = 0
@@ -99,6 +92,15 @@ export const useUserStore = defineStore('user', {
         this.$patch((state) => {
           state.phraseHistory.phrases = updatedPhrases
         })
+
+        this.phraseHistory.entries.push({
+          fullString,
+          currentWordIndex,
+          timestamp: Date.now(),
+          listType,
+          phrases: updatedPhrases
+        })
+
       } catch (error) {
         this.error = error.message
         throw error

@@ -214,42 +214,48 @@ const getCurrentInputAtCursor = () => {
   return searchQuery.value
 }
 
-// Update selectSuggestion function
-const selectSuggestion = async (suggestion, customListType = null) => {
-  const phrases = userStore.phraseHistory.phrases
+// Updated utility function
+const buildFullString = (existingPhrases, suggestionText = null) => {
   const phraseArray = []
-  let fullString = ''
   
-  // If suggestion is an object, get its text
+  // Build the phrase array
+  for (let i = 0; i < wordLists.sequence.length; i++) {
+    if (i === currentWordIndex.value && suggestionText !== null) {
+      phraseArray[i] = suggestionText
+    } else if (existingPhrases[i]) {
+      phraseArray[i] = existingPhrases[i].phrase
+    }
+  }
+
+  // Build and return the full string
+  let fullString = phraseArray.filter(p => p).join(' ')
+  
+  // Add space if needed based on current list type
+  const currentListType = wordLists.sequence[currentWordIndex.value] || 
+    wordLists.sequence[wordLists.sequence.length - 1]
+  if (wordLists.addSpaceAfter.includes(currentListType)) {
+    fullString += ' '
+  }
+
+  return { fullString, phraseArray }
+}
+
+// Modified selectSuggestion to pass phrases
+const selectSuggestion = async (suggestion, customListType = null) => {
   const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
-  
-  // Get current list type, defaulting to last sequence type if beyond bounds
   const currentListType = wordLists.sequence[currentWordIndex.value] || 
     wordLists.sequence[wordLists.sequence.length - 1]
   
-  // Build the new phrase array and string
-  for (let i = 0; i < wordLists.sequence.length; i++) {
-    if (i === currentWordIndex.value) {
-      phraseArray[i] = suggestionText
-    } else if (phrases[i]) {
-      phraseArray[i] = phrases[i].phrase
-    }
-  }
+  // Pass phrases from store to buildFullString
+  const { fullString, phraseArray } = buildFullString(userStore.phraseHistory.phrases, suggestionText)
   
-  fullString = phraseArray.filter(p => p).join(' ')
-  
-  // Determine if this is a custom phrase - handle case where we're beyond sequence bounds
+  // Rest of the existing selectSuggestion function...
   const isCustom = currentListType ? 
     !wordLists.lists[currentListType].includes(suggestionText) : 
     true
   
   if (isCustom) {
     customListType = customListType || currentListType
-  }
-  
-  // Add space if needed - modified to respect addSpaceAfter rules for all phrases
-  if (wordLists.addSpaceAfter.includes(currentListType)) {
-    fullString += ' '
   }
   
   // Update the store first
@@ -597,26 +603,13 @@ const handleKeydown = (event) => {
   // Handle escape key to restore the last deleted phrase
   if (event.key === 'Escape') {
     const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
-    if (lastEntry?.fullString) {
-      // Split the full string into phrases
-      const phrases = lastEntry.fullString.trim().split(/\s+/)
-      
+    if (lastEntry?.phrases) {
       // Reconstruct the phrase array and update the store
-      searchQuery.value = lastEntry.fullString
+      const { fullString } = buildFullString(lastEntry.phrases)
+      searchQuery.value = fullString
+      
       userStore.$patch((state) => {
-        state.phraseHistory.phrases = phrases.reduce((acc, phrase, index) => {
-          if (phrase) {
-            // Calculate start position based on the full string
-            const start = lastEntry.fullString.indexOf(phrase)
-            acc[index] = {
-              phrase,
-              start,
-              end: start + phrase.length,
-              listType: index === lastEntry.currentWordIndex ? lastEntry.listType : null
-            }
-          }
-          return acc
-        }, {})
+        state.phraseHistory.phrases = lastEntry.phrases
       })
     }
     
