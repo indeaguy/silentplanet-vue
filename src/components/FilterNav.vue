@@ -163,7 +163,7 @@ const wordLists = {
   lists: {
     adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most disliked'],
     contentTypes: ['music', 'art', 'poem', 'post', 'ad'],
-    preposition: ['in', 'from', 'created', 'created between'],
+    preposition: ['in', 'from', 'today', 'this week', 'created', 'created between'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
     // Add more lists as needed
   },
@@ -302,16 +302,30 @@ const filteredSuggestions = computed(() => {
   const currentListType = wordLists.sequence[currentWordIndex.value]
   const suggestions = wordLists.lists[currentListType] || []
   
-  if (!showSuggestions.value || Object.keys(phrases).length >= wordLists.sequence.length) {
+  // Debug logs
+  console.log('Filtered Suggestions State:', {
+    showSuggestions: showSuggestions.value,
+    showAllSuggestions: showAllSuggestions.value,
+    currentListType,
+    phrasesLength: Object.keys(phrases).length,
+    sequenceLength: wordLists.sequence.length
+  })
+
+  if (!showSuggestions.value) {
     return []
   }
 
   // If showAllSuggestions is true, return ALL suggestions for current type
   if (showAllSuggestions.value && currentListType) {
-    console.log('Showing all suggestions for:', currentListType) // Debug log
-    return wordLists.lists[currentListType]
+    console.log('Showing all suggestions for:', currentListType)
+    return suggestions
   }
   
+  // Don't show suggestions if we've reached the maximum phrases
+  if (Object.keys(phrases).length >= wordLists.sequence.length) {
+    return []
+  }
+
   const currentInput = getCurrentInputAtCursor()
   
   // Check if we're at a word boundary
@@ -604,10 +618,9 @@ const handleKeydown = (event) => {
   if (event.key === 'Escape') {
     const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
     if (lastEntry?.phrases) {
-      // Reconstruct the phrase array and update the store
-      const { fullString } = buildFullString(lastEntry.phrases)
-      searchQuery.value = fullString
       
+      // Reconstruct the phrase array and update the store
+      searchQuery.value = { fullString } = buildFullString(lastEntry.phrases)
       userStore.$patch((state) => {
         state.phraseHistory.phrases = lastEntry.phrases
       })
