@@ -161,7 +161,7 @@ const searchQuery = ref('')
 const wordLists = {
   sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
   lists: {
-    adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most disliked'],
+    adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
     contentTypes: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
     preposition: ['in', 'from', 'today', 'this week', 'created', 'created between'],
     location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
@@ -246,10 +246,10 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   const currentListType = wordLists.sequence[currentWordIndex.value] || 
     wordLists.sequence[wordLists.sequence.length - 1]
   
-  // Pass phrases from store to buildFullString
+  // Build the full string with the new suggestion
   const { fullString, phraseArray } = buildFullString(userStore.phraseHistory.phrases, suggestionText)
   
-  // Rest of the existing selectSuggestion function...
+  // Check if this is a custom phrase
   const isCustom = currentListType ? 
     !wordLists.lists[currentListType].includes(suggestionText) : 
     true
@@ -261,23 +261,23 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   // Update the store first
   await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType, currentListType)
   
-  // Then update the UI
+  // Update the UI and cursor position
   searchQuery.value = fullString
-  cursorPosition.value = fullString.length
+  const newPosition = fullString.length
+  cursorPosition.value = newPosition
+  await userStore.updateCursorPosition(newPosition)  // Add cursor position to store
   
-  // Always show suggestions for next phrase unless we're at the end
+  // Handle suggestions visibility
   const shouldShowSuggestions = currentWordIndex.value < wordLists.sequence.length - 1
   
-  // Force suggestions to close and reopen if needed
   showSuggestions.value = false
   await nextTick()
   showSuggestions.value = shouldShowSuggestions
   
-  // Reset selection
+  // Reset suggestion selection
   selectedSuggestionIndex.value = -1
   
-  // Add this: Force update suggestion state after selection
-  // @TODO bad code smell?
+  // Update suggestion state with new cursor position
   await nextTick()
   updateSuggestionState(cursorPosition.value)
 }
@@ -416,16 +416,17 @@ const updateSuggestionState = async (position) => {
 }
 
 const handleClick = async (event) => {
-  // Wait for the browser to update the selection
   await nextTick()
   const clickPosition = event.target.selectionStart
+  await userStore.updateCursorPosition(clickPosition)
   await updateSuggestionState(clickPosition)
 }
 
-// Update handleInput to reset state when typing
+// Update handleInput to include cursor position
 const handleInput = async (event) => {
-  resetSuggestionState() // Reset state when user starts typing
+  resetSuggestionState()
   const inputPosition = event.target.selectionStart
+  await userStore.updateCursorPosition(inputPosition)
   await updateSuggestionState(inputPosition)
 }
 
@@ -451,12 +452,23 @@ watch([showSuggestions, filteredSuggestions], ([show, suggestions]) => {
   }
 }, { immediate: true })
 
-// Modify handleKeydown to handle arrow navigation and selection
+// Update handleKeydown to track cursor position for arrow keys
 const handleKeydown = (event) => {
+  // Add cursor position update for arrow keys at the start
+  if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    nextTick(() => {
+      const newPosition = event.target.selectionStart
+      userStore.updateCursorPosition(newPosition)
+      cursorPosition.value = newPosition
+      updateSuggestionState(newPosition)
+    })
+    return
+  }
+
   if (event.key === 'Backspace') {
     const phrases = userStore.phraseHistory.phrases
     const cursorPos = event.target.selectionStart
-    
+
     // Find which phrase we're in or at the end of
     let targetPhraseIndex = null
     Object.entries(phrases).forEach(([index, phrase]) => {
@@ -464,77 +476,69 @@ const handleKeydown = (event) => {
         targetPhraseIndex = parseInt(index)
       }
     })
-    
+
     if (targetPhraseIndex !== null) {
       event.preventDefault()
-      
+
       // Get the phrase being deleted and its list type
       const deletedPhrase = phrases[targetPhraseIndex]
       const listType = wordLists.sequence[targetPhraseIndex]
-      
+
       // Store the position where we'll put the cursor after deletion
       const newCursorPosition = deletedPhrase.start
-      
+
       // If it was a custom phrase, remove it from customPhrases
       if (deletedPhrase.isCustom && userStore.phraseHistory.customPhrases[listType]) {
         userStore.$patch((state) => {
           state.phraseHistory.customPhrases[listType].delete(deletedPhrase.phrase)
         })
       }
-      
+
       // Create new phrases object without current phrase
       const updatedPhrases = { ...phrases }
       delete updatedPhrases[targetPhraseIndex]
-      
+
       // Update store
       userStore.$patch((state) => {
         state.phraseHistory.phrases = updatedPhrases
       })
-      
+
       // Rebuild search query
       const phraseArray = []
       Object.entries(updatedPhrases).forEach(([index, data]) => {
         phraseArray[index] = data.phrase
-        if (wordLists.addSpaceAfter.includes(wordLists.sequence[index]) || 
+        if (wordLists.addSpaceAfter.includes(wordLists.sequence[index]) ||
             parseInt(index) < wordLists.sequence.length - 1) {
           phraseArray[index] += ' '
         }
       })
       searchQuery.value = phraseArray.filter(p => p).join('')
-      
+
       // Show suggestions for the deleted position
       showSuggestions.value = true
       cursorPosition.value = newCursorPosition
-      
+      userStore.updateCursorPosition(newCursorPosition)  // Add this line to update store
+
       // Set cursor position to start of deleted phrase
       nextTick(() => {
         event.target.setSelectionRange(newCursorPosition, newCursorPosition)
       })
-      
+
       return
     }
   }
 
-  // Update cursor position immediately for arrow keys
-  if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    // Wait for the browser to update the selection
-    nextTick(() => {
-      const newPosition = event.target.selectionStart
-      cursorPosition.value = newPosition
-      updateSuggestionState(newPosition)
-    })
-    return
-  }
-
-  // Handle cursor movement with shift key
+  // Update cursor position for shift+arrow movements
   if (event.shiftKey) {
     if (event.key === 'ArrowUp') {
+      userStore.updateCursorPosition(0)
       cursorPosition.value = 0
       event.target.setSelectionRange(0, 0)
       return
     }
     if (event.key === 'ArrowDown') {
       const length = searchQuery.value.length
+      userStore.updateCursorPosition(length)
       cursorPosition.value = length
       event.target.setSelectionRange(length, length)
       return

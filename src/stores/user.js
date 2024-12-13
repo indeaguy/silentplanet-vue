@@ -10,7 +10,8 @@ export const useUserStore = defineStore('user', {
       phrases: {}, 
       lastUsed: {},
       customPhrases: {}, // New property to track custom phrases by list type
-      selectedPhrase: {}
+      selectedPhrase: {},
+      cursorPosition: 0  // Add this new property
     }
   }),
   actions: {
@@ -131,6 +132,11 @@ export const useUserStore = defineStore('user', {
         this.error = error.message
         throw error
       }
+    },
+    updateCursorPosition(position) {
+      this.$patch((state) => {
+        state.phraseHistory.cursorPosition = position
+      })
     }
   }
 }) 
