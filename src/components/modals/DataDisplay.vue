@@ -1,5 +1,8 @@
 <template>
   <div v-if="showDisplay" :style="computedStyles" class="data-display-container">
+    <div class="scroll-container">
+      <pre>{{ formattedJson }}</pre>
+    </div>
     <button 
       class="copy-button" 
       @click="copyToClipboard"
@@ -7,7 +10,6 @@
     >
       {{ copied ? '✓' : '📋' }}
     </button>
-    <pre>{{ formattedJson }}</pre>
   </div>
 </template>
 
@@ -111,6 +113,7 @@ onBeforeUnmount(() => {
 .data-display-container {
   position: relative;
   transition: all 0.2s ease-out;
+  max-height: 300px;
 }
 
 .data-display-container:hover {
@@ -147,7 +150,30 @@ onBeforeUnmount(() => {
   background: rgba(0, 255, 0, 0.3);
 }
 
-pre {
-  margin: 0;
+.scroll-container {
+  max-height: inherit;
+  overflow: visible;
+  transition: all 0.2s ease-out;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.data-display-container:hover .scroll-container {
+  overflow-y: auto;
+  flex-direction: column-reverse;
+}
+
+/* Customize scrollbar for better visibility */
+.scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+  background: rgba(0, 255, 0, 0.1);
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 0, 0.3);
+  border-radius: 3px;
 }
 </style> 
