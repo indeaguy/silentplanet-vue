@@ -14,6 +14,79 @@ export const useUserStore = defineStore('user', {
       cursorPosition: 0  // Add this new property
     }
   }),
+  getters: {
+    selectedPhrase: (state) => {
+      const position = state.phraseHistory.cursorPosition
+      const phrases = state.phraseHistory.phrases
+      
+      // Expand the debug output to show full details
+      const phraseBoundaries = Object.entries(phrases).map(([index, p]) => {
+        console.log(`Phrase ${index}:`, {
+          text: p.phrase,
+          start: p.start,
+          end: p.end,
+          cursorAt: position,
+          isWithinBounds: position > p.start && position <= p.end,
+          isAfterSpace: position === p.end + 1
+        });
+        return {
+          index,
+          phrase: p.phrase,
+          start: p.start,
+          end: p.end,
+          isWithinBounds: position > p.start && position <= p.end,
+          isAfterSpace: position === p.end + 1
+        };
+      });
+
+      for (const [index, phrase] of Object.entries(phrases)) {
+        const nextPhrase = phrases[parseInt(index) + 1]
+        const isWithinPhrase = position > phrase.start && position <= phrase.end
+        const isInSpaceAfterPhrase = position > phrase.end && position <= phrase.end + 1 && 
+                                    (!nextPhrase || position < nextPhrase.start)
+
+        if (isWithinPhrase || isInSpaceAfterPhrase) {
+          const result = {
+            index: parseInt(index),
+            phrase: phrase.phrase,
+            start: phrase.start,
+            end: phrase.end,
+            isCustom: phrase.isCustom,
+            listType: phrase.listType
+          }
+          state.phraseHistory.selectedPhrase = result
+          console.log('Store: Found selectedPhrase:', result)
+          return result
+        }
+      }
+
+      // If we didn't find a match above, check if we're in a space before a phrase
+      for (const [index, phrase] of Object.entries(phrases)) {
+        if (position === phrase.start) {
+          // We're in the space before this phrase, so return the previous phrase
+          const prevIndex = parseInt(index) - 1
+          const prevPhrase = phrases[prevIndex]
+          if (prevPhrase) {
+            const result = {
+              index: prevIndex,
+              phrase: prevPhrase.phrase,
+              start: prevPhrase.start,
+              end: prevPhrase.end,
+              isCustom: prevPhrase.isCustom,
+              listType: prevPhrase.listType
+            }
+            state.phraseHistory.selectedPhrase = result
+            console.log('Store: Found previous phrase:', result)
+            return result
+          }
+        }
+      }
+
+      state.phraseHistory.selectedPhrase = null
+      console.log('Store: No selectedPhrase found')
+      return null
+    }
+  },
   actions: {
     async signIn(email, password) {
       try {
@@ -65,12 +138,17 @@ export const useUserStore = defineStore('user', {
           const phrase = phraseArray[i]
           if (!phrase || !phrase.trim()) continue
 
+          // Only increment past space if there is one
+          if (characterIndex > 0 && fullString[characterIndex] === ' ') {
+            characterIndex++ // Move past the space between phrases
+          }
+
           // Only update if it's the current word or doesn't exist yet
           if (i === currentWordIndex || !updatedPhrases[i]) {
             updatedPhrases[i] = {
               phrase,
-              start: characterIndex,
-              end: characterIndex + phrase.length,
+              start: characterIndex, // Now correctly points to first letter
+              end: characterIndex + phrase.length - 1, // Adjust end to be last letter position
               isCustom: i === currentWordIndex ? customListType !== null : updatedPhrases[i]?.isCustom,
               listType: listType,
               listTypeIndex: i
@@ -115,23 +193,6 @@ export const useUserStore = defineStore('user', {
                  (this.phraseHistory.lastUsed[`${position}-${a}`] || 0)
         })
         .slice(0, limit)
-    },
-    async updateSelectedPhrase(index, phrase, start, end, isCustom = false, listType = null) {
-      try {
-        this.$patch((state) => {
-          state.phraseHistory.selectedPhrase = {
-            index,
-            phrase,
-            start,
-            end,
-            isCustom,
-            listType
-          }
-        })
-      } catch (error) {
-        this.error = error.message
-        throw error
-      }
     },
     updateCursorPosition(position) {
       this.$patch((state) => {

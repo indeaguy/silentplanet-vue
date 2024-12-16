@@ -81,8 +81,8 @@ const getUserStoreData = () => {
           Array.from(set)
         ])
       ),
-      selectedPhrase: userStore.phraseHistory.selectedPhrase,
-      cursorPosition: userStore.phraseHistory.cursorPosition
+      cursorPosition: userStore.phraseHistory.cursorPosition,
+      selectedPhrase: userStore.selectedPhrase
     },
     user: userStore.user,
     error: userStore.error

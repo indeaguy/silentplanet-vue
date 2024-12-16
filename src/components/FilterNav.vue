@@ -367,38 +367,20 @@ const updateSuggestionState = async (position) => {
   const previousIndex = currentWordIndex.value
   cursorPosition.value = position
   
-  // If we moved to a different phrase, reset suggestion state
   if (previousIndex !== currentWordIndex.value) {
     resetSuggestionState()
   }
   
   const phrases = userStore.phraseHistory.phrases
-  const currentPhrase = phrases[currentWordIndex.value]
   const currentListType = wordLists.sequence[currentWordIndex.value]
-  
-  // Update the selected phrase in the store
-  if (currentPhrase) {
-    await userStore.updateSelectedPhrase(
-      currentWordIndex.value,
-      currentPhrase.phrase,
-      currentPhrase.start,
-      currentPhrase.end,
-      currentPhrase.isCustom,
-      currentListType
-    )
-  } else {
-    // Clear selected phrase if cursor is not within any phrase
-    await userStore.updateSelectedPhrase(null, null, null, null, false, null)
-  }
-
-  // Rest of the function remains the same...
   const suggestions = wordLists.lists[currentListType] || []
   
   const isStartingFresh = Object.keys(phrases).length === 0
-  const isValidPhrase = !currentPhrase || suggestions.includes(currentPhrase.phrase)
+  const isValidPhrase = !userStore.selectedPhrase || suggestions.includes(userStore.selectedPhrase.phrase)
   
   const hasLeadingSpace = position === 0 || searchQuery.value[position - 1] === ' '
-  const isExactMatch = currentPhrase && phrases[currentWordIndex.value]?.phrase === currentPhrase.phrase
+  const isExactMatch = userStore.selectedPhrase && 
+    phrases[currentWordIndex.value]?.phrase === userStore.selectedPhrase.phrase
   
   const shouldShowSuggestions = (
     isStartingFresh || 
