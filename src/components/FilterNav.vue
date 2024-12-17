@@ -189,31 +189,6 @@ const currentWordIndex = computed(() => {
   return cursorPosition.value > lastPhrase?.end ? Object.keys(phrases).length : 0
 })
 
-// Add this debug helper
-const debugState = computed(() => ({
-  currentWordIndex: currentWordIndex.value,
-  phrases: userStore.phraseHistory.phrases,
-  typedWord: searchQuery.value,
-  cursorPosition: cursorPosition.value
-}))
-
-// Helper function to get current input at cursor
-const getCurrentInputAtCursor = () => {
-  const phrases = userStore.phraseHistory.phrases
-  // Instead of splitting by spaces, we'll work with the raw string
-  const lastPhraseIndex = currentWordIndex.value - 1
-  const lastPhrase = phrases[lastPhraseIndex]
-  
-  if (lastPhrase) {
-    // Get text after the last complete phrase, preserving spaces
-    const startPos = lastPhrase.end + 1
-    return searchQuery.value.substring(startPos)
-  }
-  
-  // If no previous phrase, return the entire input
-  return searchQuery.value
-}
-
 // Updated utility function
 const buildFullString = (existingPhrases, suggestionText = null) => {
   const phraseArray = []
@@ -302,22 +277,12 @@ const filteredSuggestions = computed(() => {
   const currentListType = wordLists.sequence[currentWordIndex.value]
   const suggestions = wordLists.lists[currentListType] || []
   
-  // Debug logs
-  console.log('Filtered Suggestions State:', {
-    showSuggestions: showSuggestions.value,
-    showAllSuggestions: showAllSuggestions.value,
-    currentListType,
-    phrasesLength: Object.keys(phrases).length,
-    sequenceLength: wordLists.sequence.length
-  })
-
   if (!showSuggestions.value) {
     return []
   }
 
   // If showAllSuggestions is true, return ALL suggestions for current type
   if (showAllSuggestions.value && currentListType) {
-    console.log('Showing all suggestions for:', currentListType)
     return suggestions
   }
   
@@ -326,32 +291,65 @@ const filteredSuggestions = computed(() => {
     return []
   }
 
-  const currentInput = getCurrentInputAtCursor()
+  // Get current input from selected phrase or partial input
+  const selectedPhrase = userStore.selectedPhrase
+  let currentInput = ''
   
-  // Check if we're at a word boundary
-  const previousWord = phrases[currentWordIndex.value - 1]
-  const isAtWordBoundary = previousWord && 
-    cursorPosition.value === previousWord.end + 1
+  if (selectedPhrase) {
+    // If cursor is within a phrase, use that phrase
+    currentInput = selectedPhrase.phrase
+  } else {
+    // If cursor is between phrases, find the text being typed
+    const cursorPos = cursorPosition.value
+    
+    // Find the start of the current input (last phrase end + 1 or 0)
+    let startPos = 0
+    Object.values(phrases).forEach(phrase => {
+      if (phrase.end < cursorPos) {
+        startPos = Math.max(startPos, phrase.end + 1)
+      }
+    })
+    
+    // Get all text from the last phrase end to the next phrase start
+    let endPos = searchQuery.value.length
+    Object.values(phrases).forEach(phrase => {
+      if (phrase.start > cursorPos) {
+        endPos = Math.min(endPos, phrase.start)
+      }
+    })
+    
+    currentInput = searchQuery.value.slice(startPos, endPos).trim()
+  }
 
+  // Check if we're at a word boundary with no input
+  const isAtWordBoundary = !currentInput
   if (isAtWordBoundary) {
     return suggestions
   }
   
   if (currentInput) {
-    // Use trimEnd() only for the comparison, not for determining if input exists
-    const searchTerm = currentInput.trimEnd().toLowerCase()
+    const searchTerm = currentInput.toLowerCase()
     const matchingSuggestions = suggestions.filter(s => 
       s.toLowerCase().includes(searchTerm)
     )
     
+    // Check if there's an exact match in suggestions or existing phrases
     const hasExactMatch = suggestions.some(s => 
       s.toLowerCase() === searchTerm
     )
-    const isSelectedPhrase = phrases[currentWordIndex.value]?.phrase === searchTerm
-    
-    if (searchTerm && !hasExactMatch && !isSelectedPhrase) {
+    const isSelectedPhrase = phrases[currentWordIndex.value]?.phrase.toLowerCase() === searchTerm
+
+    // Only add custom suggestion if:
+    // 1. We have a search term
+    // 2. It's not an exact match with existing suggestions
+    // 3. It's not already selected as a phrase
+    // 4. There are no partial matches OR we explicitly want to allow custom phrases
+    if (searchTerm && 
+        !hasExactMatch && 
+        !isSelectedPhrase && 
+        (matchingSuggestions.length === 0 || currentListType === 'location')) {
       matchingSuggestions.push({
-        text: searchTerm,
+        text: currentInput, // Use original case for custom phrase
         isCustom: true
       })
     }
@@ -502,7 +500,7 @@ const handleKeydown = async (event) => {
       // Show suggestions for the deleted position
       showSuggestions.value = true
       cursorPosition.value = newCursorPosition
-      userStore.updateCursorPosition(newCursorPosition)  // Add this line to update store
+      userStore.updateCursorPosition(newCursorPosition)
 
       // Set cursor position to start of deleted phrase
       nextTick(() => {
@@ -519,26 +517,12 @@ const handleKeydown = async (event) => {
     
     // Check if cursor is within a phrase
     if (userStore.selectedPhrase) {
-
-      // If we're showing all suggestions for a different phrase, reset
-      // if (showingAllSuggestionsForIndex.value !== null && 
-      //     showingAllSuggestionsForIndex.value !== userStore.selectedPhrase.index) {
-      //   resetSuggestionState()
-      // }
-      
       if (!showAllSuggestions.value) {
         // First down arrow press - show all suggestions
         showAllSuggestions.value = true
         showSuggestions.value = true
         selectedSuggestionIndex.value = 0
         showingAllSuggestionsForIndex.value = userStore.selectedPhrase.index
-        
-        // Add one-time event listener to reset state when input loses focus
-        // const resetState = () => {
-        //   resetSuggestionState()
-        //   event.target.removeEventListener('blur', resetState)
-        // }
-        // event.target.addEventListener('blur', resetState, { once: true })
       } else {
         // Subsequent down arrow presses - navigate through suggestions
         selectedSuggestionIndex.value = Math.min(
@@ -550,41 +534,41 @@ const handleKeydown = async (event) => {
     }
 
     // Regular suggestion behavior
-    // if (!showSuggestions.value) {
-    //   showSuggestions.value = true
-    // } else {
-    //   selectedSuggestionIndex.value = Math.min(
-    //     selectedSuggestionIndex.value + 1,
-    //     filteredSuggestions.value.length - 1
-    //   )
-    // }
+    if (!showSuggestions.value) {
+      showSuggestions.value = true
+      selectedSuggestionIndex.value = 0
+    } else {
+      selectedSuggestionIndex.value = Math.min(
+        selectedSuggestionIndex.value + 1,
+        filteredSuggestions.value.length - 1
+      )
+    }
   }
   
   if (event.key === 'ArrowUp' && showSuggestions.value) {
     event.preventDefault()
     if (selectedSuggestionIndex.value <= 0) {
       selectedSuggestionIndex.value = -1  // Clear selection
+      showSuggestions.value = false
     } else {
-      selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
+      selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, 0)
     }
   }
   
-  
-  
   if (event.key === 'Enter' && selectedSuggestionIndex.value >= 0) {
     event.preventDefault()
-    selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
-    selectedSuggestionIndex.value = -1
+    const selectedSuggestion = filteredSuggestions.value[selectedSuggestionIndex.value]
+    if (selectedSuggestion) {
+      await selectSuggestion(selectedSuggestion)
+      selectedSuggestionIndex.value = -1
+      showSuggestions.value = false
+    }
   }
 
-  
-  
-  
   // Handle escape key to restore the last deleted phrase
   if (event.key === 'Escape') {
     const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
     if (lastEntry?.phrases) {
-      
       // Reconstruct the phrase array and update the store
       searchQuery.value = { fullString } = buildFullString(lastEntry.phrases)
       userStore.$patch((state) => {
@@ -597,7 +581,12 @@ const handleKeydown = async (event) => {
     selectedSuggestionIndex.value = -1
   }
 
-  // Add space key handling before other key checks
+  // Reset showAllSuggestions when user starts typing
+  if (event.key.length === 1 || event.key === 'Backspace') {
+    showAllSuggestions.value = false
+  }
+
+  // Add space key handling
   if (event.key === ' ') {
     const phrases = userStore.phraseHistory.phrases
     const currentListType = wordLists.sequence[currentWordIndex.value]
@@ -613,8 +602,10 @@ const handleKeydown = async (event) => {
       return // Allow the space by not preventing default
     }
     
-    // Get the current word being typed (only if not at a phrase end)
-    const currentInput = getCurrentInputAtCursor().trim()
+    // Get the current word being typed
+    const selectedPhrase = userStore.selectedPhrase
+    const currentInput = selectedPhrase ? selectedPhrase.phrase : 
+      searchQuery.value.slice(0, cursorPosition.value).split(' ').pop()
     
     if (currentInput) {
       // Find exact matches
@@ -631,11 +622,6 @@ const handleKeydown = async (event) => {
     
     // Allow the space in all other cases
     return
-  }
-
-  // Reset showAllSuggestions when user starts typing
-  if (event.key.length === 1 || event.key === 'Backspace') {
-    showAllSuggestions.value = false
   }
 }
 
