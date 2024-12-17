@@ -18,34 +18,11 @@ export const useUserStore = defineStore('user', {
     selectedPhrase: (state) => {
       const position = state.phraseHistory.cursorPosition
       const phrases = state.phraseHistory.phrases
-      
-      // Expand the debug output to show full details
-      const phraseBoundaries = Object.entries(phrases).map(([index, p]) => {
-        console.log(`Phrase ${index}:`, {
-          text: p.phrase,
-          start: p.start,
-          end: p.end,
-          cursorAt: position,
-          isWithinBounds: position > p.start && position <= p.end,
-          isAfterSpace: position === p.end + 1
-        });
-        return {
-          index,
-          phrase: p.phrase,
-          start: p.start,
-          end: p.end,
-          isWithinBounds: position > p.start && position <= p.end,
-          isAfterSpace: position === p.end + 1
-        };
-      });
 
       for (const [index, phrase] of Object.entries(phrases)) {
-        const nextPhrase = phrases[parseInt(index) + 1]
-        const isWithinPhrase = position > phrase.start && position <= phrase.end
-        const isInSpaceAfterPhrase = position > phrase.end && position <= phrase.end + 1 && 
-                                    (!nextPhrase || position < nextPhrase.start)
+        const isWithinPhrase = position >= phrase.start && position <= phrase.end + 1
 
-        if (isWithinPhrase || isInSpaceAfterPhrase) {
+        if (isWithinPhrase) {
           const result = {
             index: parseInt(index),
             phrase: phrase.phrase,
@@ -55,35 +32,11 @@ export const useUserStore = defineStore('user', {
             listType: phrase.listType
           }
           state.phraseHistory.selectedPhrase = result
-          console.log('Store: Found selectedPhrase:', result)
           return result
         }
       }
 
-      // If we didn't find a match above, check if we're in a space before a phrase
-      for (const [index, phrase] of Object.entries(phrases)) {
-        if (position === phrase.start) {
-          // We're in the space before this phrase, so return the previous phrase
-          const prevIndex = parseInt(index) - 1
-          const prevPhrase = phrases[prevIndex]
-          if (prevPhrase) {
-            const result = {
-              index: prevIndex,
-              phrase: prevPhrase.phrase,
-              start: prevPhrase.start,
-              end: prevPhrase.end,
-              isCustom: prevPhrase.isCustom,
-              listType: prevPhrase.listType
-            }
-            state.phraseHistory.selectedPhrase = result
-            console.log('Store: Found previous phrase:', result)
-            return result
-          }
-        }
-      }
-
       state.phraseHistory.selectedPhrase = null
-      console.log('Store: No selectedPhrase found')
       return null
     }
   },

@@ -435,15 +435,18 @@ watch([showSuggestions, filteredSuggestions], ([show, suggestions]) => {
 }, { immediate: true })
 
 // Update handleKeydown to track cursor position for arrow keys
-const handleKeydown = (event) => {
+const handleKeydown = async (event) => {
   // Add cursor position update for arrow keys at the start
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    nextTick(() => {
-      const newPosition = event.target.selectionStart
-      userStore.updateCursorPosition(newPosition)
-      cursorPosition.value = newPosition
-      updateSuggestionState(newPosition)
-    })
+    const currentPos = event.target.selectionEnd
+    const newPosition = event.key === 'ArrowLeft' ? 
+      Math.max(0, currentPos - 1) : 
+      Math.min(searchQuery.value.length, currentPos + 1)
+    
+    userStore.updateCursorPosition(newPosition)
+    cursorPosition.value = newPosition
+    resetSuggestionState()
+    updateSuggestionState(newPosition)
     return
   }
 
@@ -510,64 +513,32 @@ const handleKeydown = (event) => {
     }
   }
 
-  // Update cursor position for shift+arrow movements
-  if (event.shiftKey) {
-    if (event.key === 'ArrowUp') {
-      userStore.updateCursorPosition(0)
-      cursorPosition.value = 0
-      event.target.setSelectionRange(0, 0)
-      return
-    }
-    if (event.key === 'ArrowDown') {
-      const length = searchQuery.value.length
-      userStore.updateCursorPosition(length)
-      cursorPosition.value = length
-      event.target.setSelectionRange(length, length)
-      return
-    }
-  }
-
   // Handle suggestion navigation
   if (event.key === 'ArrowDown') {
     event.preventDefault()
-    const phrases = userStore.phraseHistory.phrases
-    const position = event.target.selectionStart
     
-    // Determine which phrase we're in based on cursor position
-    let currentPhrase = null
-    let phraseIndex = null
-    
-    Object.entries(phrases).forEach(([index, phrase]) => {
-      if (position >= phrase.start && position <= phrase.end) {
-        currentPhrase = phrase
-        phraseIndex = parseInt(index)
-      }
-    })
-
     // Check if cursor is within a phrase
-    if (currentPhrase) {
-      console.log('Cursor in phrase:', currentPhrase, 'at index:', phraseIndex)
-      
+    if (userStore.selectedPhrase) {
+
       // If we're showing all suggestions for a different phrase, reset
-      if (showingAllSuggestionsForIndex.value !== null && 
-          showingAllSuggestionsForIndex.value !== phraseIndex) {
-        resetSuggestionState()
-      }
+      // if (showingAllSuggestionsForIndex.value !== null && 
+      //     showingAllSuggestionsForIndex.value !== userStore.selectedPhrase.index) {
+      //   resetSuggestionState()
+      // }
       
       if (!showAllSuggestions.value) {
         // First down arrow press - show all suggestions
         showAllSuggestions.value = true
         showSuggestions.value = true
         selectedSuggestionIndex.value = 0
-        showingAllSuggestionsForIndex.value = phraseIndex
-        console.log('Showing all suggestions for index:', phraseIndex)
+        showingAllSuggestionsForIndex.value = userStore.selectedPhrase.index
         
         // Add one-time event listener to reset state when input loses focus
-        const resetState = () => {
-          resetSuggestionState()
-          event.target.removeEventListener('blur', resetState)
-        }
-        event.target.addEventListener('blur', resetState, { once: true })
+        // const resetState = () => {
+        //   resetSuggestionState()
+        //   event.target.removeEventListener('blur', resetState)
+        // }
+        // event.target.addEventListener('blur', resetState, { once: true })
       } else {
         // Subsequent down arrow presses - navigate through suggestions
         selectedSuggestionIndex.value = Math.min(
@@ -579,27 +550,36 @@ const handleKeydown = (event) => {
     }
 
     // Regular suggestion behavior
-    if (!showSuggestions.value) {
-      showSuggestions.value = true
-    } else {
-      selectedSuggestionIndex.value = Math.min(
-        selectedSuggestionIndex.value + 1,
-        filteredSuggestions.value.length - 1
-      )
-    }
-  } else if (event.key === 'ArrowUp' && showSuggestions.value) {
+    // if (!showSuggestions.value) {
+    //   showSuggestions.value = true
+    // } else {
+    //   selectedSuggestionIndex.value = Math.min(
+    //     selectedSuggestionIndex.value + 1,
+    //     filteredSuggestions.value.length - 1
+    //   )
+    // }
+  }
+  
+  if (event.key === 'ArrowUp' && showSuggestions.value) {
     event.preventDefault()
     if (selectedSuggestionIndex.value <= 0) {
       selectedSuggestionIndex.value = -1  // Clear selection
     } else {
       selectedSuggestionIndex.value = Math.max(selectedSuggestionIndex.value - 1, -1)
     }
-  } else if (event.key === 'Enter' && selectedSuggestionIndex.value >= 0) {
+  }
+  
+  
+  
+  if (event.key === 'Enter' && selectedSuggestionIndex.value >= 0) {
     event.preventDefault()
     selectSuggestion(filteredSuggestions.value[selectedSuggestionIndex.value])
     selectedSuggestionIndex.value = -1
   }
 
+  
+  
+  
   // Handle escape key to restore the last deleted phrase
   if (event.key === 'Escape') {
     const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
