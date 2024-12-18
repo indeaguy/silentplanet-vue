@@ -173,20 +173,16 @@ const wordLists = {
 const showSuggestions = ref(false)
 const cursorPosition = ref(0)
 
-// Replace currentWordIndex computed property
+// Replace currentWordIndex computed property with simpler version
 const currentWordIndex = computed(() => {
-  const phrases = userStore.phraseHistory.phrases
-  if (!phrases || Object.keys(phrases).length === 0) return 0
-  
-  for (const [index, phraseData] of Object.entries(phrases)) {
-    if (cursorPosition.value >= phraseData.start && cursorPosition.value <= phraseData.end) {
-      return parseInt(index)
-    }
+  const selectedPhrase = userStore.selectedPhrase
+  if (selectedPhrase) {
+    return selectedPhrase.index
   }
   
-  // If cursor is after the last word, return next index
-  const lastPhrase = phrases[Object.keys(phrases).length - 1]
-  return cursorPosition.value > lastPhrase?.end ? Object.keys(phrases).length : 0
+  // If no phrase is selected, find the next available index
+  const phrases = userStore.phraseHistory.phrases
+  return Object.keys(phrases).length
 })
 
 // Updated utility function
@@ -486,16 +482,10 @@ const handleKeydown = async (event) => {
         state.phraseHistory.phrases = updatedPhrases
       })
 
-      // Rebuild search query
-      const phraseArray = []
-      Object.entries(updatedPhrases).forEach(([index, data]) => {
-        phraseArray[index] = data.phrase
-        if (wordLists.addSpaceAfter.includes(wordLists.sequence[index]) ||
-            parseInt(index) < wordLists.sequence.length - 1) {
-          phraseArray[index] += ' '
-        }
-      })
-      searchQuery.value = phraseArray.filter(p => p).join('')
+      // Get the original string and replace just the phrase with empty space
+      const beforePhrase = searchQuery.value.substring(0, deletedPhrase.start)
+      const afterPhrase = searchQuery.value.substring(deletedPhrase.end + 1)
+      searchQuery.value = beforePhrase + afterPhrase
 
       // Show suggestions for the deleted position
       showSuggestions.value = true
