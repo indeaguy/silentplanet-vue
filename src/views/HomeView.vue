@@ -6,6 +6,7 @@ import { useThreePolysStore } from '../stores/polys.js'
 import { computed, provide, ref, onMounted, watch } from 'vue'
 import DataDisplay from '@/components/modals/DataDisplay.vue'
 import { useUserStore } from '../stores/user'
+import { useNavStore } from '../stores/nav'
 
 //const selectedRegion = ref('')
 const threePolysStore = useThreePolysStore()
@@ -68,24 +69,31 @@ const getCameraData = () => {
   return worldStage.value?.getCameraData()
 }
 
-// Add this function for the new DataDisplay
+// Update getUserStoreData to only include user-specific data
 const getUserStoreData = () => {
   const userStore = useUserStore()
   return {
+    user: userStore.user,
+    error: userStore.error
+  }
+}
+
+// Add new function for nav store data
+const getNavStoreData = () => {
+  const navStore = useNavStore()
+  return {
     phraseHistory: {
-      entries: userStore.phraseHistory.entries,
-      phrases: userStore.phraseHistory.phrases,
+      entries: navStore.phraseHistory.entries,
+      phrases: navStore.phraseHistory.phrases,
       customPhrases: Object.fromEntries(
-        Object.entries(userStore.phraseHistory.customPhrases).map(([key, set]) => [
+        Object.entries(navStore.phraseHistory.customPhrases).map(([key, set]) => [
           key, 
           Array.from(set)
         ])
       ),
-      cursorPosition: userStore.phraseHistory.cursorPosition,
-      selectedPhrase: userStore.selectedPhrase
-    },
-    user: userStore.user,
-    error: userStore.error
+      cursorPosition: navStore.phraseHistory.cursorPosition,
+      selectedPhrase: navStore.selectedPhrase
+    }
   }
 }
 </script>
@@ -112,11 +120,23 @@ const getUserStoreData = () => {
         :custom-styles="{ bottom: '10px' }"
       />
       <DataDisplay 
-        :data-source="getUserStoreData"
+        :data-source="getNavStoreData"
         :use-matrix-style="true"
         :custom-styles="{ 
           bottom: '10px', 
           right: '150px',
+          width: '100px', 
+          color: '#ffa500',
+          textShadow: '0 0 3px #ffa500',
+          border: '1px solid rgba(255, 165, 0, 0.2)'
+        }"
+      />
+      <DataDisplay 
+        :data-source="getUserStoreData"
+        :use-matrix-style="true"
+        :custom-styles="{ 
+          bottom: '10px', 
+          right: '290px',
           width: '100px', 
           color: '#00ffff',
           textShadow: '0 0 3px #00ffff',

@@ -138,7 +138,8 @@
  */
 
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
-import { useUserStore } from '../stores/user'
+import { useNavStore } from '../stores/nav'
+const navStore = useNavStore()
 
 // Selected Region Id
 const selectedRegion = inject('selectedRegion')
@@ -157,31 +158,17 @@ watch(selectedValue, (newValue) => {
 
 const searchQuery = ref('')
 
-// Replace the wordLists and wordSequence with a single configuration object
-const wordLists = {
-  sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
-  lists: {
-    adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
-    contentTypes: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
-    preposition: ['in', 'from', 'today', 'this week', 'created', 'created between'],
-    location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
-    // Add more lists as needed
-  },
-  addSpaceAfter: ['adjectives', 'preposition'] // Words that should automatically add a space
-}
-
 const showSuggestions = ref(false)
 const cursorPosition = ref(0)
 
 // Replace currentWordIndex computed property with simpler version
 const currentWordIndex = computed(() => {
-  const selectedPhrase = userStore.selectedPhrase
+  const selectedPhrase = navStore.selectedPhrase
   if (selectedPhrase) {
     return selectedPhrase.index
   }
   
-  // If no phrase is selected, find the next available index
-  const phrases = userStore.phraseHistory.phrases
+  const phrases = navStore.phraseHistory.phrases
   return Object.keys(phrases).length
 })
 
@@ -190,7 +177,7 @@ const buildFullString = (existingPhrases, suggestionText = null) => {
   const phraseArray = []
   
   // Build the phrase array
-  for (let i = 0; i < wordLists.sequence.length; i++) {
+  for (let i = 0; i < navStore.wordLists.sequence.length; i++) {
     if (i === currentWordIndex.value && suggestionText !== null) {
       phraseArray[i] = suggestionText
     } else if (existingPhrases[i]) {
@@ -202,9 +189,9 @@ const buildFullString = (existingPhrases, suggestionText = null) => {
   let fullString = phraseArray.filter(p => p).join(' ')
   
   // Add space if needed based on current list type
-  const currentListType = wordLists.sequence[currentWordIndex.value] || 
-    wordLists.sequence[wordLists.sequence.length - 1]
-  if (wordLists.addSpaceAfter.includes(currentListType)) {
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value] || 
+    navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
+  if (navStore.wordLists.addSpaceAfter.includes(currentListType)) {
     fullString += ' '
   }
 
@@ -214,15 +201,15 @@ const buildFullString = (existingPhrases, suggestionText = null) => {
 // Modified selectSuggestion to pass phrases
 const selectSuggestion = async (suggestion, customListType = null) => {
   const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
-  const currentListType = wordLists.sequence[currentWordIndex.value] || 
-    wordLists.sequence[wordLists.sequence.length - 1]
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value] || 
+    navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
   
   // Build the full string with the new suggestion
-  const { fullString, phraseArray } = buildFullString(userStore.phraseHistory.phrases, suggestionText)
+  const { fullString, phraseArray } = buildFullString(navStore.phraseHistory.phrases, suggestionText)
   
   // Check if this is a custom phrase
   const isCustom = currentListType ? 
-    !wordLists.lists[currentListType].includes(suggestionText) : 
+    !navStore.wordLists.lists[currentListType].includes(suggestionText) : 
     true
   
   if (isCustom) {
@@ -230,16 +217,16 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   }
   
   // Update the store first
-  await userStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType, currentListType)
+  await navStore.addPhraseEntry(fullString, phraseArray, currentWordIndex.value, customListType, currentListType)
   
   // Update the UI and cursor position
   searchQuery.value = fullString
   const newPosition = fullString.length
   cursorPosition.value = newPosition
-  await userStore.updateCursorPosition(newPosition)  // Add cursor position to store
+  await navStore.updateCursorPosition(newPosition)  // Add cursor position to store
   
   // Handle suggestions visibility
-  const shouldShowSuggestions = currentWordIndex.value < wordLists.sequence.length - 1
+  const shouldShowSuggestions = currentWordIndex.value < navStore.wordLists.sequence.length - 1
   
   showSuggestions.value = false
   await nextTick()
@@ -269,9 +256,9 @@ const resetSuggestionState = () => {
 
 // Update filteredSuggestions computed property
 const filteredSuggestions = computed(() => {
-  const phrases = userStore.phraseHistory.phrases
-  const currentListType = wordLists.sequence[currentWordIndex.value]
-  const suggestions = wordLists.lists[currentListType] || []
+  const phrases = navStore.phraseHistory.phrases
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  const suggestions = navStore.wordLists.lists[currentListType] || []
   
   if (!showSuggestions.value) {
     return []
@@ -283,12 +270,12 @@ const filteredSuggestions = computed(() => {
   }
   
   // Don't show suggestions if we've reached the maximum phrases
-  if (Object.keys(phrases).length >= wordLists.sequence.length) {
+  if (Object.keys(phrases).length >= navStore.wordLists.sequence.length) {
     return []
   }
 
   // Get current input from selected phrase or partial input
-  const selectedPhrase = userStore.selectedPhrase
+  const selectedPhrase = navStore.selectedPhrase
   let currentInput = ''
   
   if (selectedPhrase) {
@@ -365,22 +352,22 @@ const updateSuggestionState = async (position) => {
     resetSuggestionState()
   }
   
-  const phrases = userStore.phraseHistory.phrases
-  const currentListType = wordLists.sequence[currentWordIndex.value]
-  const suggestions = wordLists.lists[currentListType] || []
+  const phrases = navStore.phraseHistory.phrases
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  const suggestions = navStore.wordLists.lists[currentListType] || []
   
   const isStartingFresh = Object.keys(phrases).length === 0
-  const isValidPhrase = !userStore.selectedPhrase || suggestions.includes(userStore.selectedPhrase.phrase)
+  const isValidPhrase = !navStore.selectedPhrase || suggestions.includes(navStore.selectedPhrase.phrase)
   
   const hasLeadingSpace = position === 0 || searchQuery.value[position - 1] === ' '
-  const isExactMatch = userStore.selectedPhrase && 
-    phrases[currentWordIndex.value]?.phrase === userStore.selectedPhrase.phrase
+  const isExactMatch = navStore.selectedPhrase && 
+    phrases[currentWordIndex.value]?.phrase === navStore.selectedPhrase.phrase
   
   const shouldShowSuggestions = (
     isStartingFresh || 
     (hasLeadingSpace && !isExactMatch) ||
     (isValidPhrase && !isExactMatch)
-  ) && Object.keys(phrases).length < wordLists.sequence.length
+  ) && Object.keys(phrases).length < navStore.wordLists.sequence.length
 
   if (showSuggestions.value !== shouldShowSuggestions) {
     showSuggestions.value = shouldShowSuggestions
@@ -394,7 +381,7 @@ const updateSuggestionState = async (position) => {
 const handleClick = async (event) => {
   await nextTick()
   const clickPosition = event.target.selectionStart
-  await userStore.updateCursorPosition(clickPosition)
+  await navStore.updateCursorPosition(clickPosition)
   await updateSuggestionState(clickPosition)
 }
 
@@ -402,7 +389,7 @@ const handleClick = async (event) => {
 const handleInput = async (event) => {
   resetSuggestionState()
   const inputPosition = event.target.selectionStart
-  await userStore.updateCursorPosition(inputPosition)
+  await navStore.updateCursorPosition(inputPosition)
   await updateSuggestionState(inputPosition)
 }
 
@@ -412,9 +399,6 @@ const handleFocusOut = (event) => {
     showSuggestions.value = false
   }
 }
-
-// Add store initialization after other refs
-const userStore = useUserStore()
 
 // Add new ref for tracking selected suggestion
 const selectedSuggestionIndex = ref(-1)
@@ -437,7 +421,7 @@ const handleKeydown = async (event) => {
       Math.max(0, currentPos - 1) : 
       Math.min(searchQuery.value.length, currentPos + 1)
     
-    userStore.updateCursorPosition(newPosition)
+    navStore.updateCursorPosition(newPosition)
     cursorPosition.value = newPosition
     resetSuggestionState()
     updateSuggestionState(newPosition)
@@ -445,7 +429,7 @@ const handleKeydown = async (event) => {
   }
 
   if (event.key === 'Backspace') {
-    const phrases = userStore.phraseHistory.phrases
+    const phrases = navStore.phraseHistory.phrases
     const cursorPos = event.target.selectionStart
 
     // Find which phrase we're in or at the end of
@@ -461,14 +445,14 @@ const handleKeydown = async (event) => {
 
       // Get the phrase being deleted and its list type
       const deletedPhrase = phrases[targetPhraseIndex]
-      const listType = wordLists.sequence[targetPhraseIndex]
+      const listType = navStore.wordLists.sequence[targetPhraseIndex]
 
       // Store the position where we'll put the cursor after deletion
       const newCursorPosition = deletedPhrase.start
 
       // If it was a custom phrase, remove it from customPhrases
-      if (deletedPhrase.isCustom && userStore.phraseHistory.customPhrases[listType]) {
-        userStore.$patch((state) => {
+      if (deletedPhrase.isCustom && navStore.phraseHistory.customPhrases[listType]) {
+        navStore.$patch((state) => {
           state.phraseHistory.customPhrases[listType].delete(deletedPhrase.phrase)
         })
       }
@@ -478,7 +462,7 @@ const handleKeydown = async (event) => {
       delete updatedPhrases[targetPhraseIndex]
 
       // Update store
-      userStore.$patch((state) => {
+      navStore.$patch((state) => {
         state.phraseHistory.phrases = updatedPhrases
       })
 
@@ -490,7 +474,7 @@ const handleKeydown = async (event) => {
       // Show suggestions for the deleted position
       showSuggestions.value = true
       cursorPosition.value = newCursorPosition
-      userStore.updateCursorPosition(newCursorPosition)
+      navStore.updateCursorPosition(newCursorPosition)
 
       // Set cursor position to start of deleted phrase
       nextTick(() => {
@@ -506,13 +490,13 @@ const handleKeydown = async (event) => {
     event.preventDefault()
     
     // Check if cursor is within a phrase
-    if (userStore.selectedPhrase) {
+    if (navStore.selectedPhrase) {
       if (!showAllSuggestions.value) {
         // First down arrow press - show all suggestions
         showAllSuggestions.value = true
         showSuggestions.value = true
         selectedSuggestionIndex.value = 0
-        showingAllSuggestionsForIndex.value = userStore.selectedPhrase.index
+        showingAllSuggestionsForIndex.value = navStore.selectedPhrase.index
       } else {
         // Subsequent down arrow presses - navigate through suggestions
         selectedSuggestionIndex.value = Math.min(
@@ -557,11 +541,11 @@ const handleKeydown = async (event) => {
 
   // Handle escape key to restore the last deleted phrase
   if (event.key === 'Escape') {
-    const lastEntry = userStore.phraseHistory.entries.slice(-1)[0]
+    const lastEntry = navStore.phraseHistory.entries.slice(-1)[0]
     if (lastEntry?.phrases) {
       // Reconstruct the phrase array and update the store
       searchQuery.value = { fullString } = buildFullString(lastEntry.phrases)
-      userStore.$patch((state) => {
+      navStore.$patch((state) => {
         state.phraseHistory.phrases = lastEntry.phrases
       })
     }
@@ -578,9 +562,9 @@ const handleKeydown = async (event) => {
 
   // Add space key handling
   if (event.key === ' ') {
-    const phrases = userStore.phraseHistory.phrases
-    const currentListType = wordLists.sequence[currentWordIndex.value]
-    const suggestions = wordLists.lists[currentListType] || []
+    const phrases = navStore.phraseHistory.phrases
+    const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+    const suggestions = navStore.wordLists.lists[currentListType] || []
     
     // Check if we're at the end of a valid phrase
     const currentPhrase = phrases[currentWordIndex.value]
@@ -593,7 +577,7 @@ const handleKeydown = async (event) => {
     }
     
     // Get the current word being typed
-    const selectedPhrase = userStore.selectedPhrase
+    const selectedPhrase = navStore.selectedPhrase
     const currentInput = selectedPhrase ? selectedPhrase.phrase : 
       searchQuery.value.slice(0, cursorPosition.value).split(' ').pop()
     
