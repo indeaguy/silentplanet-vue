@@ -429,6 +429,29 @@ const handleKeydown = async (event) => {
   }
 
   if (event.key === 'Backspace') {
+    // Handle clear all cases first
+    const isAllSelected = event.target.selectionStart === 0 && 
+                         event.target.selectionEnd === searchQuery.value.length
+    const isAtStart = event.target.selectionStart === 0 && 
+                     event.target.selectionEnd === 0
+
+    if (isAllSelected || isAtStart) {
+      event.preventDefault()
+      
+      // Clear all phrases
+      navStore.$patch((state) => {
+        state.phraseHistory.phrases = {}
+        state.phraseHistory.selectedPhrase = null
+      })
+      
+      // Clear input
+      searchQuery.value = ''
+      cursorPosition.value = 0
+      navStore.updateCursorPosition(0)
+      return
+    }
+
+    // Handle existing backspace logic for deleting individual phrases
     const phrases = navStore.phraseHistory.phrases
     const cursorPos = event.target.selectionStart
 
