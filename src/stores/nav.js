@@ -118,6 +118,33 @@ export const useNavStore = defineStore('nav', {
       this.$patch((state) => {
         state.phraseHistory.cursorPosition = position
       })
+    },
+
+    clearSubsequentPhrases(startIndex) {
+      const originalPhrases = { ...this.phraseHistory.phrases }
+      const updatedPhrases = {}
+      
+      // Keep only phrases before startIndex
+      Object.entries(this.phraseHistory.phrases).forEach(([index, phrase]) => {
+        if (parseInt(index) < startIndex) {
+          updatedPhrases[index] = phrase
+        }
+      })
+
+      // Store the state before clearing for undo
+      this.phraseHistory.entries.push({
+        fullString: this.phraseHistory.entries[this.phraseHistory.entries.length - 1]?.fullString || '',
+        phrases: originalPhrases,
+        timestamp: Date.now(),
+        isUndoPoint: true
+      })
+
+      // Update store
+      this.$patch((state) => {
+        state.phraseHistory.phrases = updatedPhrases
+      })
+
+      return updatedPhrases
     }
   }
 })

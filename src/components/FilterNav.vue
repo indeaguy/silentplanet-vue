@@ -455,6 +455,30 @@ const handleKeydown = async (event) => {
     const phrases = navStore.phraseHistory.phrases
     const cursorPos = event.target.selectionStart
 
+    // Check if we're at a position right after a space that precedes a phrase
+    for (const [index, phrase] of Object.entries(phrases)) {
+      if (cursorPos === phrase.start) {
+        event.preventDefault()
+        
+        // Clear this phrase and all subsequent phrases
+        const updatedPhrases = navStore.clearSubsequentPhrases(parseInt(index))
+        
+        // Update input value to remove cleared phrases
+        searchQuery.value = searchQuery.value.substring(0, phrase.start)
+        cursorPosition.value = phrase.start
+        
+        // Update cursor position in store
+        navStore.updateCursorPosition(cursorPosition.value)
+        
+        // Update cursor position in input
+        nextTick(() => {
+          event.target.setSelectionRange(cursorPosition.value, cursorPosition.value)
+        })
+        
+        return
+      }
+    }
+
     // Find which phrase we're in or at the end of
     let targetPhraseIndex = null
     Object.entries(phrases).forEach(([index, phrase]) => {
