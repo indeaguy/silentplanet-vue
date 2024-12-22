@@ -15,7 +15,7 @@ export const useNavStore = defineStore('nav', {
       lists: {
         adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
         contentTypes: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
-        preposition: ['in', 'from', 'today', 'this week', 'created', 'created between'],
+        preposition: ['in', 'from', 'today', 'this week', 'added on', 'added between'],
         location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
       },
       addSpaceAfter: ['adjectives', 'preposition']

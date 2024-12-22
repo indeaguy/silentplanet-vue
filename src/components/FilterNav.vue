@@ -746,6 +746,17 @@ watch(showAllSuggestions, (newValue) => {
 watch([showAllSuggestions, showingAllSuggestionsForIndex], ([showAll, forIndex]) => {
   console.log('State changed:', { showAll, forIndex, currentIndex: currentWordIndex.value })
 })
+
+// Update the cursor position watch
+watch(cursorPosition, async (newPosition) => {
+  if (navStore.selectedPhrase) {
+    showSuggestions.value = true
+    showAllSuggestions.value = true
+    selectedSuggestionIndex.value = 0
+  } else {
+    showAllSuggestions.value = false
+  }
+})
 </script>
 
 <template>
