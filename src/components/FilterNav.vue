@@ -484,24 +484,70 @@ const handleKeydown = async (event) => {
 
     if (isAllSelected || isAtStart) {
       event.preventDefault()
-      
-      // Clear all phrases
       navStore.$patch((state) => {
         state.phraseHistory.phrases = {}
         state.phraseHistory.selectedPhrase = null
       })
-      
-      // Clear input
       searchQuery.value = ''
       cursorPosition.value = 0
       navStore.updateCursorPosition(0)
       return
     }
 
-    // Handle existing backspace logic for deleting individual phrases
     const phrases = navStore.phraseHistory.phrases
-    const cursorPos = event.target.selectionStart
+    const selStart = event.target.selectionStart
+    const selEnd = event.target.selectionEnd
+    const cursorPos = selStart
 
+    // Handle text selection cases first
+    if (selStart !== selEnd) {
+      // Find all phrases that are fully or partially selected
+      let firstAffectedIndex = null
+      const affectedPhrases = []
+
+      Object.entries(phrases).forEach(([index, phrase]) => {
+        // Check if any part of the phrase is within selection
+        const isPartiallySelected = (
+          (selStart <= phrase.end && selStart >= phrase.start) || // Selection starts within phrase
+          (selEnd <= phrase.end && selEnd >= phrase.start) || // Selection ends within phrase
+          (selStart <= phrase.start && selEnd >= phrase.end) // Phrase is completely within selection
+        )
+
+        if (isPartiallySelected) {
+          affectedPhrases.push(parseInt(index))
+          if (firstAffectedIndex === null) {
+            firstAffectedIndex = parseInt(index)
+          }
+        }
+      })
+
+      if (affectedPhrases.length > 0) {
+        event.preventDefault()
+
+        // Get the position where we'll put the cursor after deletion
+        const newCursorPosition = phrases[firstAffectedIndex].start
+
+        // Clear all affected phrases and subsequent phrases
+        const updatedPhrases = navStore.clearSubsequentPhrases(firstAffectedIndex)
+
+        // Update the input value to remove cleared phrases
+        searchQuery.value = searchQuery.value.substring(0, newCursorPosition)
+
+        // Show suggestions for the first removed phrase type
+        showSuggestions.value = true
+        cursorPosition.value = newCursorPosition
+        navStore.updateCursorPosition(newCursorPosition)
+
+        // Set cursor position
+        nextTick(() => {
+          event.target.setSelectionRange(newCursorPosition, newCursorPosition)
+        })
+
+        return
+      }
+    }
+
+    // Handle existing backspace logic for single phrases
     // Check if we're at a position right after a space that precedes a phrase
     for (const [index, phrase] of Object.entries(phrases)) {
       if (cursorPos === phrase.start) {
@@ -529,7 +575,7 @@ const handleKeydown = async (event) => {
     // Find which phrase we're in or at the end of
     let targetPhraseIndex = null
     Object.entries(phrases).forEach(([index, phrase]) => {
-      if (cursorPos > phrase.start && cursorPos <= phrase.end + 1) {
+      if (cursorPos >= phrase.start && cursorPos <= phrase.end + 1) {
         targetPhraseIndex = parseInt(index)
       }
     })
@@ -544,26 +590,11 @@ const handleKeydown = async (event) => {
       // Store the position where we'll put the cursor after deletion
       const newCursorPosition = deletedPhrase.start
 
-      // If it was a custom phrase, remove it from customPhrases
-      if (deletedPhrase.isCustom && navStore.phraseHistory.customPhrases[listType]) {
-        navStore.$patch((state) => {
-          state.phraseHistory.customPhrases[listType].delete(deletedPhrase.phrase)
-        })
-      }
+      // Clear this phrase and all subsequent phrases
+      const updatedPhrases = navStore.clearSubsequentPhrases(targetPhraseIndex)
 
-      // Create new phrases object without current phrase
-      const updatedPhrases = { ...phrases }
-      delete updatedPhrases[targetPhraseIndex]
-
-      // Update store
-      navStore.$patch((state) => {
-        state.phraseHistory.phrases = updatedPhrases
-      })
-
-      // Get the original string and replace just the phrase with empty space
-      const beforePhrase = searchQuery.value.substring(0, deletedPhrase.start)
-      const afterPhrase = searchQuery.value.substring(deletedPhrase.end + 1)
-      searchQuery.value = beforePhrase + afterPhrase
+      // Update the input value to remove cleared phrases
+      searchQuery.value = searchQuery.value.substring(0, deletedPhrase.start)
 
       // Show suggestions for the deleted position
       showSuggestions.value = true
