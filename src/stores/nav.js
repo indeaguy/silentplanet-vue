@@ -8,7 +8,8 @@ export const useNavStore = defineStore('nav', {
       lastUsed: {},
       customPhrases: {}, // Track custom phrases by list type
       selectedPhrase: {},
-      cursorPosition: 0
+      cursorPosition: 0,
+      currentInput: null,
     },
     wordLists: {
       sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
@@ -145,6 +146,12 @@ export const useNavStore = defineStore('nav', {
       })
 
       return updatedPhrases
-    }
+    },
+
+    updateCurrentInput(input) {
+      this.$patch((state) => {
+        state.phraseHistory.currentInput = input
+      })
+    },
   }
 })

@@ -92,7 +92,8 @@ const getNavStoreData = () => {
         ])
       ),
       cursorPosition: navStore.phraseHistory.cursorPosition,
-      selectedPhrase: navStore.selectedPhrase
+      selectedPhrase: navStore.selectedPhrase,
+      currentInput: navStore.phraseHistory.currentInput
     }
   }
 }

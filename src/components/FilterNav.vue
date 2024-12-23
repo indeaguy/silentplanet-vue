@@ -237,6 +237,9 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   
   // Don't reset showSuggestions here - let updateSuggestionState handle it
   await updateSuggestionState(newPosition)
+  
+  // Clear the current input after selecting a suggestion
+  navStore.updateCurrentInput(null)
 }
 
 // Update resetSuggestionState
@@ -432,10 +435,36 @@ const handleClick = async (event) => {
   await updateSuggestionState(clickPosition)
 }
 
-// Update handleInput to include cursor position
+// Update handleInput function
 const handleInput = async (event) => {
   resetSuggestionState()
   const inputPosition = event.target.selectionStart
+  
+  // Get the current word being typed
+  const phrases = navStore.phraseHistory.phrases
+  let startPos = 0
+  Object.values(phrases).forEach(phrase => {
+    if (phrase.end < inputPosition) {
+      startPos = Math.max(startPos, phrase.end + 1)
+    }
+  })
+  
+  let endPos = searchQuery.value.length
+  Object.values(phrases).forEach(phrase => {
+    if (phrase.start > inputPosition) {
+      endPos = Math.min(endPos, phrase.start)
+    }
+  })
+  
+  const currentInput = searchQuery.value.slice(startPos, endPos).trim()
+  
+  // Store the current input if it's not empty and not already a selected phrase
+  if (currentInput && !navStore.selectedPhrase) {
+    navStore.updateCurrentInput(currentInput)
+  } else {
+    navStore.updateCurrentInput(null)
+  }
+
   await navStore.updateCursorPosition(inputPosition)
   await updateSuggestionState(inputPosition)
 }
@@ -459,7 +488,99 @@ watch([showSuggestions, filteredSuggestions], ([show, suggestions]) => {
   }
 }, { immediate: true })
 
-// Update handleKeydown to track cursor position for arrow keys
+// Add these new methods before handleKeydown
+const handleClearAll = (event) => {
+  event.preventDefault()
+  navStore.$patch((state) => {
+    state.phraseHistory.phrases = {}
+    state.phraseHistory.selectedPhrase = null
+  })
+  searchQuery.value = ''
+  cursorPosition.value = 0
+  navStore.updateCursorPosition(0)
+}
+
+const handleSelectedTextDeletion = (event, selStart, selEnd, phrases) => {
+  let firstAffectedIndex = null
+  const affectedPhrases = []
+
+  Object.entries(phrases).forEach(([index, phrase]) => {
+    const isPartiallySelected = (
+      (selStart <= phrase.end && selStart >= phrase.start) ||
+      (selEnd <= phrase.end && selEnd >= phrase.start) ||
+      (selStart <= phrase.start && selEnd >= phrase.end)
+    )
+
+    if (isPartiallySelected) {
+      affectedPhrases.push(parseInt(index))
+      if (firstAffectedIndex === null) {
+        firstAffectedIndex = parseInt(index)
+      }
+    }
+  })
+
+  if (affectedPhrases.length > 0) {
+    event.preventDefault()
+    const newCursorPosition = phrases[firstAffectedIndex].start
+    navStore.clearSubsequentPhrases(firstAffectedIndex)
+    searchQuery.value = searchQuery.value.substring(0, newCursorPosition)
+    showSuggestions.value = true
+    cursorPosition.value = newCursorPosition
+    navStore.updateCursorPosition(newCursorPosition)
+    
+    nextTick(() => {
+      event.target.setSelectionRange(newCursorPosition, newCursorPosition)
+    })
+    return true
+  }
+  return false
+}
+
+const handlePhraseStartDeletion = (event, cursorPos, phrases) => {
+  for (const [index, phrase] of Object.entries(phrases)) {
+    if (cursorPos === phrase.start) {
+      event.preventDefault()
+      navStore.clearSubsequentPhrases(parseInt(index))
+      searchQuery.value = searchQuery.value.substring(0, phrase.start)
+      cursorPosition.value = phrase.start
+      navStore.updateCursorPosition(cursorPosition.value)
+      
+      nextTick(() => {
+        event.target.setSelectionRange(cursorPosition.value, cursorPosition.value)
+      })
+      return true
+    }
+  }
+  return false
+}
+
+const handlePhraseDeletion = (event, cursorPos, phrases) => {
+  let targetPhraseIndex = null
+  Object.entries(phrases).forEach(([index, phrase]) => {
+    if (cursorPos >= phrase.start && cursorPos <= phrase.end + 1) {
+      targetPhraseIndex = parseInt(index)
+    }
+  })
+
+  if (targetPhraseIndex !== null) {
+    event.preventDefault()
+    const deletedPhrase = phrases[targetPhraseIndex]
+    const newCursorPosition = deletedPhrase.start
+    navStore.clearSubsequentPhrases(targetPhraseIndex)
+    searchQuery.value = searchQuery.value.substring(0, deletedPhrase.start)
+    showSuggestions.value = true
+    cursorPosition.value = newCursorPosition
+    navStore.updateCursorPosition(newCursorPosition)
+    
+    nextTick(() => {
+      event.target.setSelectionRange(newCursorPosition, newCursorPosition)
+    })
+    return true
+  }
+  return false
+}
+
+// Update the backspace section in handleKeydown
 const handleKeydown = async (event) => {
   // Add cursor position update for arrow keys at the start
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
@@ -476,21 +597,13 @@ const handleKeydown = async (event) => {
   }
 
   if (event.key === 'Backspace') {
-    // Handle clear all cases first
     const isAllSelected = event.target.selectionStart === 0 && 
                          event.target.selectionEnd === searchQuery.value.length
     const isAtStart = event.target.selectionStart === 0 && 
                      event.target.selectionEnd === 0
 
     if (isAllSelected || isAtStart) {
-      event.preventDefault()
-      navStore.$patch((state) => {
-        state.phraseHistory.phrases = {}
-        state.phraseHistory.selectedPhrase = null
-      })
-      searchQuery.value = ''
-      cursorPosition.value = 0
-      navStore.updateCursorPosition(0)
+      handleClearAll(event)
       return
     }
 
@@ -499,113 +612,18 @@ const handleKeydown = async (event) => {
     const selEnd = event.target.selectionEnd
     const cursorPos = selStart
 
-    // Handle text selection cases first
+    // Try each deletion handler in sequence
     if (selStart !== selEnd) {
-      // Find all phrases that are fully or partially selected
-      let firstAffectedIndex = null
-      const affectedPhrases = []
-
-      Object.entries(phrases).forEach(([index, phrase]) => {
-        // Check if any part of the phrase is within selection
-        const isPartiallySelected = (
-          (selStart <= phrase.end && selStart >= phrase.start) || // Selection starts within phrase
-          (selEnd <= phrase.end && selEnd >= phrase.start) || // Selection ends within phrase
-          (selStart <= phrase.start && selEnd >= phrase.end) // Phrase is completely within selection
-        )
-
-        if (isPartiallySelected) {
-          affectedPhrases.push(parseInt(index))
-          if (firstAffectedIndex === null) {
-            firstAffectedIndex = parseInt(index)
-          }
-        }
-      })
-
-      if (affectedPhrases.length > 0) {
-        event.preventDefault()
-
-        // Get the position where we'll put the cursor after deletion
-        const newCursorPosition = phrases[firstAffectedIndex].start
-
-        // Clear all affected phrases and subsequent phrases
-        const updatedPhrases = navStore.clearSubsequentPhrases(firstAffectedIndex)
-
-        // Update the input value to remove cleared phrases
-        searchQuery.value = searchQuery.value.substring(0, newCursorPosition)
-
-        // Show suggestions for the first removed phrase type
-        showSuggestions.value = true
-        cursorPosition.value = newCursorPosition
-        navStore.updateCursorPosition(newCursorPosition)
-
-        // Set cursor position
-        nextTick(() => {
-          event.target.setSelectionRange(newCursorPosition, newCursorPosition)
-        })
-
+      if (handleSelectedTextDeletion(event, selStart, selEnd, phrases)) {
         return
       }
     }
 
-    // Handle existing backspace logic for single phrases
-    // Check if we're at a position right after a space that precedes a phrase
-    for (const [index, phrase] of Object.entries(phrases)) {
-      if (cursorPos === phrase.start) {
-        event.preventDefault()
-        
-        // Clear this phrase and all subsequent phrases
-        const updatedPhrases = navStore.clearSubsequentPhrases(parseInt(index))
-        
-        // Update input value to remove cleared phrases
-        searchQuery.value = searchQuery.value.substring(0, phrase.start)
-        cursorPosition.value = phrase.start
-        
-        // Update cursor position in store
-        navStore.updateCursorPosition(cursorPosition.value)
-        
-        // Update cursor position in input
-        nextTick(() => {
-          event.target.setSelectionRange(cursorPosition.value, cursorPosition.value)
-        })
-        
-        return
-      }
+    if (handlePhraseStartDeletion(event, cursorPos, phrases)) {
+      return
     }
 
-    // Find which phrase we're in or at the end of
-    let targetPhraseIndex = null
-    Object.entries(phrases).forEach(([index, phrase]) => {
-      if (cursorPos >= phrase.start && cursorPos <= phrase.end + 1) {
-        targetPhraseIndex = parseInt(index)
-      }
-    })
-
-    if (targetPhraseIndex !== null) {
-      event.preventDefault()
-
-      // Get the phrase being deleted and its list type
-      const deletedPhrase = phrases[targetPhraseIndex]
-      const listType = navStore.wordLists.sequence[targetPhraseIndex]
-
-      // Store the position where we'll put the cursor after deletion
-      const newCursorPosition = deletedPhrase.start
-
-      // Clear this phrase and all subsequent phrases
-      const updatedPhrases = navStore.clearSubsequentPhrases(targetPhraseIndex)
-
-      // Update the input value to remove cleared phrases
-      searchQuery.value = searchQuery.value.substring(0, deletedPhrase.start)
-
-      // Show suggestions for the deleted position
-      showSuggestions.value = true
-      cursorPosition.value = newCursorPosition
-      navStore.updateCursorPosition(newCursorPosition)
-
-      // Set cursor position to start of deleted phrase
-      nextTick(() => {
-        event.target.setSelectionRange(newCursorPosition, newCursorPosition)
-      })
-
+    if (handlePhraseDeletion(event, cursorPos, phrases)) {
       return
     }
   }
