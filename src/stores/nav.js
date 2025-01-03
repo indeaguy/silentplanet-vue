@@ -25,6 +25,11 @@ export const useNavStore = defineStore('nav', {
 
   getters: {
     selectedPhrase: (state) => {
+
+      if (state.phraseHistory.currentInput !== null && state.phraseHistory.currentInput !== " ") {
+        return state.phraseHistory.selectedPhrase
+      }
+
       const position = state.phraseHistory.cursorPosition
       const phrases = state.phraseHistory.phrases
 
