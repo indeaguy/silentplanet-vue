@@ -138,33 +138,8 @@
  */
 
 
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
 import { useNavStore } from '../stores/nav'
-
-
-
-
-
-
-
-
-
 
 // placeholder for region stuff
 
@@ -181,39 +156,11 @@ watch(selectedValue, (newValue) => {
 })
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Stores involved
  */
 
 const navStore = useNavStore()
-
-
-
-
-
-
-
-
-
-
-
 
 
 /**
@@ -238,19 +185,6 @@ const previousSuggestionIndex = ref(null)
 const highlightedPhraseSuggestionIndex = ref(-1)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 // computed properties
 
 // Replace currentWordIndex computed property with simpler version
@@ -263,6 +197,8 @@ const currentWordIndex = computed(() => {
   const phrases = navStore.phraseHistory.phrases
   return Object.keys(phrases).length
 })
+
+
 
 // suggestions for new phrases for the current phrase in the sequence
 const filteredSuggestions = computed(() => {
@@ -278,13 +214,14 @@ const filteredSuggestions = computed(() => {
   if (navStore.selectedPhrase && showAllSuggestions.value) {
     return suggestions
   }
-  
+
   // If we have a selected phrase and currentInput, filter suggestions
   if (navStore.selectedPhrase && navStore.phraseHistory.currentInput) {
     const searchTerm = navStore.phraseHistory.currentInput.toLowerCase()
-    return suggestions.filter(s => 
+    const filteredSuggestions = suggestions.filter(s => 
       s.toLowerCase().includes(searchTerm)
     )
+    return filteredSuggestions
   }
 
   if (Object.keys(phrases).length >= navStore.wordLists.sequence.length) {
@@ -349,17 +286,6 @@ const filteredSuggestions = computed(() => {
 })
 
 
-
-
-
-
-
-
-
-
-
-
-
 // Updated utility function
 const buildFullString = (existingPhrases, suggestionText = null) => {
   const phraseArray = []
@@ -385,7 +311,6 @@ const buildFullString = (existingPhrases, suggestionText = null) => {
 
   return { fullString, phraseArray }
 }
-
 
 
 // Modified selectSuggestion to pass phrases
@@ -426,6 +351,7 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   navStore.updateCurrentInput(null)
 }
 
+
 // Update resetSuggestionState
 const resetSuggestionState = () => {
   showAllSuggestions.value = false;
@@ -433,7 +359,6 @@ const resetSuggestionState = () => {
   showingAllSuggestionsForIndex.value = null;
   // Do not reset showSuggestions here
 };
-
 
 
 const updateSuggestionState = async (position) => {
@@ -490,7 +415,6 @@ const updateSuggestionState = async (position) => {
 }
 
 
-
 const handleClick = async (event) => {
   await nextTick()
   const clickPosition = event.target.selectionStart
@@ -499,21 +423,11 @@ const handleClick = async (event) => {
 }
 
 
-
 // Update handleInput to manage selectedPhrase during typing
 const handleInput = async (event) => {
   resetSuggestionState()
   const inputPosition = event.target.selectionStart
   const selectedPhrase = navStore.selectedPhrase ? { ...navStore.selectedPhrase } : null
-  
-  console.log('handleInput debug:', {
-    inputPosition,
-    selectedPhrase,
-    currentInput: navStore.phraseHistory.currentInput,
-    eventData: event.data,
-    searchQuery: searchQuery.value,
-    phrases: navStore.phraseHistory.phrases
-  })
   
   if (selectedPhrase) {
     // Always work with a plain object copy
@@ -554,11 +468,19 @@ const handleInput = async (event) => {
     const currentInput = searchQuery.value.slice(startPos, endPos).trim()
     navStore.updateCurrentInput(currentInput || null)
   }
+  
+  console.log('handleInput debug:', {
+    inputPosition,
+    selectedPhrase,
+    currentInput: navStore.phraseHistory.currentInput,
+    eventData: event.data,
+    searchQuery: searchQuery.value,
+    phrases: navStore.phraseHistory.phrases
+  })
 
   await navStore.updateCursorPosition(inputPosition)
   await updateSuggestionState(inputPosition)
 }
-
 
 
 const handleFocusOut = (event) => {
@@ -567,7 +489,6 @@ const handleFocusOut = (event) => {
     showSuggestions.value = false
   }
 }
-
 
 
 // Add these new methods before handleKeydown
@@ -581,8 +502,6 @@ const handleClearAll = (event) => {
   cursorPosition.value = 0
   navStore.updateCursorPosition(0)
 }
-
-
 
 
 const handleSelectedTextDeletion = (event, selStart, selEnd, phrases) => {
@@ -622,7 +541,6 @@ const handleSelectedTextDeletion = (event, selStart, selEnd, phrases) => {
 }
 
 
-
 const handlePhraseStartDeletion = (event, cursorPos, phrases) => {
   for (const [index, phrase] of Object.entries(phrases)) {
     if (cursorPos === phrase.start) {
@@ -640,7 +558,6 @@ const handlePhraseStartDeletion = (event, cursorPos, phrases) => {
   }
   return false
 }
-
 
 
 const handlePhraseDeletion = (event, cursorPos, phrases) => {
@@ -673,6 +590,25 @@ const handlePhraseDeletion = (event, cursorPos, phrases) => {
 
 // Update the backspace section in handleKeydown
 const handleKeydown = async (event) => {
+  // Add undo/history navigation at the start
+  if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
+    event.preventDefault();
+    const newValue = navStore.navigateHistory(-1);
+    if (newValue !== false) {
+      searchQuery.value = newValue;
+    }
+    return;
+  }
+
+  if (event.key === 'ArrowUp' && !showSuggestions.value) {
+    event.preventDefault();
+    const newValue = navStore.navigateHistory(-1);
+    if (newValue !== false) {
+      searchQuery.value = newValue;
+    }
+    return;
+  }
+
   // Add cursor position update for arrow keys at the start
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
     const currentPos = event.target.selectionEnd
@@ -732,7 +668,9 @@ const handleKeydown = async (event) => {
     
     // Check if cursor is within a phrase
     if (navStore.selectedPhrase) {
-      if (!showAllSuggestions.value) {
+      if (!showAllSuggestions.value 
+         || (!filteredSuggestions.value?.length && !showSuggestions.value)
+      ) {
         // First down arrow press - show all suggestions
         showAllSuggestions.value = true
         showSuggestions.value = true
@@ -775,8 +713,8 @@ const handleKeydown = async (event) => {
     const selectedSuggestion = filteredSuggestions.value[highlightedPhraseSuggestionIndex.value]
     if (selectedSuggestion) {
       await selectSuggestion(selectedSuggestion)
-      highlightedPhraseSuggestionIndex.value = -1
-      showSuggestions.value = false
+      // highlightedPhraseSuggestionIndex.value = -1
+      // showSuggestions.value = false
     }
   }
 
@@ -855,14 +793,6 @@ const isCustomSuggestion = (suggestion) => {
 
 
 
-
-
-
-
-
-
-
-
 /**
  * Observers
  */
@@ -876,10 +806,9 @@ const isCustomSuggestion = (suggestion) => {
 }, { deep: true, flush: 'sync' });
 
 
-
 // Update the cursor position watch
 watch(cursorPosition, async (newPosition) => {
-  if (navStore.selectedPhrase) {
+  if (navStore.selectedPhrase && navStore.phraseHistory.currentInput === null) {
     showSuggestions.value = true
     showAllSuggestions.value = true
     highlightedPhraseSuggestionIndex.value = 0
@@ -887,7 +816,6 @@ watch(cursorPosition, async (newPosition) => {
     showAllSuggestions.value = false
   }
 })
-
 
 
 // Update watcher to handle ongoing typing
@@ -1048,6 +976,10 @@ watch([showSuggestions, filteredSuggestions], ([show, suggestions]) => {
   border-radius: 2px;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  animation-duration: 1.5s;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  animation-delay: 0.8s;
+  animation-play-state: paused;
 }
 
 .terminal-input::placeholder {
@@ -1075,6 +1007,7 @@ watch([showSuggestions, filteredSuggestions], ([show, suggestions]) => {
 .terminal-input:focus {
   border-color: rgba(0, 255, 0, 0.6);
   box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+  animation-play-state: running;
 }
 
 .suggestions {

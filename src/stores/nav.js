@@ -10,6 +10,7 @@ export const useNavStore = defineStore('nav', {
       selectedPhrase: {},
       cursorPosition: 0,
       currentInput: null,
+      historyPosition: -1,
     },
     wordLists: {
       sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
@@ -94,6 +95,7 @@ export const useNavStore = defineStore('nav', {
 
         this.$patch((state) => {
           state.phraseHistory.phrases = updatedPhrases
+          state.phraseHistory.historyPosition = state.phraseHistory.entries.length
         })
 
         this.phraseHistory.entries.push({
@@ -157,6 +159,27 @@ export const useNavStore = defineStore('nav', {
       this.$patch((state) => {
         state.phraseHistory.currentInput = input
       })
+    },
+
+    navigateHistory(direction) {
+      if (this.phraseHistory.entries.length === 0) return false;
+      
+      const newPosition = this.phraseHistory.historyPosition + direction;
+      
+      // Bounds checking
+      if (newPosition < 0 || newPosition >= this.phraseHistory.entries.length) {
+        return false;
+      }
+
+      const historyEntry = this.phraseHistory.entries[newPosition];
+      
+      this.$patch((state) => {
+        state.phraseHistory.historyPosition = newPosition;
+        state.phraseHistory.phrases = historyEntry.phrases;
+        state.phraseHistory.currentInput = null;
+      });
+
+      return historyEntry.fullString;
     },
   }
 })
