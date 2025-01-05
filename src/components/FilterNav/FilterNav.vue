@@ -3,6 +3,7 @@ import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
 import { useNavStore } from '../../stores/nav'
 import { buildFullString } from './helpers/buildFullString'
 import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
+import { useSuggestions } from './composables/useSuggestions'
 
 // placeholder for region stuff
 
@@ -32,20 +33,11 @@ const navStore = useNavStore()
 
 // reactive references
 
-// Add a new ref to track when we want to show all suggestions
-const showAllSuggestions = ref(false)
-// Add new ref to track which phrase we're showing all suggestions for
-const showingAllSuggestionsForIndex = ref(null)
+// Add a new ref to track which phrase we're showing all suggestions for
 const searchQuery = ref('')
 
-const showSuggestions = ref(false)
-const cursorPosition = ref(0)
-
 // Add this with the other refs
-const previousSuggestionIndex = ref(null)
-
-// Add new ref for tracking which phrase suggestion the user currently has highlighted with the up/down arrows
-const highlightedPhraseSuggestionIndex = ref(-1)
+const cursorPosition = ref(0)
 
 
 // computed properties
@@ -62,91 +54,16 @@ const currentWordIndex = computed(() => {
 })
 
 
-
-// suggestions for new phrases for the current phrase in the sequence
-const filteredSuggestions = computed(() => {
-  const phrases = navStore.phraseHistory.phrases
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-  const suggestions = navStore.wordLists.lists[currentListType] || []
-  
-  if (!showSuggestions.value) {
-    return []
-  }
-
-  // If we have a selected phrase and showAllSuggestions is true, return all suggestions
-  if (navStore.selectedPhrase && showAllSuggestions.value) {
-    return suggestions
-  }
-
-  // If we have a selected phrase and currentInput, filter suggestions
-  if (navStore.selectedPhrase && navStore.phraseHistory.currentInput) {
-    const searchTerm = navStore.phraseHistory.currentInput.toLowerCase()
-    const filteredSuggestions = suggestions.filter(s => 
-      s.toLowerCase().includes(searchTerm)
-    )
-    return filteredSuggestions
-  }
-
-  if (Object.keys(phrases).length >= navStore.wordLists.sequence.length) {
-    return []
-  }
-
-  // Rest of the existing logic...
-  const selectedPhrase = navStore.selectedPhrase
-  let currentInput = ''
-  
-  if (selectedPhrase) {
-    currentInput = selectedPhrase.phrase
-  } else {
-    const cursorPos = cursorPosition.value
-    let startPos = 0
-    Object.values(phrases).forEach(phrase => {
-      if (phrase.end < cursorPos) {
-        startPos = Math.max(startPos, phrase.end + 1)
-      }
-    })
-    
-    let endPos = searchQuery.value.length
-    Object.values(phrases).forEach(phrase => {
-      if (phrase.start > cursorPos) {
-        endPos = Math.min(endPos, phrase.start)
-      }
-    })
-    
-    currentInput = searchQuery.value.slice(startPos, endPos).trim()
-  }
-
-  const isAtWordBoundary = !currentInput
-  if (isAtWordBoundary) {
-    return suggestions
-  }
-  
-  if (currentInput) {
-    const searchTerm = currentInput.toLowerCase()
-    const matchingSuggestions = suggestions.filter(s => 
-      s.toLowerCase().includes(searchTerm)
-    )
-    
-    const hasExactMatch = suggestions.some(s => 
-      s.toLowerCase() === searchTerm
-    )
-    const isSelectedPhrase = phrases[currentWordIndex.value]?.phrase.toLowerCase() === searchTerm
-
-    if (searchTerm && 
-        !hasExactMatch && 
-        !isSelectedPhrase && 
-        (matchingSuggestions.length === 0 || currentListType === 'location')) {
-      matchingSuggestions.push({
-        text: currentInput,
-        isCustom: true
-      })
-    }
-    
-    return matchingSuggestions
-  }
-  
-  return suggestions
-})
+// Add this after the existing refs:
+const {
+  showAllSuggestions,
+  showingAllSuggestionsForIndex,
+  showSuggestions,
+  highlightedPhraseSuggestionIndex,
+  filteredSuggestions,
+  resetSuggestionState,
+  updateSuggestionState
+} = useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition)
 
 
 // Modified selectSuggestion to pass phrases
@@ -193,69 +110,6 @@ const selectSuggestion = async (suggestion, customListType = null) => {
   
   // Clear the current input after selecting a suggestion
   navStore.updateCurrentInput(null)
-}
-
-
-// Update resetSuggestionState
-const resetSuggestionState = () => {
-  showAllSuggestions.value = false;
-  highlightedPhraseSuggestionIndex.value = -1;
-  showingAllSuggestionsForIndex.value = null;
-  // Do not reset showSuggestions here
-};
-
-
-const updateSuggestionState = async (position) => {
-  // Update cursor position first
-  cursorPosition.value = position;
-
-  // Get currentIndex directly without IIFE
-  const currentIndex = navStore.selectedPhrase ? 
-    navStore.selectedPhrase.index : 
-    Object.keys(navStore.phraseHistory.phrases).length;
-
-  // Compare with the previous index using ref
-  if (previousSuggestionIndex.value !== currentIndex) {
-    resetSuggestionState();
-  }
-
-  // Update previousIndex ref for the next call
-  previousSuggestionIndex.value = currentIndex;
-
-  const phrases = navStore.phraseHistory.phrases;
-  const currentListType = navStore.wordLists.sequence[currentIndex];
-  const suggestions = navStore.wordLists.lists[currentListType] || [];
-
-  const isStartingFresh = Object.keys(phrases).length === 0;
-  const isValidPhrase = !navStore.selectedPhrase || suggestions.includes(navStore.selectedPhrase.phrase);
-
-  const hasLeadingSpace =
-    position === 0 ||
-    searchQuery.value[position - 1] === ' ' ||
-    (navStore.selectedPhrase && position === navStore.selectedPhrase.end + 1);
-
-  const isExactMatch =
-    navStore.selectedPhrase &&
-    phrases[currentIndex]?.phrase === navStore.selectedPhrase.phrase;
-
-  const shouldShowSuggestions =
-    (
-      isStartingFresh ||
-      (hasLeadingSpace && !isExactMatch) ||
-      (isValidPhrase && !isExactMatch)
-    ) &&
-    (Object.keys(phrases).length < navStore.wordLists.sequence.length ||
-      (navStore.phraseHistory.currentInput !== null && navStore.selectedPhrase !== null));
-
-  // Update showSuggestions based on the computed flag
-  // Only set showSuggestions if it changes; avoid unnecessary updates
-  if (showSuggestions.value !== shouldShowSuggestions) {
-    showSuggestions.value = shouldShowSuggestions;
-  }
-
-  if (shouldShowSuggestions && suggestions.length > 0) {
-    highlightedPhraseSuggestionIndex.value = 0;
-  }
 }
 
 
