@@ -1,7 +1,8 @@
 <script setup>
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
-import { useNavStore } from '../stores/nav'
-import { buildFullString } from './FilterNav/helpers/buildFullString'
+import { useNavStore } from '../../stores/nav'
+import { buildFullString } from './helpers/buildFullString'
+import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
 
 // placeholder for region stuff
 
@@ -627,19 +628,6 @@ const handleKeydown = async (event) => {
     // Allow the space in all other cases
     return
   }
-}
-
-// Add these helper functions
-const getSuggestionKey = (suggestion) => {
-  return typeof suggestion === 'string' ? suggestion : suggestion.text
-}
-
-const getSuggestionText = (suggestion) => {
-  return typeof suggestion === 'string' ? suggestion : suggestion.text
-}
-
-const isCustomSuggestion = (suggestion) => {
-  return typeof suggestion === 'object' && suggestion.isCustom
 }
 
 

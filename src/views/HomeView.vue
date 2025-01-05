@@ -1,5 +1,5 @@
 <script setup>
-import FilterNav from '../components/FilterNav.vue'
+import FilterNav from '../components/FilterNav/FilterNav.vue'
 import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
 import { useThreePolysStore } from '../stores/polys.js'
