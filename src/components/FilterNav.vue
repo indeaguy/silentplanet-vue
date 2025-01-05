@@ -1,6 +1,7 @@
 <script setup>
 import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
 import { useNavStore } from '../stores/nav'
+import { buildFullString } from './FilterNav/helpers/buildFullString'
 
 // placeholder for region stuff
 
@@ -147,41 +148,22 @@ const filteredSuggestions = computed(() => {
 })
 
 
-// Updated utility function
-const buildFullString = (existingPhrases, suggestionText = null) => {
-  const phraseArray = []
-  
-  // Build the phrase array
-  for (let i = 0; i < navStore.wordLists.sequence.length; i++) {
-    if (i === currentWordIndex.value && suggestionText !== null) {
-      phraseArray[i] = suggestionText
-    } else if (existingPhrases[i]) {
-      phraseArray[i] = existingPhrases[i].phrase
-    }
-  }
-
-  // Build and return the full string
-  let fullString = phraseArray.filter(p => p).join(' ')
-  
-  // Add space if needed based on current list type
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value] || 
-    navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
-  if (navStore.wordLists.addSpaceAfter.includes(currentListType)) {
-    fullString += ' '
-  }
-
-  return { fullString, phraseArray }
-}
-
-
 // Modified selectSuggestion to pass phrases
 const selectSuggestion = async (suggestion, customListType = null) => {
   const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
   const currentListType = navStore.wordLists.sequence[currentWordIndex.value] || 
     navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
   
-  // Build the full string with the new suggestion
-  const { fullString, phraseArray } = buildFullString(navStore.phraseHistory.phrases, suggestionText)
+  // Build the full string with the new suggestion using the helper
+  const { fullString, phraseArray } = buildFullString(
+    navStore.phraseHistory.phrases, 
+    suggestionText,
+    {
+      sequence: navStore.wordLists.sequence,
+      addSpaceAfter: navStore.wordLists.addSpaceAfter,
+      currentIndex: currentWordIndex.value
+    }
+  )
   
   // Check if this is a custom phrase
   const isCustom = currentListType ? 
@@ -583,8 +565,16 @@ const handleKeydown = async (event) => {
   if (event.key === 'Escape') {
     const lastEntry = navStore.phraseHistory.entries.slice(-1)[0]
     if (lastEntry?.phrases) {
-      // Reconstruct the phrase array and update the store
-      searchQuery.value = { fullString } = buildFullString(lastEntry.phrases)
+      const { fullString } = buildFullString(
+        lastEntry.phrases,
+        null,
+        {
+          sequence: navStore.wordLists.sequence,
+          addSpaceAfter: navStore.wordLists.addSpaceAfter,
+          currentIndex: currentWordIndex.value
+        }
+      )
+      searchQuery.value = fullString
       navStore.$patch((state) => {
         state.phraseHistory.phrases = lastEntry.phrases
       })
