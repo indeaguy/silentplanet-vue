@@ -4,6 +4,7 @@ import { useNavStore } from '../../stores/nav'
 import { buildFullString } from './helpers/buildFullString'
 import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
 import { useSuggestions } from './composables/useSuggestions'
+import { handlePhraseDeletionLogic } from './helpers/phraseDeleteHelpers'
 
 // placeholder for region stuff
 
@@ -202,90 +203,6 @@ const handleClearAll = (event) => {
 }
 
 
-const handleSelectedTextDeletion = (event, selStart, selEnd, phrases) => {
-  let firstAffectedIndex = null
-  const affectedPhrases = []
-
-  Object.entries(phrases).forEach(([index, phrase]) => {
-    const isPartiallySelected = (
-      (selStart <= phrase.end && selStart >= phrase.start) ||
-      (selEnd <= phrase.end && selEnd >= phrase.start) ||
-      (selStart <= phrase.start && selEnd >= phrase.end)
-    )
-
-    if (isPartiallySelected) {
-      affectedPhrases.push(parseInt(index))
-      if (firstAffectedIndex === null) {
-        firstAffectedIndex = parseInt(index)
-      }
-    }
-  })
-
-  if (affectedPhrases.length > 0) {
-    event.preventDefault()
-    const newCursorPosition = phrases[firstAffectedIndex].start
-    navStore.clearSubsequentPhrases(firstAffectedIndex)
-    searchQuery.value = searchQuery.value.substring(0, newCursorPosition)
-    showSuggestions.value = true
-    cursorPosition.value = newCursorPosition
-    navStore.updateCursorPosition(newCursorPosition)
-    
-    nextTick(() => {
-      event.target.setSelectionRange(newCursorPosition, newCursorPosition)
-    })
-    return true
-  }
-  return false
-}
-
-
-const handlePhraseStartDeletion = (event, cursorPos, phrases) => {
-  for (const [index, phrase] of Object.entries(phrases)) {
-    if (cursorPos === phrase.start) {
-      event.preventDefault()
-      navStore.clearSubsequentPhrases(parseInt(index))
-      searchQuery.value = searchQuery.value.substring(0, phrase.start)
-      cursorPosition.value = phrase.start
-      navStore.updateCursorPosition(cursorPosition.value)
-      
-      nextTick(() => {
-        event.target.setSelectionRange(cursorPosition.value, cursorPosition.value)
-      })
-      return true
-    }
-  }
-  return false
-}
-
-
-const handlePhraseDeletion = (event, cursorPos, phrases) => {
-  let targetPhraseIndex = null
-  Object.entries(phrases).forEach(([index, phrase]) => {
-    if (cursorPos >= phrase.start && cursorPos <= phrase.end + 1) {
-      targetPhraseIndex = parseInt(index)
-    }
-  })
-
-  if (targetPhraseIndex !== null) {
-    event.preventDefault()
-    const deletedPhrase = phrases[targetPhraseIndex]
-    const newCursorPosition = deletedPhrase.start
-    navStore.clearSubsequentPhrases(targetPhraseIndex)
-    searchQuery.value = searchQuery.value.substring(0, deletedPhrase.start)
-    showSuggestions.value = true
-    cursorPosition.value = newCursorPosition
-    navStore.updateCursorPosition(newCursorPosition)
-    
-    nextTick(() => {
-      event.target.setSelectionRange(newCursorPosition, newCursorPosition)
-    })
-    return true
-  }
-  return false
-}
-
-
-
 // Update the backspace section in handleKeydown
 const handleKeydown = async (event) => {
   // Add undo/history navigation at the start
@@ -322,7 +239,6 @@ const handleKeydown = async (event) => {
   }
 
   if (event.key === 'Backspace') {
-    // Add our new condition first
     if (navStore.phraseHistory.currentInput !== null) {
       const newInput = navStore.phraseHistory.currentInput.slice(0, -1)
       navStore.updateCurrentInput(newInput || null)
@@ -339,23 +255,25 @@ const handleKeydown = async (event) => {
       return
     }
 
-    const phrases = navStore.phraseHistory.phrases
     const selStart = event.target.selectionStart
     const selEnd = event.target.selectionEnd
-    const cursorPos = selStart
 
-    // Try each deletion handler in sequence
-    if (selStart !== selEnd) {
-      if (handleSelectedTextDeletion(event, selStart, selEnd, phrases)) {
-        return
-      }
+    const context = {
+      event,
+      navStore,
+      searchQuery,
+      cursorPosition,
+      showSuggestions,
+      nextTick
     }
 
-    if (handlePhraseStartDeletion(event, cursorPos, phrases)) {
-      return
-    }
+    const handled = handlePhraseDeletionLogic({
+      selStart,
+      selEnd,
+      context
+    })
 
-    if (handlePhraseDeletion(event, cursorPos, phrases)) {
+    if (handled) {
       return
     }
   }
