@@ -139,7 +139,6 @@ const handleInput = async (event) => {
       // Make sure we're getting the latest currentInput value
       const currentInput = navStore.phraseHistory.currentInput
       const newInput = currentInput + event.data
-      console.log('Updating input:', { currentInput, newInput })
       navStore.updateCurrentInput(newInput)
     }
     
@@ -167,15 +166,6 @@ const handleInput = async (event) => {
     const currentInput = searchQuery.value.slice(startPos, endPos).trim()
     navStore.updateCurrentInput(currentInput || null)
   }
-  
-  console.log('handleInput debug:', {
-    inputPosition,
-    selectedPhrase,
-    currentInput: navStore.phraseHistory.currentInput,
-    eventData: event.data,
-    searchQuery: searchQuery.value,
-    phrases: navStore.phraseHistory.phrases
-  })
 
   await navStore.updateCursorPosition(inputPosition)
   await updateSuggestionState(inputPosition)
@@ -329,8 +319,10 @@ const handleKeydown = async (event) => {
     const selectedSuggestion = filteredSuggestions.value[highlightedPhraseSuggestionIndex.value]
     if (selectedSuggestion) {
       await selectSuggestion(selectedSuggestion)
-      // highlightedPhraseSuggestionIndex.value = -1
-      // showSuggestions.value = false
+      // Only hide suggestions if there isn't a space after the current phrase
+      if (!searchQuery.value.endsWith(' ')) {
+        showSuggestions.value = false
+      }
     }
   }
 
@@ -408,15 +400,6 @@ const handleKeydown = async (event) => {
  * Observers
  */
 
- watch(showSuggestions, (newVal, oldVal) => {
-  console.error('showSuggestions changed:', {
-    from: oldVal,
-    to: newVal,
-    trace: new Error().stack
-  });
-}, { deep: true, flush: 'sync' });
-
-
 // Update the cursor position watch
 watch(cursorPosition, async (newPosition) => {
   if (navStore.selectedPhrase && navStore.phraseHistory.currentInput === null) {
@@ -435,7 +418,6 @@ watch(() => navStore.phraseHistory.currentInput, (newInput) => {
   
   const selectedPhrase = navStore.selectedPhrase
   const phrases = { ...navStore.phraseHistory.phrases }
-  const currentPhrase = phrases[selectedPhrase.index]
   
   // Rebuild the full string with updated positions
   let newString = ''

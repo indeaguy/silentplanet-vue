@@ -18,9 +18,13 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       return []
     }
 
-    // If we have a selected phrase and showAllSuggestions is true, return all suggestions
+    // If we have a selected phrase and showAllSuggestions is true, 
+    // check for custom phrases in the list
     if (navStore.selectedPhrase && showAllSuggestions.value) {
-      return suggestions
+      return suggestions.map(s => {
+        const isCustom = navStore.phraseHistory.customPhrases[currentListType]?.has(s)
+        return isCustom ? { text: s, isCustom: true } : s
+      })
     }
 
     // If we have a selected phrase and currentInput, filter suggestions
@@ -67,9 +71,13 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     
     if (currentInput) {
       const searchTerm = currentInput.toLowerCase()
-      const matchingSuggestions = suggestions.filter(s => 
-        s.toLowerCase().includes(searchTerm)
-      )
+      const matchingSuggestions = suggestions.map(s => {
+        const isCustom = navStore.phraseHistory.customPhrases[currentListType]?.has(s)
+        return isCustom ? { text: s, isCustom: true } : s
+      }).filter(s => {
+        const text = typeof s === 'object' ? s.text : s
+        return text.toLowerCase().includes(searchTerm)
+      })
       
       const hasExactMatch = suggestions.some(s => 
         s.toLowerCase() === searchTerm
@@ -78,8 +86,7 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
 
       if (searchTerm && 
           !hasExactMatch && 
-          !isSelectedPhrase && 
-          (matchingSuggestions.length === 0 || currentListType === 'location')) {
+          !isSelectedPhrase) {
         matchingSuggestions.push({
           text: currentInput,
           isCustom: true
@@ -89,7 +96,11 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       return matchingSuggestions
     }
     
-    return suggestions
+    // Map suggestions to include custom status
+    return suggestions.map(s => {
+      const isCustom = navStore.phraseHistory.customPhrases[currentListType]?.has(s)
+      return isCustom ? { text: s, isCustom: true } : s
+    })
   })
 
   // Methods
