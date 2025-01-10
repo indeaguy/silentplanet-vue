@@ -1,188 +1,234 @@
 import { ref, computed } from 'vue'
 
 export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition) {
+  // ------------------------------------------------------------------------------
   // Reactive state
+  // ------------------------------------------------------------------------------
   const showAllSuggestions = ref(false)
   const showingAllSuggestionsForIndex = ref(null)
   const showSuggestions = ref(false)
   const highlightedPhraseSuggestionIndex = ref(-1)
   const previousSuggestionIndex = ref(null)
 
-  // Computed properties
+  // ------------------------------------------------------------------------------
+  // Helper: Mark suggestions with `isCustom` if they exist in customPhrases
+  // ------------------------------------------------------------------------------
+  function markCustomSuggestions(suggestions, listType) {
+    return suggestions.map(suggestion => {
+      const isCustom = navStore.phraseHistory.customPhrases[listType]?.has(suggestion)
+      return isCustom
+        ? { text: suggestion, isCustom: true }
+        : suggestion
+    })
+  }
+
+  // ------------------------------------------------------------------------------
+  // Computed: filter and return the correct suggestions based on the current state
+  // ------------------------------------------------------------------------------
   const filteredSuggestions = computed(() => {
-    const phrases = navStore.phraseHistory.phrases
-    const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-    const suggestions = navStore.wordLists.lists[currentListType] || []
-    
+    // If suggestions are not currently shown, return nothing
     if (!showSuggestions.value) {
       return []
     }
 
-    // If we have a selected phrase and showAllSuggestions is true, 
-    // check for custom phrases in the list
-    if (navStore.selectedPhrase && showAllSuggestions.value) {
-      return suggestions.map(s => {
-        const isCustom = navStore.phraseHistory.customPhrases[currentListType]?.has(s)
-        return isCustom ? { text: s, isCustom: true } : s
-      })
+    // Local references for convenience
+    const existingPhrases = navStore.phraseHistory.phrases
+    const listType = navStore.wordLists.sequence[currentWordIndex.value]
+    const allSuggestions = navStore.wordLists.lists[listType] || []
+    const selectedPhrase = navStore.selectedPhrase
+    const currentInput = navStore.phraseHistory.currentInput
+
+    // --------------------------------------------------------------------------
+    // 1) Show all suggestions if the user requested "show all" and has a phrase selected
+    // --------------------------------------------------------------------------
+    if (selectedPhrase && showAllSuggestions.value) {
+      return markCustomSuggestions(allSuggestions, listType)
     }
 
-    // If we have a selected phrase and currentInput, filter suggestions
-    if (navStore.selectedPhrase && navStore.phraseHistory.currentInput) {
-      const searchTerm = navStore.phraseHistory.currentInput.toLowerCase()
-      const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-      const filteredSuggestions = suggestions.filter(s => 
+    // --------------------------------------------------------------------------
+    // 2) If there is a phrase selected and we have an active input, filter suggestions
+    // --------------------------------------------------------------------------
+    if (selectedPhrase && currentInput) {
+      const searchTerm = currentInput.toLowerCase()
+
+      const filtered = allSuggestions.filter(s =>
         s.toLowerCase().includes(searchTerm)
       )
 
-      // Add custom suggestion if no exact match exists
-      const hasExactMatch = suggestions.some(s => 
-        s.toLowerCase() === searchTerm
+      // Check if the exact searchTerm already exists
+      const hasExactMatch = allSuggestions.some(
+        s => s.toLowerCase() === searchTerm
       )
-      
+
+      // If no exact match, add the custom (user-typed) suggestion
       if (searchTerm && !hasExactMatch) {
-        filteredSuggestions.push({
-          text: navStore.phraseHistory.currentInput,
-          isCustom: true
+        filtered.push({
+          text: currentInput,
+          isCustom: true,
         })
       }
 
-      return filteredSuggestions
+      return filtered
     }
 
-    if (Object.keys(phrases).length >= navStore.wordLists.sequence.length) {
+    // --------------------------------------------------------------------------
+    // 3) If we've already chosen enough phrases to fill the sequence, do not show suggestions
+    // --------------------------------------------------------------------------
+    if (Object.keys(existingPhrases).length >= navStore.wordLists.sequence.length) {
       return []
     }
 
-    const selectedPhrase = navStore.selectedPhrase
-    let currentInput = ''
-    
+    // --------------------------------------------------------------------------
+    // 4) If no phrase is selected, figure out the "current input" by slicing the query
+    // --------------------------------------------------------------------------
+    let localCurrentInput = ''
     if (selectedPhrase) {
-      currentInput = selectedPhrase.phrase
+      // If we do have a selected phrase, use that directly
+      localCurrentInput = selectedPhrase.phrase
     } else {
       const cursorPos = cursorPosition.value
       let startPos = 0
-      Object.values(phrases).forEach(phrase => {
+      let endPos = searchQuery.value.length
+
+      // Calculate start position based on existing phrases
+      Object.values(existingPhrases).forEach(phrase => {
         if (phrase.end < cursorPos) {
           startPos = Math.max(startPos, phrase.end + 1)
         }
       })
-      
-      let endPos = searchQuery.value.length
-      Object.values(phrases).forEach(phrase => {
+
+      // Calculate end position based on existing phrases
+      Object.values(existingPhrases).forEach(phrase => {
         if (phrase.start > cursorPos) {
           endPos = Math.min(endPos, phrase.start)
         }
       })
-      
-      currentInput = searchQuery.value.slice(startPos, endPos).trim()
+
+      // Extract potential user input between existing phrases
+      localCurrentInput = searchQuery.value.slice(startPos, endPos).trim()
     }
 
-    const isAtWordBoundary = !currentInput
-    if (isAtWordBoundary) {
-      return suggestions
+    // If there is no input at all at this word boundary, show the full list
+    if (!localCurrentInput) {
+      return allSuggestions
     }
-    
-    if (currentInput) {
-      const searchTerm = currentInput.toLowerCase()
-      const matchingSuggestions = suggestions.map(s => {
-        const isCustom = navStore.phraseHistory.customPhrases[currentListType]?.has(s)
-        return isCustom ? { text: s, isCustom: true } : s
-      }).filter(s => {
-        const text = typeof s === 'object' ? s.text : s
-        return text.toLowerCase().includes(searchTerm)
-      })
-      
-      const hasExactMatch = suggestions.some(s => 
-        s.toLowerCase() === searchTerm
-      )
-      const isSelectedPhrase = phrases[currentWordIndex.value]?.phrase.toLowerCase() === searchTerm
 
-      if (searchTerm && 
-          !hasExactMatch && 
-          !isSelectedPhrase) {
-        matchingSuggestions.push({
-          text: currentInput,
-          isCustom: true
-        })
-      }
-      
-      return matchingSuggestions
-    }
-    
-    // Map suggestions to include custom status
-    return suggestions.map(s => {
-      const isCustom = navStore.phraseHistory.customPhrases[currentListType]?.has(s)
-      return isCustom ? { text: s, isCustom: true } : s
+    // --------------------------------------------------------------------------
+    // 5) Otherwise, filter suggestions based on the localCurrentInput
+    // --------------------------------------------------------------------------
+    const searchTerm = localCurrentInput.toLowerCase()
+    const customMarkedSuggestions = markCustomSuggestions(allSuggestions, listType)
+
+    // Filter down to suggestions that match the typed input
+    let matching = customMarkedSuggestions.filter(item => {
+      const text = typeof item === 'object' ? item.text : item
+      return text.toLowerCase().includes(searchTerm)
     })
+
+    // Detect if an exact match already exists
+    const hasExactMatch = allSuggestions.some(
+      s => s.toLowerCase() === searchTerm
+    )
+
+    // Also check whether the currently selected phrase matches the typed input
+    const isSelectedPhrase = existingPhrases[currentWordIndex.value]?.phrase.toLowerCase() === searchTerm
+
+    // If there's no exact match and it's not the selected phrase, allow a custom suggestion
+    if (searchTerm && !hasExactMatch && !isSelectedPhrase) {
+      matching.push({
+        text: localCurrentInput,
+        isCustom: true,
+      })
+    }
+
+    return matching
   })
 
+  // ------------------------------------------------------------------------------
   // Methods
+  // ------------------------------------------------------------------------------
+
+  /**
+   * Reset all suggestion UI states.
+   */
   const resetSuggestionState = () => {
     showAllSuggestions.value = false
     highlightedPhraseSuggestionIndex.value = -1
     showingAllSuggestionsForIndex.value = null
   }
 
+  /**
+   * Update suggestion state based on the current cursor position in the input.
+   * This will decide whether or not suggestions should be shown.
+   */
   const updateSuggestionState = async (position) => {
+    // Update the cursor position
     cursorPosition.value = position
 
-    const currentIndex = navStore.selectedPhrase ? 
-      navStore.selectedPhrase.index : 
-      Object.keys(navStore.phraseHistory.phrases).length
+    const existingPhrases = navStore.phraseHistory.phrases
+    const currentIndex = navStore.selectedPhrase
+      ? navStore.selectedPhrase.index
+      : Object.keys(existingPhrases).length
 
+    // If we switched to a different index, reset the UI state
     if (previousSuggestionIndex.value !== currentIndex) {
       resetSuggestionState()
     }
-
     previousSuggestionIndex.value = currentIndex
 
-    const phrases = navStore.phraseHistory.phrases
-    const currentListType = navStore.wordLists.sequence[currentIndex]
-    const suggestions = navStore.wordLists.lists[currentListType] || []
+    // Local references
+    const listType = navStore.wordLists.sequence[currentIndex]
+    const allSuggestions = navStore.wordLists.lists[listType] || []
+    const isStartingFresh = Object.keys(existingPhrases).length === 0
+    const isValidPhrase = !navStore.selectedPhrase || allSuggestions.includes(navStore.selectedPhrase.phrase)
+    const isExactMatch = navStore.selectedPhrase && existingPhrases[currentIndex]?.phrase === navStore.selectedPhrase.phrase
 
-    const isStartingFresh = Object.keys(phrases).length === 0
-    const isValidPhrase = !navStore.selectedPhrase || suggestions.includes(navStore.selectedPhrase.phrase)
-
+    // Check the characters before the position to see if we have a space
     const hasLeadingSpace =
       position === 0 ||
       searchQuery.value[position - 1] === ' ' ||
       (navStore.selectedPhrase && position === navStore.selectedPhrase.end + 1)
 
-    const isExactMatch =
-      navStore.selectedPhrase &&
-      phrases[currentIndex]?.phrase === navStore.selectedPhrase.phrase
-
-    const shouldShowSuggestions =
+    // Decide if we should show the suggestions panel
+    const shouldShowSuggestions = (
+      (isStartingFresh || (hasLeadingSpace && !isExactMatch) || (isValidPhrase && !isExactMatch)) &&
       (
-        isStartingFresh ||
-        (hasLeadingSpace && !isExactMatch) ||
-        (isValidPhrase && !isExactMatch)
-      ) &&
-      (Object.keys(phrases).length < navStore.wordLists.sequence.length ||
-        (navStore.phraseHistory.currentInput !== null && navStore.selectedPhrase !== null))
+        // If we haven't filled out all placeholders
+        Object.keys(existingPhrases).length < navStore.wordLists.sequence.length
+        // Or we have something typed but also a selected phrase
+        || (
+          navStore.phraseHistory.currentInput !== null
+          && navStore.selectedPhrase !== null
+        )
+      )
+    )
 
+    // Update the reactive state
     if (showSuggestions.value !== shouldShowSuggestions) {
       showSuggestions.value = shouldShowSuggestions
     }
 
-    if (shouldShowSuggestions && suggestions.length > 0) {
+    // If we are going to show suggestions, highlight the first one by default
+    if (shouldShowSuggestions && allSuggestions.length > 0) {
       highlightedPhraseSuggestionIndex.value = 0
     }
   }
 
+  // ------------------------------------------------------------------------------
+  // Return the reactive data, computed props, and methods
+  // ------------------------------------------------------------------------------
   return {
     // State
     showAllSuggestions,
     showingAllSuggestionsForIndex,
     showSuggestions,
     highlightedPhraseSuggestionIndex,
-    
+
     // Computed
     filteredSuggestions,
-    
+
     // Methods
     resetSuggestionState,
-    updateSuggestionState
+    updateSuggestionState,
   }
-} 
+}
