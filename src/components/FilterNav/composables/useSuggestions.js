@@ -30,9 +30,23 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     // If we have a selected phrase and currentInput, filter suggestions
     if (navStore.selectedPhrase && navStore.phraseHistory.currentInput) {
       const searchTerm = navStore.phraseHistory.currentInput.toLowerCase()
+      const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
       const filteredSuggestions = suggestions.filter(s => 
         s.toLowerCase().includes(searchTerm)
       )
+
+      // Add custom suggestion if no exact match exists
+      const hasExactMatch = suggestions.some(s => 
+        s.toLowerCase() === searchTerm
+      )
+      
+      if (searchTerm && !hasExactMatch) {
+        filteredSuggestions.push({
+          text: navStore.phraseHistory.currentInput,
+          isCustom: true
+        })
+      }
+
       return filteredSuggestions
     }
 
