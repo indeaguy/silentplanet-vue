@@ -66,66 +66,14 @@ const {
   highlightedPhraseSuggestionIndex,
   filteredSuggestions,
   resetSuggestionState,
-  updateSuggestionState
+  updateSuggestionState,
+  selectSuggestion
 } = useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition)
 
 
 /* --------------------------------------------------------------------------
  * Methods
  * ------------------------------------------------------------------------*/
-
-/**
- * Select a suggestion and insert it into the overall phrase.
- */
-const selectSuggestion = async (suggestion, customListType = null) => {
-  const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-    || navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
-
-  // Build the full string with the helper
-  const { fullString, phraseArray } = buildFullString(
-    navStore.phraseHistory.phrases, 
-    suggestionText,
-    {
-      sequence: navStore.wordLists.sequence,
-      addSpaceAfter: navStore.wordLists.addSpaceAfter,
-      currentIndex: currentWordIndex.value
-    }
-  )
-
-  // Check if this is a custom phrase
-  const isCustom = currentListType 
-    ? !navStore.wordLists.lists[currentListType].includes(suggestionText) 
-    : true
-  if (isCustom) {
-    customListType = customListType || currentListType
-  }
-
-  // Update the store
-  await navStore.addPhraseEntry(
-    fullString, 
-    phraseArray, 
-    currentWordIndex.value, 
-    customListType, 
-    currentListType
-  )
-
-  // Update UI and cursor
-  searchQuery.value = fullString
-  const newPosition = fullString.length
-  cursorPosition.value = newPosition
-  await navStore.updateCursorPosition(newPosition)
-
-  // Reset some suggestion states
-  showAllSuggestions.value = false
-  highlightedPhraseSuggestionIndex.value = -1
-
-  // Let updateSuggestionState handle showSuggestions
-  await updateSuggestionState(newPosition)
-
-  // Clear current input after selecting a suggestion
-  navStore.updateCurrentInput(null)
-}
 
 /**
  * When the input is clicked, reset cursor and suggestions.

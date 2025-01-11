@@ -62,30 +62,49 @@ export const useNavStore = defineStore('nav', {
         const updatedPhrases = { ...this.phraseHistory.phrases }
         let characterIndex = 0
 
-        for (let i = 0; i < phraseArray.length; i++) {
-          const phrase = phraseArray[i]
-          if (!phrase || !phrase.trim()) continue
+        // Sort the phrases by index to ensure we process them in order
+        const phraseIndices = Object.keys(updatedPhrases)
+          .map(Number)
+          .sort((a, b) => a - b)
 
+        // Process each phrase in order
+        for (let i = 0; i <= Math.max(...phraseIndices, currentWordIndex); i++) {
+          // Add space if not at the start
           if (characterIndex > 0 && fullString[characterIndex] === ' ') {
             characterIndex++
           }
 
+          // If this is the current word being updated OR a new phrase
           if (i === currentWordIndex || !updatedPhrases[i]) {
+            const phrase = phraseArray[i]
+            if (!phrase || !phrase.trim()) continue
+
             updatedPhrases[i] = {
               phrase,
               start: characterIndex,
               end: characterIndex + phrase.length - 1,
               isCustom: i === currentWordIndex ? customListType !== null : updatedPhrases[i]?.isCustom,
-              listType: listType,
+              listType: i === currentWordIndex ? listType : updatedPhrases[i]?.listType,
               listTypeIndex: i
             }
             
             this.phraseHistory.lastUsed[`${i}-${phrase}`] = Date.now()
+            characterIndex = updatedPhrases[i].end + 1
+          } else {
+            // Update positions for existing phrases
+            const existingPhrase = updatedPhrases[i]
+            if (!existingPhrase) continue
+
+            updatedPhrases[i] = {
+              ...existingPhrase,
+              start: characterIndex,
+              end: characterIndex + existingPhrase.phrase.length - 1
+            }
+            characterIndex = updatedPhrases[i].end + 1
           }
-          
-          characterIndex = updatedPhrases[i].end + 1
         }
 
+        // Handle custom phrases tracking
         if (customListType) {
           if (!this.phraseHistory.customPhrases[customListType]) {
             this.phraseHistory.customPhrases[customListType] = new Set()
@@ -93,11 +112,13 @@ export const useNavStore = defineStore('nav', {
           this.phraseHistory.customPhrases[customListType].add(phraseArray[currentWordIndex])
         }
 
+        // Update store state
         this.$patch((state) => {
           state.phraseHistory.phrases = updatedPhrases
           state.phraseHistory.historyPosition = state.phraseHistory.entries.length
         })
 
+        // Add to history
         this.phraseHistory.entries.push({
           fullString,
           currentWordIndex,

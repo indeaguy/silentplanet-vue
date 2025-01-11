@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { buildFullString } from '../helpers/buildFullString'
 
 export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition) {
   // ------------------------------------------------------------------------------
@@ -214,6 +215,52 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     }
   }
 
+  /**
+   * Select a suggestion and insert it into the overall phrase.
+   */
+  const selectSuggestion = async (suggestion, customListType = null) => {
+    const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
+    const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+      || navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
+
+    const { fullString, phraseArray } = buildFullString(
+      navStore.phraseHistory.phrases, 
+      suggestionText,
+      {
+        sequence: navStore.wordLists.sequence,
+        addSpaceAfter: navStore.wordLists.addSpaceAfter,
+        currentIndex: currentWordIndex.value
+      }
+    )
+
+    const isCustom = currentListType 
+      ? !navStore.wordLists.lists[currentListType].includes(suggestionText) 
+      : true
+    if (isCustom) {
+      customListType = customListType || currentListType
+    }
+
+    await navStore.addPhraseEntry(
+      fullString, 
+      phraseArray, 
+      currentWordIndex.value, 
+      customListType, 
+      currentListType
+    )
+
+    searchQuery.value = fullString
+    const newPosition = fullString.length
+    cursorPosition.value = newPosition
+    await navStore.updateCursorPosition(newPosition)
+
+    showAllSuggestions.value = false
+    highlightedPhraseSuggestionIndex.value = -1
+
+    await updateSuggestionState(newPosition)
+
+    navStore.updateCurrentInput(null)
+  }
+
   // ------------------------------------------------------------------------------
   // Return the reactive data, computed props, and methods
   // ------------------------------------------------------------------------------
@@ -230,5 +277,6 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     // Methods
     resetSuggestionState,
     updateSuggestionState,
+    selectSuggestion,
   }
 }
