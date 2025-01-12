@@ -247,13 +247,15 @@ const handleKeydown = async (event) => {
 
     // If the cursor is within a phrase
     if (navStore.selectedPhrase) {
-      const noSuggestionsShown = !showAllSuggestions.value 
+      const shouldShowAllSuggestions = (
+        !showAllSuggestions.value 
         || (!filteredSuggestions.value?.length && !showSuggestions.value)
+      ) && !navStore.phraseHistory.currentInput
 
-      if (noSuggestionsShown) {
+      if (shouldShowAllSuggestions) {
         // First ArrowDown press - show all suggestions
-        showAllSuggestions.value = true
         showSuggestions.value = true
+        showAllSuggestions.value = true
         highlightedPhraseSuggestionIndex.value = 0
         showingAllSuggestionsForIndex.value = navStore.selectedPhrase.index
       } else {
