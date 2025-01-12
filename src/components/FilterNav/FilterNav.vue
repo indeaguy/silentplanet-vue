@@ -438,16 +438,9 @@ watch(
     // Update the input value
     searchQuery.value = newString
 
-    // Position cursor at the end of the current input
+    // Update cursor position in store
     const newCursorPosition = phrases[selectedPhrase.index].end + 1
-    nextTick(() => {
-      const input = document.querySelector('.terminal-input')
-      if (input) {
-        input.setSelectionRange(newCursorPosition, newCursorPosition)
-        cursorPosition.value = newCursorPosition
-        navStore.updateCursorPosition(newCursorPosition)
-      }
-    })
+    navStore.updateCursorPosition(newCursorPosition)
   }
 )
 
@@ -461,6 +454,19 @@ watch(
     }
   },
   { immediate: true }
+)
+
+watch(
+  () => navStore.phraseHistory.cursorPosition,
+  (newPosition) => {
+    nextTick(() => {
+      const input = document.querySelector('.terminal-input')
+      if (input) {
+        input.setSelectionRange(newPosition, newPosition)
+        cursorPosition.value = newPosition
+      }
+    })
+  }
 )
 </script>
 
