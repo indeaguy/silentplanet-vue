@@ -8,6 +8,7 @@ import { buildFullString } from './helpers/buildFullString'
 import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
 import { useSuggestions } from './composables/useSuggestions'
 import { handlePhraseDeletionLogic } from './helpers/phraseDeleteHelpers'
+import { usePhraseHandling } from './composables/usePhraseHandling'
 
 
 /* --------------------------------------------------------------------------
@@ -387,61 +388,44 @@ watch(cursorPosition, async (newPosition) => {
   }
 })
 
+/**
+ * Initialize phrase handling composable with required dependencies
+ * Used to manage phrase positions and updates in the search input
+ */
+const phraseHandling = usePhraseHandling({
+  navStore,
+  searchQuery,
+  cursorPosition
+})
+
+/**
+ * Watch for changes to the current input text
+ * When a phrase is being edited, this updates:
+ * - The positions of all phrases
+ * - The complete search string
+ * - The cursor position
+ */
 watch(
   () => navStore.phraseHistory.currentInput,
   (newInput) => {
+    // Only process if we have both input and a selected phrase
     if (!newInput || !navStore.selectedPhrase) return
 
-    const selectedPhrase = navStore.selectedPhrase
-    const phrases = { ...navStore.phraseHistory.phrases }
+    // Get updated positions and text from phrase handler
+    const { newString, phrases, newCursorPosition } = phraseHandling.updatePhrasePositions(
+      navStore.selectedPhrase,
+      newInput
+    )
 
-    // Rebuild the full string with updated positions
-    let newString = ''
-    let currentPosition = 0
-    Object.keys(phrases)
-      .sort((a, b) => parseInt(a) - parseInt(b))
-      .forEach(index => {
-        const numericIndex = parseInt(index)
-        const phrase = phrases[numericIndex]
-
-        // Add space if needed between phrases
-        if (currentPosition > 0) {
-          newString += ' '
-          currentPosition++
-        }
-
-        if (numericIndex === selectedPhrase.index) {
-          // Insert the updated currentInput
-          newString += newInput
-          phrases[numericIndex] = {
-            ...phrase,
-            phrase: newInput,
-            start: currentPosition,
-            end: currentPosition + newInput.length - 1
-          }
-          currentPosition += newInput.length
-        } else {
-          // Keep existing phrase
-          newString += phrase.phrase
-          phrases[numericIndex] = {
-            ...phrase,
-            start: currentPosition,
-            end: currentPosition + phrase.phrase.length - 1
-          }
-          currentPosition += phrase.phrase.length
-        }
-      })
-
-    // Update the store
+    // Update the store with new phrase positions
     navStore.$patch((state) => {
       state.phraseHistory.phrases = phrases
     })
 
-    // Update the input value
+    // Update the visible search input text
     searchQuery.value = newString
 
-    // Update cursor position in store
-    const newCursorPosition = phrases[selectedPhrase.index].end + 1
+    // Move cursor to end of edited phrase
     navStore.updateCursorPosition(newCursorPosition)
   }
 )
