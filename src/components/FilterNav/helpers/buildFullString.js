@@ -25,9 +25,10 @@ export const buildFullString = (existingPhrases, suggestionText = null, options)
   // Build and return the full string
   let fullString = phraseArray.filter(p => p).join(' ')
   
-  // Add space if needed based on current list type
-  const currentListType = sequence[currentIndex] || sequence[sequence.length - 1]
-  if (addSpaceAfter.includes(currentListType)) {
+  // Add space if the last phrase type is in addSpaceAfter
+  const lastIndex = phraseArray.filter(p => p).length - 1
+  const lastListType = sequence[lastIndex]
+  if (lastListType && addSpaceAfter.includes(lastListType)) {
     fullString += ' '
   }
 
