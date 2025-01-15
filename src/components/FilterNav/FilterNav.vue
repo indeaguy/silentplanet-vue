@@ -294,17 +294,19 @@ const handleKeydown = async (event) => {
   }
 
   // Selecting a suggestion with Enter
-  if (event.key === 'Enter' && highlightedPhraseSuggestionIndex.value >= 0) {
-    event.preventDefault()
-    const selectedSuggestion = filteredSuggestions.value[highlightedPhraseSuggestionIndex.value]
-    if (selectedSuggestion) {
-      await selectSuggestion(selectedSuggestion)
-
-      // Hide suggestions if no trailing space
-      if (!searchQuery.value.endsWith(' ')) {
-        showSuggestions.value = false
+  if (event.key === 'Enter') {
+    if (highlightedPhraseSuggestionIndex.value >= 0) {
+      event.preventDefault()
+      const selectedSuggestion = filteredSuggestions.value[highlightedPhraseSuggestionIndex.value]
+      if (selectedSuggestion) {
+        await selectSuggestion(selectedSuggestion)
       }
+    } else if (showSuggestions.value) {
+      // If suggestions are shown but none are highlighted, hide them
+      // @TODO: add a use-case here to not hide suggestions when a subquery is expecting a parameter
+      showSuggestions.value = false
     }
+    return
   }
 
   // --------------------------------------------------------------------------
