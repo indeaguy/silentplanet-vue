@@ -15,12 +15,36 @@ export const useNavStore = defineStore('nav', {
     wordLists: {
       sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
       lists: {
-        adjectives: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
-        contentTypes: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
-        preposition: ['in', 'from', 'today', 'this week', 'added on', 'added between'],
-        location: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
+        adjectives: {
+          id: 'adjectives',
+          type: 'filter',
+          values: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
+          customListClass: 'SortFilter', // Class used for handling custom values
+          addSpaceAfter: true
+        },
+        contentTypes: {
+          id: 'contentTypes',
+          type: 'content',
+          values: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
+          customListClass: 'ContentType',
+          subListId: 'contentSubTypes', // References potential sub-lists
+          addSpaceAfter: false
+        },
+        preposition: {
+          id: 'preposition',
+          type: 'connector',
+          values: ['in', 'from', 'today', 'this week', 'added on', 'added between'],
+          customListClass: null, // No custom values allowed
+          addSpaceAfter: true
+        },
+        location: {
+          id: 'location',
+          type: 'location',
+          values: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
+          customListClass: 'Location',
+          addSpaceAfter: false
+        }
       },
-      addSpaceAfter: ['adjectives', 'preposition']
     }
   }),
 

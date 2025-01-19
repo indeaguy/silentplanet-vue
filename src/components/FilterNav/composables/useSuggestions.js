@@ -35,7 +35,7 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     // Local references for convenience
     const existingPhrases = navStore.phraseHistory.phrases
     const listType = navStore.wordLists.sequence[currentWordIndex.value]
-    const allSuggestions = navStore.wordLists.lists[listType] || []
+    const allSuggestions = navStore.wordLists.lists[listType]?.values || []
     const selectedPhrase = navStore.selectedPhrase
     const currentInput = navStore.phraseHistory.currentInput
 
@@ -179,7 +179,7 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
 
     // Local references
     const listType = navStore.wordLists.sequence[currentIndex]
-    const allSuggestions = navStore.wordLists.lists[listType] || []
+    const allSuggestions = navStore.wordLists.lists[listType]?.values || []
     const isStartingFresh = Object.keys(existingPhrases).length === 0
     const isValidPhrase = !navStore.selectedPhrase || allSuggestions.includes(navStore.selectedPhrase.phrase)
     const isExactMatch = navStore.selectedPhrase && existingPhrases[currentIndex]?.phrase === navStore.selectedPhrase.phrase
@@ -223,18 +223,27 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
       || navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
 
+    // Add space after if:
+    // 1. This list type has addSpaceAfter = true
+    // 2. We're not editing an existing phrase
+    const listConfig = navStore.wordLists.lists[currentListType]
+    const isEditing = navStore.phraseHistory.phrases[currentWordIndex.value]
+    let finalText = suggestionText
+    // if (listConfig?.addSpaceAfter && !isEditing) {
+    //   finalText += ' '
+    // }
+
     const { fullString, phraseArray } = buildFullString(
       navStore.phraseHistory.phrases, 
-      suggestionText,
+      finalText,
       {
-        sequence: navStore.wordLists.sequence,
-        addSpaceAfter: navStore.wordLists.addSpaceAfter,
-        currentIndex: currentWordIndex.value
+        currentIndex: currentWordIndex.value,
+        navStore
       }
     )
 
     const isCustom = currentListType 
-      ? !navStore.wordLists.lists[currentListType].includes(suggestionText) 
+      ? !navStore.wordLists.lists[currentListType].values.includes(suggestionText) 
       : true
     if (isCustom) {
       customListType = customListType || currentListType

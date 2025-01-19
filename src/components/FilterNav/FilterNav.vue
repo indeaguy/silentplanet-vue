@@ -320,9 +320,8 @@ const handleKeydown = async (event) => {
         lastEntry.phrases,
         null,
         {
-          sequence: navStore.wordLists.sequence,
-          addSpaceAfter: navStore.wordLists.addSpaceAfter,
-          currentIndex: currentWordIndex.value
+          currentIndex: currentWordIndex.value,
+          navStore
         }
       )
       searchQuery.value = fullString

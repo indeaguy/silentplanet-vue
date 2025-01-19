@@ -1,34 +1,49 @@
 /**
  * Builds a full string from an array of phrases based on word list sequence
  * 
- * @param {Object} existingPhrases - Object containing existing phrases
- * @param {string|null} suggestionText - Optional text to insert at current index
+ * @param {Object} phrases - Object containing existing phrases
+ * @param {string|null} newPhrase - Optional text to insert at current index
  * @param {Object} options - Configuration options
- * @param {Array} options.sequence - Array defining the sequence of word types
- * @param {Array} options.addSpaceAfter - Array of word types that should have spaces after them
  * @param {number} options.currentIndex - Current index in the sequence
+ * @param {Object} options.navStore - Navigation store
  * @returns {Object} Object containing the full string and phrase array
  */
-export const buildFullString = (existingPhrases, suggestionText = null, options) => {
-  const { sequence, addSpaceAfter, currentIndex } = options
-  const phraseArray = []
-  
-  // Build the phrase array
-  for (let i = 0; i < sequence.length; i++) {
-    if (i === currentIndex && suggestionText !== null) {
-      phraseArray[i] = suggestionText
-    } else if (existingPhrases[i]) {
-      phraseArray[i] = existingPhrases[i].phrase
+export const buildFullString = (phrases, newPhrase, options) => {
+  const { currentIndex, navStore } = options
+  let phraseArray = []
+  let fullString = ''
+  let replace = false
+
+  // Get current list type from sequence and check if it should add space
+  const currentListType = navStore.wordLists.sequence[currentIndex]
+  const shouldAddSpace = navStore.wordLists.lists[currentListType]?.addSpaceAfter
+
+  // Get sorted indices to maintain order
+  const indices = Object.keys(phrases)
+    .map(Number)
+    .sort((a, b) => a - b)
+
+  indices.forEach((index) => {
+    const currentPhrase = phrases[index]
+    
+    // Add the current phrase
+    if (index === currentIndex && newPhrase) {
+      replace = true
+      phraseArray[index] = newPhrase
+      fullString += newPhrase
+    } else if (currentPhrase.phrase) {
+      phraseArray[index] = currentPhrase.phrase
+      fullString += currentPhrase.phrase
     }
+
+    fullString += ' '
+  })
+  if (!replace) {
+    fullString += newPhrase
+    phraseArray[currentIndex] = newPhrase
   }
 
-  // Build and return the full string
-  let fullString = phraseArray.filter(p => p).join(' ')
-  
-  // Add space if the last phrase type is in addSpaceAfter
-  const lastIndex = phraseArray.filter(p => p).length - 1
-  const lastListType = sequence[lastIndex]
-  if (lastListType && addSpaceAfter.includes(lastListType)) {
+  if (shouldAddSpace) {
     fullString += ' '
   }
 
