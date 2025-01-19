@@ -57,6 +57,11 @@ const currentWordIndex = computed(() => {
   return Object.keys(phrases).length
 })
 
+const currentList = computed(() => {
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  return navStore.wordLists.lists[currentListType] || []
+})
+
 /**
  * Use the custom useSuggestions composable
  */
@@ -69,7 +74,7 @@ const {
   resetSuggestionState,
   updateSuggestionState,
   selectSuggestion
-} = useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition)
+} = useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition, currentList)
 
 
 /* --------------------------------------------------------------------------
@@ -344,8 +349,7 @@ const handleKeydown = async (event) => {
   // --------------------------------------------------------------------------
   if (event.key === ' ') {
     const { phrases, currentInput } = navStore.phraseHistory
-    const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-    const suggestions = navStore.wordLists.lists[currentListType] || []
+    const suggestions = currentList.value
     const currentPhrase = phrases[currentWordIndex.value]
     const isAtPhraseEnd = currentPhrase && (cursorPosition.value === currentPhrase.end + 1)
 

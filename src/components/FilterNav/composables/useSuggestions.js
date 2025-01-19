@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { buildFullString } from '../helpers/buildFullString'
 
-export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition) {
+export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition, currentList) {
   // ------------------------------------------------------------------------------
   // Reactive state
   // ------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     // Local references for convenience
     const existingPhrases = navStore.phraseHistory.phrases
     const listType = navStore.wordLists.sequence[currentWordIndex.value]
-    const allSuggestions = navStore.wordLists.lists[listType]?.values || []
+    const allSuggestions = currentList.value?.values || []
     const selectedPhrase = navStore.selectedPhrase
     const currentInput = navStore.phraseHistory.currentInput
 
@@ -238,7 +238,8 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       finalText,
       {
         currentIndex: currentWordIndex.value,
-        navStore
+        navStore,
+        currentList: currentList.value
       }
     )
 

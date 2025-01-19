@@ -6,17 +6,17 @@
  * @param {Object} options - Configuration options
  * @param {number} options.currentIndex - Current index in the sequence
  * @param {Object} options.navStore - Navigation store
+ * @param {Array} options.currentList - Current list of valid values
  * @returns {Object} Object containing the full string and phrase array
  */
 export const buildFullString = (phrases, newPhrase, options) => {
-  const { currentIndex, navStore } = options
+  const { currentIndex, navStore, currentList } = options
   let phraseArray = []
   let fullString = ''
   let replace = false
 
-  // Get current list type from sequence and check if it should add space
-  const currentListType = navStore.wordLists.sequence[currentIndex]
-  const shouldAddSpace = navStore.wordLists.lists[currentListType]?.addSpaceAfter
+  // Get space behavior from the current list
+  const shouldAddSpace = currentList?.addSpaceAfter
 
   // Get sorted indices to maintain order
   const indices = Object.keys(phrases)
