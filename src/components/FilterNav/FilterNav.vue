@@ -364,7 +364,7 @@ const handleKeydown = async (event) => {
       : searchQuery.value.slice(0, cursorPosition.value).split(' ').pop()
 
     // If there's an exact match, select it and prevent the space
-    if (typedInput) {
+    if (typedInput && suggestions.length > 0) {
       const exactMatch = suggestions.find(s => s.toLowerCase() === typedInput.toLowerCase())
       if (exactMatch) {
         selectSuggestion(exactMatch)
