@@ -2,7 +2,7 @@
 /* --------------------------------------------------------------------------
  * Imports
  * ------------------------------------------------------------------------*/
-import { inject, defineEmits, ref, watch, computed, nextTick } from 'vue'
+import { inject, defineEmits, ref, watch, computed, nextTick, onMounted } from 'vue'
 import { useNavStore } from '../../stores/nav'
 import { buildFullString } from './helpers/buildFullString'
 import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
@@ -38,6 +38,7 @@ const navStore = useNavStore()
  * ------------------------------------------------------------------------*/
 const searchQuery = ref('')
 const cursorPosition = ref(0)
+const inputElement = ref(null)
 
 
 /* --------------------------------------------------------------------------
@@ -75,6 +76,77 @@ const {
   updateSuggestionState,
   selectSuggestion
 } = useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition, currentList)
+
+/**
+ * Computed property to determine the suggestions class based on the current list type
+ */
+const getSuggestionsClass = computed(() => {
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  const customListClass = navStore.wordLists.lists[currentListType]?.customListClass
+  return customListClass ? `suggestions-${customListClass}` : ''
+})
+
+/**
+ * Computed property to determine if we should show the cursor tab
+ */
+const showCursorTab = computed(() => {
+  return showSuggestions.value && filteredSuggestions.value.length > 0
+})
+
+/**
+ * Computed property to calculate the cursor tab position
+ */
+const cursorTabPosition = computed(() => {
+  if (!inputElement.value) {
+    return 0
+  }
+  
+  // If there's a selected phrase, use its start position
+  if (navStore.selectedPhrase) {
+    const textUpToCursor = searchQuery.value.substring(0, navStore.selectedPhrase.start)
+    const span = document.createElement('span')
+    span.style.font = window.getComputedStyle(inputElement.value).font
+    span.style.visibility = 'hidden'
+    span.style.position = 'absolute'
+    span.textContent = textUpToCursor
+    document.body.appendChild(span)
+    const width = span.offsetWidth
+    document.body.removeChild(span)
+    const inputPadding = parseInt(window.getComputedStyle(inputElement.value).paddingLeft)
+    return width + inputPadding
+  }
+  
+  // If no selected phrase, find the end of the last phrase
+  const phrases = navStore.phraseHistory.phrases
+  const phraseKeys = Object.keys(phrases).map(Number).sort((a, b) => a - b)
+  
+  if (phraseKeys.length > 0) {
+    const lastPhrase = phrases[phraseKeys[phraseKeys.length - 1]]
+    const textUpToCursor = searchQuery.value.substring(0, lastPhrase.end + 1) // +1 for space after phrase
+    const span = document.createElement('span')
+    span.style.font = window.getComputedStyle(inputElement.value).font
+    span.style.visibility = 'hidden'
+    span.style.position = 'absolute'
+    span.textContent = textUpToCursor
+    document.body.appendChild(span)
+    const width = span.offsetWidth
+    document.body.removeChild(span)
+    const inputPadding = parseInt(window.getComputedStyle(inputElement.value).paddingLeft)
+    return width + inputPadding
+  }
+  
+  // If no phrases at all, return the initial padding
+  return parseInt(window.getComputedStyle(inputElement.value).paddingLeft)
+})
+
+/**
+ * Computed property to get the current list's display label
+ */
+const getCurrentListLabel = computed(() => {
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  const list = navStore.wordLists.lists[currentListType]
+  return list?.id || currentListType
+})
 
 
 /* --------------------------------------------------------------------------
@@ -457,22 +529,36 @@ watch(
     })
   }
 )
+
+// Update template ref when component mounts
+onMounted(() => {
+  inputElement.value = document.querySelector('.terminal-input')
+})
 </script>
 
 <template>
-  <div
-    id="filter-nav"
-    @focusout="handleFocusOut"
-    @mousedown.stop
-    @click.stop
-    @mousemove.stop
-  >
+  <div id="filter-nav">
     <p class="content-message">
       Filter Nav region: {{ selectedRegion.name }}
     </p>
 
     <div class="terminal-input-container">
+      <!-- Add debug info temporarily -->
+      <!-- <div style="position: absolute; top: -40px; color: red; font-size: 10px;">
+        Cursor: {{ cursorPosition }}, Tab: {{ cursorTabPosition }}
+      </div> -->
+      
+      <div 
+        v-if="showCursorTab"
+        class="cursor-tab"
+        :class="getSuggestionsClass"
+        :style="{ left: cursorTabPosition + 'px' }"
+      >
+        {{ getCurrentListLabel }}
+      </div>
+
       <input 
+        ref="inputElement"
         type="text"
         v-model="searchQuery"
         class="terminal-input"
@@ -489,6 +575,7 @@ watch(
       <div
         v-if="showSuggestions && filteredSuggestions.length > 0"
         class="suggestions"
+        :class="getSuggestionsClass"
         :key="currentWordIndex"
       >
         <div
@@ -586,6 +673,38 @@ watch(
   z-index: 1000;
 }
 
+/* Add new suggestion list type styles */
+.suggestions.suggestions-SortFilter {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(255, 165, 0, 0.4); /* Orange tint */
+}
+
+.suggestions.suggestions-ContentType {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(186, 156, 255, 0.4); /* Bright purple border */
+}
+
+.suggestions.suggestions-Location {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: rgba(0, 191, 255, 0.4); /* Blue tint */
+}
+
+/* Add matching hover effects for each type */
+.suggestions.suggestions-SortFilter .suggestion-item:hover,
+.suggestions.suggestions-SortFilter .suggestion-selected {
+  background: rgba(255, 165, 0, 0.2);
+}
+
+.suggestions.suggestions-ContentType .suggestion-item:hover,
+.suggestions.suggestions-ContentType .suggestion-selected {
+  background: rgba(186, 156, 255, 0.2); /* Bright purple background */
+}
+
+.suggestions.suggestions-Location .suggestion-item:hover,
+.suggestions.suggestions-Location .suggestion-selected {
+  background: rgba(0, 191, 255, 0.2);
+}
+
 .suggestion-item {
   padding: 0.5rem;
   color: #00ff00;
@@ -604,5 +723,48 @@ watch(
 
 .custom-icon {
   margin-right: 4px;
+}
+
+.cursor-tab {
+  position: absolute;
+  top: -22px;
+  padding: 2px 12px;
+  font-size: 11px;
+  text-transform: capitalize;
+  background: rgba(0, 0, 0, 0.8);
+  color: rgba(0, 255, 0, 0.8);
+  font-family: monospace;
+  z-index: 1000;
+  clip-path: polygon(
+    5px 0%,          /* top-left */
+    100% 0%,         /* top-right */
+    calc(100% - 5px) 100%,  /* bottom-right */
+    0% 100%          /* bottom-left */
+  );
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-bottom: none;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Cursor tab color variants */
+.cursor-tab.suggestions-SortFilter {
+  border-color: rgba(255, 165, 0, 0.4);
+  color: rgba(255, 165, 0, 0.8);
+}
+
+.cursor-tab.suggestions-ContentType {
+  border-color: rgba(186, 156, 255, 0.4); /* Bright purple border */
+  color: rgba(186, 156, 255, 0.8); /* Bright purple text */
+}
+
+.cursor-tab.suggestions-Location {
+  border-color: rgba(0, 191, 255, 0.4);
+  color: rgba(0, 191, 255, 0.8);
+}
+
+#filter-nav {
+  position: relative;
 }
 </style>

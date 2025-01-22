@@ -13,10 +13,10 @@ export const useNavStore = defineStore('nav', {
       historyPosition: -1,
     },
     wordLists: {
-      sequence: ['adjectives', 'contentTypes', 'preposition', 'location'],
+      sequence: ['comparative', 'contentTypes', 'preposition', 'location'],
       lists: {
-        adjectives: {
-          id: 'adjectives',
+        comparative: {
+          id: 'comparative',
           type: 'filter',
           values: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
           customListClass: 'SortFilter', // Class used for handling custom values
