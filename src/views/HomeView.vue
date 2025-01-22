@@ -3,44 +3,12 @@ import FilterNav from '../components/FilterNav/FilterNav.vue'
 import RegionContent from '../components/RegionContent.vue'
 import BaseGlobe from '../components/BaseGlobe.vue'
 import { useThreePolysStore } from '../stores/polys.js'
-import { computed, provide, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import DataDisplay from '@/components/modals/DataDisplay.vue'
 import { useUserStore } from '../stores/user'
 import { useNavStore } from '../stores/nav'
 
-//const selectedRegion = ref('')
 const threePolysStore = useThreePolysStore()
-provide(
-  'selectedRegion',
-  computed(() => threePolysStore.selectedMesh)
-) // @TODO what is vue computed?
-//provide('selectedRegion', selectedRegion)
-
-// @TODO get the geotree from a backend source
-const regionOptions = {
-  regions: [
-    {
-      id: 1,
-      name: 'Elysium',
-      children: [
-        {
-          id: 101,
-          name: 'Elysium Jr.'
-        },
-        {
-          id: 102,
-          name: 'Elysium Sr.'
-        }
-      ]
-    },
-    {
-      id: 2,
-      name: 'Not Elysium',
-      children: []
-    }
-  ]
-}
-provide('regionOptions', regionOptions)
 
 // Event handler for the 'update-region-id' emit
 const setSelectedRegion = (newRegion) => {
@@ -103,7 +71,7 @@ const getNavStoreData = () => {
   <div class="home-view">
     <div class="header-extension">
       <div class="header-space"></div>
-      <FilterNav />
+      <FilterNav @update-region-id="setSelectedRegion" />
     </div>
     <div id="world-container">
       <BaseGlobe 
@@ -111,7 +79,7 @@ const getNavStoreData = () => {
         @update-region-id="setSelectedRegion" />
     </div>
     <div class="region-content-wrapper">
-      <RegionContent />
+      <RegionContent @update-region="setSelectedRegion" />
     </div>
     <div class="data-displays">
       <DataDisplay 

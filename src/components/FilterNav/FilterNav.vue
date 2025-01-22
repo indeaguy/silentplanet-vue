@@ -4,6 +4,7 @@
  * ------------------------------------------------------------------------*/
 import { inject, defineEmits, ref, watch, computed, nextTick, onMounted } from 'vue'
 import { useNavStore } from '../../stores/nav'
+import { useThreePolysStore } from '../../stores/polys'
 import { buildFullString } from './helpers/buildFullString'
 import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
 import { useSuggestions } from './composables/useSuggestions'
@@ -15,7 +16,8 @@ import { usePhraseHandling } from './composables/usePhraseHandling'
  * REGION STUFF - TEMPORARY
  * ------------------------------------------------------------------------*/
 const emit = defineEmits(['update-region-id'])
-const selectedRegion = inject('selectedRegion')
+const threePolysStore = useThreePolysStore()
+const selectedRegion = computed(() => threePolysStore.selectedMesh)
 
 /**
  * We create a local copy of the selectedRegion value. 

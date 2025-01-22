@@ -49,9 +49,9 @@ export const useThreePolysStore = defineStore('ThreePolysStoreMeshes', {
       }
     },
     setSelectedMeshByRegionId(meshRegionId, callback = false) {
-      const mesh = this.getMeshByRegion(meshRegionId)
+      const mesh = this.getMeshByRegionId(meshRegionId)
       if (mesh) {
-        this.setSelectedMesh(mesh, callback) // @TODO what affect does this approach have on reactivity?
+        this.setSelectedMesh(mesh, callback)
       }
     },
     setHoveredMesh(mesh, callback) {
@@ -70,7 +70,7 @@ export const useThreePolysStore = defineStore('ThreePolysStoreMeshes', {
       }
     },
     setHoveredMeshByRegionId(meshRegionId, callback = false) {
-      const mesh = this.getMeshByRegion(meshRegionId, callback)
+      const mesh = this.getMeshByRegionId(meshRegionId, callback)
       if (mesh) {
         this.setHoveredMesh(mesh) // @TODO what affect does this approach have on reactivity?
       }

@@ -1,14 +1,22 @@
 <script setup>
-import { inject } from 'vue'
+import { useThreePolysStore } from '../stores/polys'
+import { computed } from 'vue'
 
-const selectedRegion = inject('selectedRegion')
+const store = useThreePolysStore()
+const selectedRegion = computed(() => store.selectedMesh)
 
-// @TODO add validation for the existence of selectedRegion.name
+const emit = defineEmits(['update-region'])
+
+// Example future method that would need to update the store
+const handleRegionUpdate = (newData) => {
+  emit('update-region', newData)
+}
 </script>
 
 <template>
   <div id="region-content">
-    <p class="content-message">Selected Region Content value: {{ selectedRegion.name }}</p>
+    <p class="content-message">Selected Region Content value: {{ selectedRegion?.name }}</p>
+    <!-- Future interactive elements would go here -->
   </div>
 </template>
 
