@@ -29,8 +29,8 @@ export const buildFullString = (phrases, newPhrase, options) => {
     // Add the current phrase
     if (index === currentIndex && newPhrase) {
       replace = true
-      phraseArray[index] = newPhrase
-      fullString += newPhrase
+      phraseArray[index] = typeof newPhrase === 'string' ? newPhrase : newPhrase.label
+      fullString += typeof newPhrase === 'string' ? newPhrase : newPhrase.label
     } else if (currentPhrase.phrase) {
       phraseArray[index] = currentPhrase.phrase
       fullString += currentPhrase.phrase

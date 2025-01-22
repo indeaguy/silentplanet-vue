@@ -18,29 +18,58 @@ export const useNavStore = defineStore('nav', {
         comparative: {
           id: 'comparative',
           type: 'filter',
-          values: ['most popular', 'newest', 'fastest rising', 'random', 'most undisliked', 'most controversial', 'least controversial'],
-          customListClass: 'SortFilter', // Class used for handling custom values
+          values: [
+            { label: 'most popular' },
+            { label: 'newest' },
+            { label: 'fastest rising' },
+            { label: 'random' },
+            { label: 'most undisliked' },
+            { label: 'most controversial' },
+            { label: 'least controversial' }
+          ],
+          customListClass: 'SortFilter',
           addSpaceAfter: true
         },
         contentTypes: {
           id: 'contentTypes',
           type: 'content',
-          values: ['post', 'music', 'art', 'video', 'vine', 'poem', 'controvercy', 'ad'],
+          values: [
+            { label: 'post' },
+            { label: 'music' },
+            { label: 'art' },
+            { label: 'video' },
+            { label: 'vine' },
+            { label: 'poem' },
+            { label: 'controvercy' },
+            { label: 'ad' }
+          ],
           customListClass: 'ContentType',
-          subListId: 'contentSubTypes', // References potential sub-lists
+          subListId: 'contentSubTypes',
           addSpaceAfter: false
         },
         preposition: {
           id: 'preposition',
           type: 'connector',
-          values: ['in', 'from', 'today', 'this week', 'added on', 'added between'],
-          customListClass: null, // No custom values allowed
+          values: [
+            { label: 'in' },
+            { label: 'from' },
+            { label: 'today' },
+            { label: 'this week' },
+            { label: 'added on' },
+            { label: 'added between' }
+          ],
+          customListClass: null,
           addSpaceAfter: true
         },
         location: {
           id: 'location',
           type: 'location',
-          values: ['Canada', 'Lower Sackville', 'New York', 'Paris'],
+          values: [
+            { label: 'Canada' },
+            { label: 'Lower Sackville' },
+            { label: 'New York' },
+            { label: 'Paris' }
+          ],
           customListClass: 'Location',
           addSpaceAfter: false
         }

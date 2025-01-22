@@ -52,13 +52,17 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     if (selectedPhrase && currentInput) {
       const searchTerm = currentInput.toLowerCase()
 
-      const filtered = allSuggestions.filter(s =>
-        s.toLowerCase().includes(searchTerm)
-      )
+      const filtered = allSuggestions.filter(s => {
+        const text = typeof s === 'object' ? s.label : s
+        return text.toLowerCase().includes(searchTerm)
+      })
 
       // Check if the exact searchTerm already exists
       const hasExactMatch = allSuggestions.some(
-        s => s.toLowerCase() === searchTerm
+        s => {
+          const text = typeof s === 'object' ? s.label : s
+          return text.toLowerCase() === searchTerm
+        }
       )
 
       // If no exact match, add the custom (user-typed) suggestion
@@ -122,13 +126,16 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
 
     // Filter down to suggestions that match the typed input
     let matching = customMarkedSuggestions.filter(item => {
-      const text = typeof item === 'object' ? item.text : item
+      const text = typeof item === 'object' ? item.label : item
       return text.toLowerCase().includes(searchTerm)
     })
 
     // Detect if an exact match already exists
     const hasExactMatch = allSuggestions.some(
-      s => s.toLowerCase() === searchTerm
+      s => {
+        const text = typeof s === 'object' ? s.label : s
+        return text.toLowerCase() === searchTerm
+      }
     )
 
     // Also check whether the currently selected phrase matches the typed input

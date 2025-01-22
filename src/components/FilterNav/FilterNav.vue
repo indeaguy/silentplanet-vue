@@ -379,7 +379,11 @@ const handleKeydown = async (event) => {
       event.preventDefault()
       const selectedSuggestion = filteredSuggestions.value[highlightedPhraseSuggestionIndex.value]
       if (selectedSuggestion) {
-        await selectSuggestion(selectedSuggestion)
+        // Handle both object and string suggestions
+        const suggestionText = typeof selectedSuggestion === 'object' 
+          ? (selectedSuggestion.label || selectedSuggestion.text) 
+          : selectedSuggestion
+        await selectSuggestion(suggestionText)
       }
     } else if (showSuggestions.value) {
       // If suggestions are shown but none are highlighted, hide them

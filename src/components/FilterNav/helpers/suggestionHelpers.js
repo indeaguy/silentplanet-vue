@@ -8,7 +8,8 @@
  * @returns {string} The suggestion key
  */
 export const getSuggestionKey = (suggestion) => {
-  return typeof suggestion === 'string' ? suggestion : suggestion.text
+  if (typeof suggestion === 'string') return suggestion
+  return suggestion.isCustom ? suggestion.text : suggestion.label
 }
 
 /**
@@ -17,7 +18,8 @@ export const getSuggestionKey = (suggestion) => {
  * @returns {string} The suggestion text
  */
 export const getSuggestionText = (suggestion) => {
-  return typeof suggestion === 'string' ? suggestion : suggestion.text
+  if (typeof suggestion === 'string') return suggestion
+  return suggestion.isCustom ? suggestion.text : suggestion.label
 }
 
 /**
