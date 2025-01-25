@@ -250,8 +250,16 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       }
     )
 
+    // Determine if this is a custom phrase by checking if it exists in the current list type's values
+    // If currentListType exists, check if suggestionText matches any value in that list
+    // If no match found or no currentListType, treat as custom phrase
+    // For custom phrases, use provided customListType or fall back to currentListType
+    // some() returns true if any array element matches the condition, false otherwise
     const isCustom = currentListType 
-      ? !navStore.wordLists.lists[currentListType].values.includes(suggestionText) 
+      ? !navStore.wordLists.lists[currentListType].values.some(value => {
+          const valueText = typeof value === 'object' ? value.label : value
+          return valueText === suggestionText
+        })
       : true
     if (isCustom) {
       customListType = customListType || currentListType
