@@ -173,16 +173,35 @@ const handleInput = async (event) => {
   const inputPosition = event.target.selectionStart
   const selectedPhrase = navStore.selectedPhrase ? { ...navStore.selectedPhrase } : null
 
-  if (selectedPhrase) {
-    // Maintain a plain object for the selected phrase
-    const currentSelectedPhrase = { ...selectedPhrase }
+  // Handle space key first
+  if (event.data === ' ' && selectedPhrase) {
+    // Original space handling behavior
+    const phrases = navStore.phraseHistory.phrases
+    let startPos = 0
+    Object.values(phrases).forEach(phrase => {
+      if (phrase.end < inputPosition) {
+        startPos = Math.max(startPos, phrase.end + 1)
+      }
+    })
 
-    // Update currentInput based on typed character
-    if (!navStore.phraseHistory.currentInput) {
-      navStore.updateCurrentInput(event.data)
-    } else if (event.data) {
-      const newInput = navStore.phraseHistory.currentInput + event.data
-      navStore.updateCurrentInput(newInput)
+    let endPos = searchQuery.value.length
+    Object.values(phrases).forEach(phrase => {
+      if (phrase.start > inputPosition) {
+        endPos = Math.min(endPos, phrase.start)
+      }
+    })
+
+    const currentInput = searchQuery.value.slice(startPos, endPos).trim()
+    navStore.updateCurrentInput(currentInput || null)
+  } else if (selectedPhrase) {
+    // Handle non-space input with selected phrase
+    if (event.data && event.data !== ' ') {
+      if (!navStore.phraseHistory.currentInput) {
+        await navStore.updateCurrentInput(event.data)
+      } else {
+        const newInput = navStore.phraseHistory.currentInput + event.data
+        await navStore.updateCurrentInput(newInput)
+      }
     }
 
     // Force the store to keep the original selected phrase
@@ -190,7 +209,7 @@ const handleInput = async (event) => {
       state.phraseHistory.selectedPhrase = currentSelectedPhrase
     })
   } else {
-    // Original handleInput behavior
+    // Original handleInput behavior for no selected phrase
     const phrases = navStore.phraseHistory.phrases
     let startPos = 0
     Object.values(phrases).forEach(phrase => {
@@ -420,38 +439,6 @@ const handleKeydown = async (event) => {
   // --------------------------------------------------------------------------
   if (event.key.length === 1 || event.key === 'Backspace') {
     showAllSuggestions.value = false
-  }
-
-  // --------------------------------------------------------------------------
-  // Space key handling
-  // --------------------------------------------------------------------------
-  if (event.key === ' ') {
-    const { phrases, currentInput } = navStore.phraseHistory
-    const suggestions = currentList.value
-    const currentPhrase = phrases[currentWordIndex.value]
-    const isAtPhraseEnd = currentPhrase && (cursorPosition.value === currentPhrase.end + 1)
-
-    // If at the end of a valid phrase, allow space
-    if (isAtPhraseEnd) {
-      return
-    }
-
-    // Get the current word typed so far
-    const typedInput = navStore.selectedPhrase 
-      ? navStore.selectedPhrase.phrase
-      : searchQuery.value.slice(0, cursorPosition.value).split(' ').pop()
-
-    // If there's an exact match, select it and prevent the space
-    if (typedInput && suggestions.length > 0) {
-      const exactMatch = suggestions.find(s => s.toLowerCase() === typedInput.toLowerCase())
-      if (exactMatch) {
-        selectSuggestion(exactMatch)
-        return
-      }
-    }
-
-    // Otherwise, allow space
-    return
   }
 }
 
