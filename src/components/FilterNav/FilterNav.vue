@@ -480,6 +480,10 @@ watch(
     if (!navStore.selectedPhrase) return
 
     // Get updated positions and text from phrase handler
+    if (newInput === null) {
+      return
+    }
+
     const { newString, phrases, newCursorPosition } = phraseHandling.updatePhrasePositions(
       navStore.selectedPhrase,
       newInput ?? ''  // Pass empty string if newInput is null

@@ -51,8 +51,10 @@ export function usePhraseHandling(context) {
         }
       })
 
-    // Place cursor after the edited phrase
-    const newCursorPosition = phrases[selectedPhrase.index].end + 1
+    // Place cursor at end of edited phrase or at end of string if phrase not found
+    const newCursorPosition = phrases[selectedPhrase.index]?.end !== undefined 
+      ? phrases[selectedPhrase.index].end + 1 
+      : newString.length
 
     return { newString, phrases, newCursorPosition }
   }
