@@ -73,8 +73,6 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
         })
       }
 
-      let filteredSuggestions = filtered
-
       return filtered
     }
 

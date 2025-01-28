@@ -477,12 +477,12 @@ watch(
   () => navStore.phraseHistory.currentInput,
   (newInput) => {
     // Only process if we have both input and a selected phrase
-    if (!newInput || !navStore.selectedPhrase) return
+    if (!navStore.selectedPhrase) return
 
     // Get updated positions and text from phrase handler
     const { newString, phrases, newCursorPosition } = phraseHandling.updatePhrasePositions(
       navStore.selectedPhrase,
-      newInput
+      newInput ?? ''  // Pass empty string if newInput is null
     )
 
     // Update the store with new phrase positions

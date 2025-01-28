@@ -1,5 +1,5 @@
 export function usePhraseHandling(context) {
-  const { navStore, searchQuery, cursorPosition } = context
+  const { navStore } = context
 
   /**
    * Updates the positions of all phrases when a phrase is modified
