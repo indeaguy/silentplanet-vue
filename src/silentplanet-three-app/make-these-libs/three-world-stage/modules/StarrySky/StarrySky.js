@@ -34,6 +34,7 @@ export class StarrySky {
 
     try {
       this.envMap = await loadCubeTextureAsync(texturePaths);
+      // @TODO: don't do this here
       this.scene.background = this.envMap;
     } catch (error) {
       console.error('Error loading starry sky textures:', error);

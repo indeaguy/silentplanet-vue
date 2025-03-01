@@ -36,7 +36,8 @@ export const handleSelectedTextDeletion = (selStart, selEnd, phrases) => {
  */
 export const handlePhraseStartDeletion = (cursorPos, phrases) => {
   for (const [index, phrase] of Object.entries(phrases)) {
-    if (cursorPos === phrase.start) {
+    // @TODO bad code smell -1 why
+    if (cursorPos -1 === phrase.start) {
       return {
         shouldHandle: true,
         newCursorPosition: phrase.start,
@@ -126,15 +127,18 @@ export const handlePhraseDeletionLogic = ({
   if (selStart !== selEnd) {
     const result = handleSelectedTextDeletion(selStart, selEnd, phrases)
     if (applyDeletionResult(result, context)) {
+      console.log('delete case 1');
       return true
     }
   }
 
   const startResult = handlePhraseStartDeletion(selStart, phrases)
   if (applyDeletionResult(startResult, context)) {
+    console.log('delete case 2');
     return true
   }
 
   const phraseResult = handlePhraseDeletion(selStart, phrases)
+  console.log('delete case 3');
   return applyDeletionResult(phraseResult, context)
 } 

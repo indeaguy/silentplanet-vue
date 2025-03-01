@@ -44,9 +44,9 @@ function setupEventListeners() {
   // @TODO use const for id
   const baseGlobeDiv = document.getElementById('base-globe')
   if (baseGlobeDiv) {
-    resizeObserver.value = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        if (entry.target === baseGlobeDiv) {
+    resizeObserver.value = new ResizeObserver((resizeObserverEntryObjects) => {
+      for (let resizeObserverEntryObject of resizeObserverEntryObjects) {
+        if (resizeObserverEntryObject.target === baseGlobeDiv) {
           globe.worldStage.onWindowResize()
         }
       }

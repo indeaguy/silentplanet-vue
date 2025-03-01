@@ -197,8 +197,10 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       searchQuery.value[position - 1] === ' ' ||
       (navStore.selectedPhrase && position === navStore.selectedPhrase.end + 1)
 
-    // Decide if we should show the suggestions panel
-    const shouldShowSuggestions = (
+    // @TODO bad code smell
+    const forceShowSuggestions = navStore.selectedPhrase && navStore.phraseHistory.currentInput !== null
+
+    const shouldShowSuggestions = forceShowSuggestions || (
       (isStartingFresh || (hasLeadingSpace && !isExactMatch) || (isValidPhrase && !isExactMatch)) &&
       (
         // If we haven't filled out all placeholders

@@ -110,6 +110,15 @@ export const useNavStore = defineStore('nav', {
   },
 
   actions: {
+    /**
+     * Add a phrase entry
+     * @param {string} fullString - The full input string
+     * @param {array} phraseArray - The array of phrases
+     * @param {number} currentWordIndex - The index of the current word
+     * @param {string} customListType - The custom list type
+     * @param {string} listType - The list type
+     * @returns {object} the updated phrases
+     */
     async addPhraseEntry(fullString, phraseArray, currentWordIndex, customListType = null, listType = null) {
       try {
         const updatedPhrases = { ...this.phraseHistory.phrases }
@@ -202,6 +211,11 @@ export const useNavStore = defineStore('nav', {
       })
     },
 
+    /**
+     * Clear subsequent phrases
+     * @param {number} startIndex - The index of the phrase to start clearing from
+     * @returns {object} the updated phrases
+     */
     clearSubsequentPhrases(startIndex) {
       const originalPhrases = { ...this.phraseHistory.phrases }
       const updatedPhrases = {}
@@ -229,6 +243,11 @@ export const useNavStore = defineStore('nav', {
       return updatedPhrases
     },
 
+    /**
+     * Update the current input
+     * @param {*} input 
+     * @returns {string} the current input
+     */
     updateCurrentInput(input) {
       this.$patch((state) => {
         state.phraseHistory.currentInput = input

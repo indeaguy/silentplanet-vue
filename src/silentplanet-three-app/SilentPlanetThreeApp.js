@@ -28,6 +28,7 @@ export class SilentPlanetThree {
     this.uiMeshes = [];
     this.cameraData = null;
 
+    // @TODO: bad code smell
     // Bind the methods to ensure correct 'this' context
     this.handleHoverEvent = this.handleHoverEvent.bind(this);
     this.handleClickEvent = this.handleClickEvent.bind(this);
@@ -83,12 +84,7 @@ export class SilentPlanetThree {
 
     const innerSphereMaterial = createMeshBasicMaterial({
       map: innerTexture,
-      transparent: true,
       side: THREE.FrontSide,
-      color: 0xffffff,
-      depthWrite: true,
-      depthTest: true,
-      alphaTest: 0.1
     });
     
     const innerSphere = createSphere({
@@ -97,7 +93,6 @@ export class SilentPlanetThree {
       heightSegments: configInstance.settings.SPHERE.HEIGHT_SEGMENTS,
       material: innerSphereMaterial
     });
-    innerSphere.renderOrder = 0;
     this.worldStage.model.scene.add(innerSphere);
 
     grids = this.createGrids()
@@ -112,16 +107,12 @@ export class SilentPlanetThree {
         color: 0x00ff00,
         transparent: true,
         opacity: 0.7,
-        depthWrite: true,
-        depthTest: true,
         renderOrder: 2
       }),
       default: createMeshBasicMaterial({
         color: 0x87cefa,
         transparent: true,
         opacity: 0.7,
-        depthWrite: true,
-        depthTest: true,
         renderOrder: 2
       }),
       event: createGlowingMeshPhongMaterial({
@@ -130,8 +121,6 @@ export class SilentPlanetThree {
         glowIntensity: 100,
         transparent: true,
         opacity: 0.8,
-        depthWrite: true,
-        depthTest: true,
         renderOrder: 2
       }),
       selected: createGlowingMeshPhongMaterial({
@@ -140,8 +129,6 @@ export class SilentPlanetThree {
         glowIntensity: 0.5,
         transparent: true,
         opacity: 0.7,
-        depthWrite: true,
-        depthTest: true,
         renderOrder: 2
       }),
       selectedEvent: createGlowingMeshPhongMaterial({
@@ -150,8 +137,6 @@ export class SilentPlanetThree {
         glowIntensity: 100,
         transparent: true,
         opacity: 0.8,
-        depthWrite: true,
-        depthTest: true,
         renderOrder: 2
       })
     });

@@ -1,7 +1,7 @@
 {
   "SCENE": {
-    "WIDTH_PERCENTAGE": 0.1,
-    "HEIGHT_PERCENTAGE": 0.2
+    "WIDTH_PERCENTAGE": 1,
+    "HEIGHT_PERCENTAGE": 1
   },
   "CAMERA": {
     "FOV": 75,
@@ -17,15 +17,15 @@
     "CENTER": [0, 0, 0],
     "RADIUS": 1,
     "FILL_COLOUR": "0x000000",
-    "WIDTH_SEGMENTS": 30,
-    "HEIGHT_SEGMENTS": 30,
+    "WIDTH_SEGMENTS": 25,
+    "HEIGHT_SEGMENTS": 25,
     "WIREFRAME": false,
     "TRANSPARENT": true,
     "OPACITY": 0.57,
     "GRIDS": {
       "O": {
-        "COLOR": "0xffffff",
-        "COLOR_FINAL": "0x000000",
+        "COLOR": "0xff4500",
+        "COLOR_FINAL": "0x00ff00",
         "LAT_DENSITY": 10,
         "LON_DENSITY": 10,
         "FADE_START": 0.1,
@@ -33,18 +33,18 @@
         "FADE_SPEED": 0.01
       },
       "1": {
-        "COLOR": "0x808080",
+        "COLOR": "0xffd700",
         "COLOR_FINAL": "0x000000",
         "LAT_DENSITY": 5,
         "LON_DENSITY": 5,
-        "FADE_START": 0.2,
-        "FADE_END": 0.8,
+        "FADE_START": 0.1,
+        "FADE_END": 0.2,
         "FADE_SPEED": 0.02
       }
     }
   },
   "POLYGONS": {
-    "RISE": 0.02,
+    "RISE": 0.001,
     "COLOR": "0xff0000",
     "SUBDIVIDE_DEPTH": 0,
     "MIN_EDGE_LENGTH": 0.05,
@@ -55,5 +55,13 @@
     "LAYER_OVERRIDES": {
       "O": {}
     }
-  }
+  },
+  "STARRY_SKY_TEXTURES": [
+    "/assets/textures/starry_right.png",
+    "/assets/textures/starry_left.png",
+    "/assets/textures/starry_top.png",
+    "/assets/textures/starry_bottom.png",
+    "/assets/textures/starry_front.png",
+    "/assets/textures/starry_back.png"
+  ]
 }

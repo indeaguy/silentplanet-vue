@@ -15,6 +15,7 @@ export function usePhraseHandling(context) {
     const phrases = { ...navStore.phraseHistory.phrases }
     let newString = ''
     let currentPosition = 0
+    let selectedPhraseIndex = 0
 
     // Process phrases in order by index
     Object.keys(phrases)

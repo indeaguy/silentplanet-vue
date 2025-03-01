@@ -168,67 +168,42 @@ const handleClick = async (event) => {
 /**
  * Handle user input in the text field.
  */
-const handleInput = async (event) => {
+ const handleInput = async (event) => {
   resetSuggestionState()
-  const inputPosition = event.target.selectionStart
-  const selectedPhrase = navStore.selectedPhrase ? { ...navStore.selectedPhrase } : null
 
-  // Handle space key first
-  if (event.data === ' ' && selectedPhrase) {
-    // Original space handling behavior
-    const phrases = navStore.phraseHistory.phrases
-    let startPos = 0
-    Object.values(phrases).forEach(phrase => {
-      if (phrase.end < inputPosition) {
-        startPos = Math.max(startPos, phrase.end + 1)
-      }
-    })
-
-    let endPos = searchQuery.value.length
-    Object.values(phrases).forEach(phrase => {
-      if (phrase.start > inputPosition) {
-        endPos = Math.min(endPos, phrase.start)
-      }
-    })
-
-    const currentInput = searchQuery.value.slice(startPos, endPos).trim()
-    navStore.updateCurrentInput(currentInput || null)
-  } else if (selectedPhrase) {
-    // Handle non-space input with selected phrase
-    if (event.data && event.data !== ' ') {
-      if (!navStore.phraseHistory.currentInput) {
-        await navStore.updateCurrentInput(event.data)
-      } else {
-        const newInput = navStore.phraseHistory.currentInput + event.data
-        await navStore.updateCurrentInput(newInput)
-      }
-    }
-
-    // Force the store to keep the original selected phrase
-    navStore.$patch((state) => {
-      state.phraseHistory.selectedPhrase = currentSelectedPhrase
-    })
-  } else {
-    // Original handleInput behavior for no selected phrase
-    const phrases = navStore.phraseHistory.phrases
-    let startPos = 0
-    Object.values(phrases).forEach(phrase => {
-      if (phrase.end < inputPosition) {
-        startPos = Math.max(startPos, phrase.end + 1)
-      }
-    })
-
-    let endPos = searchQuery.value.length
-    Object.values(phrases).forEach(phrase => {
-      if (phrase.start > inputPosition) {
-        endPos = Math.min(endPos, phrase.start)
-      }
-    })
-
-    const currentInput = searchQuery.value.slice(startPos, endPos).trim()
-    navStore.updateCurrentInput(currentInput || null)
+  // event.data is `null` or an empty string for non-character keys (e.g. backspace, arrow, etc.)
+  const typedChar = event.data
+  if (!typedChar) {
+    // If it wasn't a printable character, let handleKeydown handle it instead
+    return
   }
 
+  const inputPosition = event.target.selectionStart
+  const selectedPhrase = navStore.selectedPhrase
+  const phrases = navStore.phraseHistory.phrases
+
+  // CASE 1: Space typed while a phrase is selected
+  if (typedChar === ' ' && selectedPhrase) {
+    // You had special "space handling" logic, so just re-compute the segment:
+    const currentSegment = getCurrentSegment(searchQuery.value, phrases, inputPosition)
+    navStore.updateCurrentInput(currentSegment || null)
+  }
+  // CASE 2: A non-space character typed while a phrase is selected
+  else if (selectedPhrase) {
+    const newInput = (navStore.phraseHistory.currentInput || '') + typedChar
+    navStore.updateCurrentInput(newInput)
+  }
+  // CASE 3: No selected phrase -> just compute the new segment
+  else {
+    const currentSegment = getCurrentSegment(searchQuery.value, phrases, inputPosition)
+    // Optionally append the typedChar directly if you want the user to see it right away, 
+    // or just do the same logic as before:
+    // e.g. const appendedSegment = currentSegment + typedChar
+    // navStore.updateCurrentInput(appendedSegment || null)
+    navStore.updateCurrentInput(currentSegment || null)
+  }
+
+  // Finally, update cursor pos & suggestions
   await navStore.updateCursorPosition(inputPosition)
   await updateSuggestionState(inputPosition)
 }
@@ -285,6 +260,7 @@ const handleKeydown = async (event) => {
   // Arrow keys to move cursor
   // --------------------------------------------------------------------------
   if (['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    event.preventDefault();
     const currentPos = event.target.selectionEnd
     const newPosition = event.key === 'ArrowLeft'
       ? Math.max(0, currentPos - 1)
@@ -301,10 +277,34 @@ const handleKeydown = async (event) => {
   // Backspace handling: Clear all or handle phrase deletion
   // --------------------------------------------------------------------------
   if (event.key === 'Backspace') {
-    if (navStore.phraseHistory.currentInput !== null) {
-      const newInput = navStore.phraseHistory.currentInput.slice(0, -1)
-      navStore.updateCurrentInput(newInput || null)
-      return
+
+    event.preventDefault();
+    const currentPos = event.target.selectionEnd
+    const newPosition = Math.max(0, currentPos - 1)
+    navStore.updateCursorPosition(newPosition)
+    cursorPosition.value = newPosition
+    resetSuggestionState()
+    updateSuggestionState(newPosition)
+
+    const newInput = navStore.phraseHistory.currentInput
+        ? navStore.phraseHistory.currentInput.slice(0, -1)
+        : null;
+
+    navStore.updateCurrentInput(newInput);
+
+    const hasSelectedPhrase = !!navStore.selectedPhrase;
+    const editingPhraseInput = navStore.phraseHistory.currentInput !== null && navStore.phraseHistory.currentInput !== "";
+
+    console.log('hasSelectedPhrase', hasSelectedPhrase)
+    console.log('editingPhraseInput', editingPhraseInput)
+    // If we are editing a phrase, handle manually
+    if (hasSelectedPhrase && editingPhraseInput) {
+     // event.preventDefault(); // stop the browser's deletion
+      // const newInput = navStore.phraseHistory.currentInput
+      //   ? navStore.phraseHistory.currentInput.slice(0, -1)
+      //   : null;
+      // navStore.updateCurrentInput(newInput);
+      return;
     }
 
     const isAllSelected = (
@@ -334,6 +334,18 @@ const handleKeydown = async (event) => {
 
     const handled = handlePhraseDeletionLogic({ selStart, selEnd, context })
     if (handled) {
+      // After successful deletion, find and select phrase at new cursor position
+      // const phrases = navStore.phraseHistory.phrases
+      // const newSelectedPhrase = Object.values(phrases).find(phrase => 
+      //   cursorPosition.value >= phrase.start && 
+      //   cursorPosition.value <= phrase.end + 1
+      // )
+      
+      // if (newSelectedPhrase) {
+      //   navStore.$patch((state) => {
+      //     state.phraseHistory.selectedPhrase = newSelectedPhrase
+      //   })
+      // }
       return
     }
   }
@@ -442,10 +454,27 @@ const handleKeydown = async (event) => {
   }
 }
 
+function getCurrentSegment(fullText, phrases, cursorPos) {
+  let startPos = 0
+  let endPos = fullText.length
+
+  Object.values(phrases).forEach((phrase) => {
+    if (phrase.end < cursorPos) {
+      startPos = Math.max(startPos, phrase.end + 1)
+    }
+    if (phrase.start > cursorPos) {
+      endPos = Math.min(endPos, phrase.start)
+    }
+  })
+
+  return fullText.slice(startPos, endPos).trim()
+}
+
 
 /* --------------------------------------------------------------------------
  * Observers
  * ------------------------------------------------------------------------*/
+// @TODO combine this with the nav store cursor position
 watch(cursorPosition, async (newPosition) => {
   if (navStore.selectedPhrase && navStore.phraseHistory.currentInput === null) {
     showSuggestions.value = true
@@ -484,12 +513,14 @@ watch(
       return
     }
 
+    // @TODO the issue is here...
     const { newString, phrases, newCursorPosition } = phraseHandling.updatePhrasePositions(
       navStore.selectedPhrase,
       newInput ?? ''  // Pass empty string if newInput is null
     )
 
     // Update the store with new phrase positions
+    // @TODO don't do this here
     navStore.$patch((state) => {
       state.phraseHistory.phrases = phrases
     })
@@ -500,18 +531,6 @@ watch(
     // Move cursor to end of edited phrase
     navStore.updateCursorPosition(newCursorPosition)
   }
-)
-
-watch(
-  [showSuggestions, filteredSuggestions],
-  ([show, suggestions]) => {
-    if (show && suggestions.length > 0) {
-      highlightedPhraseSuggestionIndex.value = 0
-    } else {
-      highlightedPhraseSuggestionIndex.value = -1
-    }
-  },
-  { immediate: true }
 )
 
 watch(
@@ -527,6 +546,18 @@ watch(
   }
 )
 
+watch(
+  [showSuggestions, filteredSuggestions],
+  ([show, suggestions]) => {
+    if (show && suggestions.length > 0) {
+      highlightedPhraseSuggestionIndex.value = 0
+    } else {
+      highlightedPhraseSuggestionIndex.value = -1
+    }
+  },
+  { immediate: true }
+)
+
 // Update template ref when component mounts
 onMounted(() => {
   inputElement.value = document.querySelector('.terminal-input')
@@ -540,11 +571,6 @@ onMounted(() => {
     </p>
 
     <div class="terminal-input-container">
-      <!-- Add debug info temporarily -->
-      <!-- <div style="position: absolute; top: -40px; color: red; font-size: 10px;">
-        Cursor: {{ cursorPosition }}, Tab: {{ cursorTabPosition }}
-      </div> -->
-      
       <div 
         v-if="showCursorTab"
         class="cursor-tab"
