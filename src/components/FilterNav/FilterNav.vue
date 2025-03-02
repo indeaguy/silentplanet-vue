@@ -502,6 +502,7 @@ const phraseHandling = usePhraseHandling({
  * - The complete search string
  * - The cursor position
  */
+// @TODO: we should be watching the searchQuery instead
 watch(
   () => navStore.phraseHistory.currentInput,
   (newInput) => {
