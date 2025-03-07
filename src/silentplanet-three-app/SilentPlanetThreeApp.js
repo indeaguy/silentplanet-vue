@@ -160,6 +160,8 @@ export class SilentPlanetThree {
 
   initializeStarrySky() {
     const starryTexturePaths = configInstance.settings.STARRY_SKY_TEXTURES;
+    // @TODO: Add STARRY_SKY_ROTATION to configInstance settings
+    const starryRotation = configInstance.settings.STARRY_SKY_ROTATION || { y: Math.PI / 2 }; // Default to no rotation
 
     if (starryTexturePaths && starryTexturePaths.length === 6) {
 
@@ -168,7 +170,9 @@ export class SilentPlanetThree {
       // @TODO maybe use this elsewhere also
       const envMap = loadCubeTexture(starryTexturePaths);
       this.starrySky = new StarrySky(this.worldStage.model.scene, this.worldStage.model.camera, envMap);
-      this.starrySky.initialize(starryTexturePaths);
+      
+      // Use the rotation from config
+      this.starrySky.initialize(starryTexturePaths, starryRotation);
     } else {
       console.warn('Starry sky textures not properly configured');
     }
