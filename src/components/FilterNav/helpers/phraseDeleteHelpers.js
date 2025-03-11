@@ -1,5 +1,9 @@
 /**
  * Handles deletion of selected text that overlaps with phrases
+ * @param {number} selStart - Selection start position
+ * @param {number} selEnd - Selection end position
+ * @param {Object} phrases - Current phrases object
+ * @returns {Object} Deletion result object
  */
 export const handleSelectedTextDeletion = (selStart, selEnd, phrases) => {
   let firstAffectedIndex = null
@@ -33,11 +37,15 @@ export const handleSelectedTextDeletion = (selStart, selEnd, phrases) => {
 
 /**
  * Handles deletion when cursor is at the start of a phrase
+ * @param {number} cursorPos - Current cursor position
+ * @param {Object} phrases - Current phrases object
+ * @returns {Object} Deletion result object
  */
 export const handlePhraseStartDeletion = (cursorPos, phrases) => {
   for (const [index, phrase] of Object.entries(phrases)) {
-    // @TODO bad code smell -1 why
-    if (cursorPos -1 === phrase.start) {
+    // Check if cursor is right at the start of a phrase
+    // The -1 accounts for the space character before the phrase
+    if (cursorPos === phrase.start || cursorPos - 1 === phrase.start) {
       return {
         shouldHandle: true,
         newCursorPosition: phrase.start,
@@ -50,9 +58,15 @@ export const handlePhraseStartDeletion = (cursorPos, phrases) => {
 
 /**
  * Handles deletion when cursor is within a phrase
+ * @param {number} cursorPos - Current cursor position
+ * @param {Object} phrases - Current phrases object
+ * @returns {Object} Deletion result object
  */
 export const handlePhraseDeletion = (cursorPos, phrases) => {
   let targetPhraseIndex = null
+  
+  // Find a phrase that contains the cursor position
+  // The +1 accounts for the cursor being right after the phrase
   Object.entries(phrases).forEach(([index, phrase]) => {
     if (cursorPos >= phrase.start && cursorPos <= phrase.end + 1) {
       targetPhraseIndex = parseInt(index)
@@ -69,6 +83,65 @@ export const handlePhraseDeletion = (cursorPos, phrases) => {
   }
 
   return { shouldHandle: false }
+}
+
+/**
+ * Handles backspace when typing a new phrase (no selected phrase)
+ * @param {number} cursorPos - Current cursor position
+ * @param {Object} context - The context object containing required dependencies
+ * @returns {boolean} - Whether the backspace was handled
+ */
+export const handleNewPhraseBackspace = (cursorPos, context) => {
+  const { navStore, searchQuery } = context
+  
+  // Only handle if we're not editing an existing phrase
+  if (navStore.selectedPhrase) {
+    return false
+  }
+  
+  // Check if we're in a position to start a new phrase (after the last phrase)
+  const phrases = navStore.phraseHistory.phrases
+  const phraseKeys = Object.keys(phrases).map(Number).sort((a, b) => a - b)
+  
+  // If there are no phrases or we're not at the end of the last phrase + space, don't handle
+  if (phraseKeys.length === 0) {
+    // If we're at the beginning of the input, don't handle
+    if (cursorPos === 0) {
+      return false
+    }
+    
+    // If we're in the middle of typing the first phrase
+    if (searchQuery.value.length > 0 && cursorPos > 0) {
+      searchQuery.value = searchQuery.value.substring(0, cursorPos - 1) + 
+                          searchQuery.value.substring(cursorPos)
+      return true
+    }
+    
+    return false
+  }
+  
+  const lastPhrase = phrases[phraseKeys[phraseKeys.length - 1]]
+  const isAfterLastPhrase = cursorPos > lastPhrase.end + 1
+  
+  // If we're not after the last phrase, don't handle
+  if (!isAfterLastPhrase) {
+    return false
+  }
+  
+  // If we're right after the last phrase + space and there's no currentInput
+  if (cursorPos === lastPhrase.end + 2 && !navStore.phraseHistory.currentInput) {
+    // Don't update searchQuery here - let the regular backspace handler work
+    return false
+  }
+  
+  // If we're typing a new phrase after the last one, update searchQuery
+  if (cursorPos > 0 && searchQuery.value.length > 0) {
+    searchQuery.value = searchQuery.value.substring(0, cursorPos - 1) + 
+                        searchQuery.value.substring(cursorPos)
+    return true
+  }
+  
+  return false
 }
 
 /**
@@ -111,7 +184,7 @@ export const applyDeletionResult = (result, context) => {
 }
 
 /**
- * Handles phrase deletion logic
+ * Handles phrase deletion logic by trying different deletion strategies
  * @param {Object} params - Parameters for deletion handling
  * @returns {boolean} - Whether the deletion was handled
  */
@@ -123,22 +196,95 @@ export const handlePhraseDeletionLogic = ({
   const { navStore } = context
   const phrases = navStore.phraseHistory.phrases
   
+  // First, try to handle backspace for new phrase input
+  if (selStart === selEnd && handleNewPhraseBackspace(selStart, context)) {
+    return true
+  }
+  
   // Try each deletion handler in sequence
   if (selStart !== selEnd) {
+    // Case 1: Text is selected
     const result = handleSelectedTextDeletion(selStart, selEnd, phrases)
     if (applyDeletionResult(result, context)) {
-      console.log('delete case 1');
       return true
     }
   }
 
+  // Case 2: Cursor is at the start of a phrase
   const startResult = handlePhraseStartDeletion(selStart, phrases)
   if (applyDeletionResult(startResult, context)) {
-    console.log('delete case 2');
     return true
   }
 
+  // Case 3: Cursor is within a phrase
   const phraseResult = handlePhraseDeletion(selStart, phrases)
-  console.log('delete case 3');
   return applyDeletionResult(phraseResult, context)
+}
+
+/**
+ * Handles the initial backspace logic and determines which specialized handler to use
+ * @param {Object} params - Parameters for backspace handling
+ * @returns {boolean} - Whether the backspace was handled
+ */
+export const handleBackspaceKeydown = ({ event, context }) => {
+  const { navStore, cursorPosition, searchQuery, resetSuggestionState, updateSuggestionState } = context;
+  const currentPos = event.target.selectionEnd;
+  const newPosition = Math.max(0, currentPos - 1);
+  
+  // Check if we're in a position to start a new phrase but haven't typed anything yet
+  const phrases = navStore.phraseHistory.phrases;
+  const phraseKeys = Object.keys(phrases).map(Number).sort((a, b) => a - b);
+  const isAfterLastPhrase = phraseKeys.length > 0 && 
+                           currentPos > phrases[phraseKeys[phraseKeys.length - 1]].end + 1;
+  const hasNoCurrentInput = !navStore.phraseHistory.currentInput || 
+                           navStore.phraseHistory.currentInput === "";
+  const hasNoSelectedPhrase = !navStore.selectedPhrase;
+  const isSpecialCase = isAfterLastPhrase && hasNoCurrentInput && hasNoSelectedPhrase && 
+                       currentPos === phrases[phraseKeys[phraseKeys.length - 1]].end + 2;
+  
+  // Only update cursor position and input if we're not in the special case
+  if (!isSpecialCase) {
+    navStore.updateCursorPosition(newPosition);
+    cursorPosition.value = newPosition;
+    
+    // Update currentInput in the store if we have one
+    if (navStore.phraseHistory.currentInput !== null) {
+      const newInput = navStore.phraseHistory.currentInput.slice(0, -1);
+      navStore.updateCurrentInput(newInput.length > 0 ? newInput : null);
+    }
+  }
+  
+  resetSuggestionState();
+  updateSuggestionState(newPosition);
+
+  const hasSelectedPhrase = !!navStore.selectedPhrase;
+  const editingPhraseInput = navStore.phraseHistory.currentInput !== null && 
+                            navStore.phraseHistory.currentInput !== "";
+
+  // If we are editing a phrase, handle manually
+  if (editingPhraseInput && hasSelectedPhrase) {
+    event.preventDefault();
+    return true;
+  }
+
+  const isAllSelected = (
+    event.target.selectionStart === 0 && 
+    event.target.selectionEnd === searchQuery.value.length
+  );
+  const isAtStart = (
+    event.target.selectionStart === 0 && 
+    event.target.selectionEnd === 0
+  );
+
+  if (isAllSelected || isAtStart) {
+    // Call the clear all handler from the context
+    context.handleClearAll(event);
+    return true;
+  }
+
+  const selStart = event.target.selectionStart;
+  const selEnd = event.target.selectionEnd;
+
+  // This will now handle updating searchQuery for new phrases
+  return handlePhraseDeletionLogic({ selStart, selEnd, context });
 } 
