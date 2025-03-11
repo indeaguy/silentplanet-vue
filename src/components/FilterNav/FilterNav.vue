@@ -8,7 +8,7 @@ import { useThreePolysStore } from '../../stores/polys'
 import { buildFullString } from './helpers/buildFullString'
 import { getSuggestionKey, getSuggestionText, isCustomSuggestion } from './helpers/suggestionHelpers'
 import { useSuggestions } from './composables/useSuggestions'
-import { handlePhraseDeletionLogic } from './helpers/phraseDeleteHelpers'
+import { handlePhraseDeletionLogic, handleBackspaceKeydown } from './helpers/phraseDeleteHelpers'
 import { usePhraseHandling } from './composables/usePhraseHandling'
 
 
@@ -277,73 +277,22 @@ const handleKeydown = async (event) => {
   // Backspace handling: Clear all or handle phrase deletion
   // --------------------------------------------------------------------------
   if (event.key === 'Backspace') {
-    const currentPos = event.target.selectionEnd
-    const newPosition = Math.max(0, currentPos - 1)
-    
-    // Check if we're in a position to start a new phrase but haven't typed anything yet
-    const phrases = navStore.phraseHistory.phrases
-    const phraseKeys = Object.keys(phrases).map(Number).sort((a, b) => a - b)
-    const isAfterLastPhrase = phraseKeys.length > 0 && 
-                             currentPos > phrases[phraseKeys[phraseKeys.length - 1]].end + 1
-    const hasNoCurrentInput = !navStore.phraseHistory.currentInput || 
-                             navStore.phraseHistory.currentInput === ""
-    const hasNoSelectedPhrase = !navStore.selectedPhrase
-    
-    // Only update cursor position and input if we're not in the special case
-    if (!(isAfterLastPhrase && hasNoCurrentInput && hasNoSelectedPhrase && currentPos === phrases[phraseKeys[phraseKeys.length - 1]].end + 2)) {
-      navStore.updateCursorPosition(newPosition)
-      cursorPosition.value = newPosition
-      
-      // Update currentInput in the store if we have one
-      if (navStore.phraseHistory.currentInput !== null) {
-        const newInput = navStore.phraseHistory.currentInput.slice(0, -1)
-        navStore.updateCurrentInput(newInput.length > 0 ? newInput : null)
-      }
-    }
-    
-    resetSuggestionState()
-    updateSuggestionState(newPosition)
-
-    const hasSelectedPhrase = !!navStore.selectedPhrase
-    const editingPhraseInput = navStore.phraseHistory.currentInput !== null && 
-                              navStore.phraseHistory.currentInput !== ""
-
-    // If we are editing a phrase, handle manually
-    if (editingPhraseInput && hasSelectedPhrase) {
-      event.preventDefault()
-      return
-    }
-
-    const isAllSelected = (
-      event.target.selectionStart === 0 && 
-      event.target.selectionEnd === searchQuery.value.length
-    )
-    const isAtStart = (
-      event.target.selectionStart === 0 && 
-      event.target.selectionEnd === 0
-    )
-
-    if (isAllSelected || isAtStart) {
-      handleClearAll(event)
-      return
-    }
-
-    const selStart = event.target.selectionStart
-    const selEnd = event.target.selectionEnd
     const context = {
       event,
       navStore,
       searchQuery,
       cursorPosition,
       showSuggestions,
+      resetSuggestionState,
+      updateSuggestionState,
+      handleClearAll,
       nextTick
-    }
-
-    // This will now handle updating searchQuery for new phrases
-    const handled = handlePhraseDeletionLogic({ selStart, selEnd, context })
+    };
+    
+    const handled = handleBackspaceKeydown({ event, context });
     if (handled) {
-      event.preventDefault()
-      return
+      event.preventDefault();
+      return;
     }
   }
 

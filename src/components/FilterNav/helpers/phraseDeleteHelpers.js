@@ -219,4 +219,72 @@ export const handlePhraseDeletionLogic = ({
   // Case 3: Cursor is within a phrase
   const phraseResult = handlePhraseDeletion(selStart, phrases)
   return applyDeletionResult(phraseResult, context)
+}
+
+/**
+ * Handles the initial backspace logic and determines which specialized handler to use
+ * @param {Object} params - Parameters for backspace handling
+ * @returns {boolean} - Whether the backspace was handled
+ */
+export const handleBackspaceKeydown = ({ event, context }) => {
+  const { navStore, cursorPosition, searchQuery, resetSuggestionState, updateSuggestionState } = context;
+  const currentPos = event.target.selectionEnd;
+  const newPosition = Math.max(0, currentPos - 1);
+  
+  // Check if we're in a position to start a new phrase but haven't typed anything yet
+  const phrases = navStore.phraseHistory.phrases;
+  const phraseKeys = Object.keys(phrases).map(Number).sort((a, b) => a - b);
+  const isAfterLastPhrase = phraseKeys.length > 0 && 
+                           currentPos > phrases[phraseKeys[phraseKeys.length - 1]].end + 1;
+  const hasNoCurrentInput = !navStore.phraseHistory.currentInput || 
+                           navStore.phraseHistory.currentInput === "";
+  const hasNoSelectedPhrase = !navStore.selectedPhrase;
+  const isSpecialCase = isAfterLastPhrase && hasNoCurrentInput && hasNoSelectedPhrase && 
+                       currentPos === phrases[phraseKeys[phraseKeys.length - 1]].end + 2;
+  
+  // Only update cursor position and input if we're not in the special case
+  if (!isSpecialCase) {
+    navStore.updateCursorPosition(newPosition);
+    cursorPosition.value = newPosition;
+    
+    // Update currentInput in the store if we have one
+    if (navStore.phraseHistory.currentInput !== null) {
+      const newInput = navStore.phraseHistory.currentInput.slice(0, -1);
+      navStore.updateCurrentInput(newInput.length > 0 ? newInput : null);
+    }
+  }
+  
+  resetSuggestionState();
+  updateSuggestionState(newPosition);
+
+  const hasSelectedPhrase = !!navStore.selectedPhrase;
+  const editingPhraseInput = navStore.phraseHistory.currentInput !== null && 
+                            navStore.phraseHistory.currentInput !== "";
+
+  // If we are editing a phrase, handle manually
+  if (editingPhraseInput && hasSelectedPhrase) {
+    event.preventDefault();
+    return true;
+  }
+
+  const isAllSelected = (
+    event.target.selectionStart === 0 && 
+    event.target.selectionEnd === searchQuery.value.length
+  );
+  const isAtStart = (
+    event.target.selectionStart === 0 && 
+    event.target.selectionEnd === 0
+  );
+
+  if (isAllSelected || isAtStart) {
+    // Call the clear all handler from the context
+    context.handleClearAll(event);
+    return true;
+  }
+
+  const selStart = event.target.selectionStart;
+  const selEnd = event.target.selectionEnd;
+
+  // This will now handle updating searchQuery for new phrases
+  return handlePhraseDeletionLogic({ selStart, selEnd, context });
 } 
