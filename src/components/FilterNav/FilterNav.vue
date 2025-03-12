@@ -42,6 +42,15 @@ const searchQuery = ref('')
 const cursorPosition = ref(0)
 const inputElement = ref(null)
 
+// Add new refs for date values
+const dateValue = ref('')
+const dateRangeStart = ref('')
+const dateRangeEnd = ref('')
+
+// Add new refs to track if date inputs should be visible
+const showingDateInput = ref(false)
+const showingDateRangeInput = ref(false)
+
 
 /* --------------------------------------------------------------------------
  * Computed
@@ -61,8 +70,40 @@ const currentWordIndex = computed(() => {
 })
 
 const currentList = computed(() => {
+  // Get the previous phrase to check for special sequences
+  const prevPhraseIndex = currentWordIndex.value - 1
+  const prevPhrase = navStore.phraseHistory.phrases[prevPhraseIndex]
+  
+  // If the previous phrase was a preposition, check its nextList property
+  if (prevPhrase?.listType === 'preposition') {
+    const prepositionValue = navStore.wordLists.lists.preposition.values
+      .find(v => v.label === prevPhrase.phrase)
+    
+    // If the preposition defines a nextList, use that instead of the default sequence
+    if (prepositionValue?.nextList) {
+      return navStore.wordLists.lists[prepositionValue.nextList]
+    }
+  }
+  
+  // Default sequence handling
   const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-  return navStore.wordLists.lists[currentListType] || []
+  const list = navStore.wordLists.lists[currentListType]
+  
+  // Location visibility logic
+  if (currentListType === 'location') {
+    const prepositionPhrases = Object.values(navStore.phraseHistory.phrases)
+      .filter(phrase => phrase.listType === 'preposition')
+    
+    const shouldShowLocation = prepositionPhrases.some(phrase => {
+      const prepositionValue = navStore.wordLists.lists.preposition.values
+        .find(v => v.label === phrase.phrase)
+      return prepositionValue?.showLocation
+    })
+    
+    return shouldShowLocation ? list : { ...list, values: [] }
+  }
+  
+  return list || []
 })
 
 /**
@@ -80,19 +121,16 @@ const {
 } = useSuggestions(navStore, currentWordIndex, searchQuery, cursorPosition, currentList)
 
 /**
- * Computed property to determine the suggestions class based on the current list type
- */
-const getSuggestionsClass = computed(() => {
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-  const customListClass = navStore.wordLists.lists[currentListType]?.customListClass
-  return customListClass ? `suggestions-${customListClass}` : ''
-})
-
-/**
  * Computed property to determine if we should show the cursor tab
  */
 const showCursorTab = computed(() => {
-  return showSuggestions.value && filteredSuggestions.value.length > 0
+  // Original condition for suggestions
+  const showForSuggestions = showSuggestions.value && filteredSuggestions.value.length > 0
+  
+  // Show for date inputs
+  const showForDate = showDateInput.value || showDateRangeInput.value
+  
+  return showForSuggestions || showForDate
 })
 
 /**
@@ -145,9 +183,63 @@ const cursorTabPosition = computed(() => {
  * Computed property to get the current list's display label
  */
 const getCurrentListLabel = computed(() => {
+  const selectedPhrase = navStore.selectedPhrase
+  
+  // If we're showing a date input, show the appropriate label
+  if (showDateInput.value) {
+    return 'date'
+  }
+  if (showDateRangeInput.value) {
+    return 'date range'
+  }
+  
+  // Original logic for other types
   const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
   const list = navStore.wordLists.lists[currentListType]
   return list?.id || currentListType
+})
+
+// Update the show computed properties to include the visibility refs
+const showDateInput = computed(() => {
+  const prevPhraseIndex = currentWordIndex.value - 1
+  const prevPhrase = navStore.phraseHistory.phrases[prevPhraseIndex]
+  
+  if (prevPhrase?.listType === 'preposition') {
+    const prepositionValue = navStore.wordLists.lists.preposition.values
+      .find(v => v.label === prevPhrase.phrase)
+    return prepositionValue?.nextList === 'date' && showingDateInput.value
+  }
+  return false
+})
+
+const showDateRangeInput = computed(() => {
+  const prevPhraseIndex = currentWordIndex.value - 1
+  const prevPhrase = navStore.phraseHistory.phrases[prevPhraseIndex]
+  
+  if (prevPhrase?.listType === 'preposition') {
+    const prepositionValue = navStore.wordLists.lists.preposition.values
+      .find(v => v.label === prevPhrase.phrase)
+    return prepositionValue?.nextList === 'dateRange' && showingDateRangeInput.value
+  }
+  return false
+})
+
+/**
+ * Update getSuggestionsClass to include date picker styles
+ */
+const getSuggestionsClass = computed(() => {
+  // If showing date inputs, use their custom classes
+  if (showDateInput.value) {
+    return 'suggestions-DatePicker'
+  }
+  if (showDateRangeInput.value) {
+    return 'suggestions-DateRangePicker'
+  }
+  
+  // Original logic for other types
+  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  const customListClass = navStore.wordLists.lists[currentListType]?.customListClass
+  return customListClass ? `suggestions-${customListClass}` : ''
 })
 
 
@@ -163,6 +255,16 @@ const handleClick = async (event) => {
   const clickPosition = event.target.selectionStart
   await navStore.updateCursorPosition(clickPosition)
   await updateSuggestionState(clickPosition)
+
+  // Show date inputs if clicking on a date phrase
+  const selectedPhrase = navStore.selectedPhrase
+  if (selectedPhrase) {
+    if (selectedPhrase.listType === 'date') {
+      showingDateInput.value = true
+    } else if (selectedPhrase.listType === 'dateRange') {
+      showingDateRangeInput.value = true
+    }
+  }
 }
 
 /**
@@ -509,6 +611,74 @@ watch(
 onMounted(() => {
   inputElement.value = document.querySelector('.terminal-input')
 })
+
+// Update the date selection handlers to pass listType to selectSuggestion
+const handleDateSelect = async (event) => {
+  const formattedDate = new Date(event.target.value)
+    .toLocaleDateString('en-US', { 
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  await selectSuggestion(formattedDate, 'date')
+  showingDateInput.value = false
+}
+
+const handleDateRangeSelect = async () => {
+  if (dateRangeStart.value && dateRangeEnd.value) {
+    const start = new Date(dateRangeStart.value)
+      .toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    const end = new Date(dateRangeEnd.value)
+      .toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    await selectSuggestion(`${start} and ${end}`, 'dateRange')
+    showingDateRangeInput.value = false
+  }
+}
+
+// Add a watcher for the currentWordIndex to show inputs when needed
+watch(currentWordIndex, (newIndex) => {
+  const prevPhrase = navStore.phraseHistory.phrases[newIndex - 1]
+  
+  if (prevPhrase?.listType === 'preposition') {
+    const prepositionValue = navStore.wordLists.lists.preposition.values
+      .find(v => v.label === prevPhrase.phrase)
+    
+    if (prepositionValue?.nextList === 'date') {
+      showingDateInput.value = true
+      showingDateRangeInput.value = false
+    } else if (prepositionValue?.nextList === 'dateRange') {
+      showingDateRangeInput.value = true
+      showingDateInput.value = false
+    }
+  }
+})
+
+// Add cleanup when phrases are deleted
+watch(() => navStore.phraseHistory.phrases, () => {
+  // If no phrases contain date-related prepositions, hide the inputs
+  const hasDatePreposition = Object.values(navStore.phraseHistory.phrases)
+    .some(phrase => {
+      if (phrase.listType === 'preposition') {
+        const prepositionValue = navStore.wordLists.lists.preposition.values
+          .find(v => v.label === phrase.phrase)
+        return prepositionValue?.nextList === 'date' || prepositionValue?.nextList === 'dateRange'
+      }
+      return false
+    })
+  
+  if (!hasDatePreposition) {
+    showingDateInput.value = false
+    showingDateRangeInput.value = false
+  }
+}, { deep: true })
 </script>
 
 <template>
@@ -569,6 +739,32 @@ onMounted(() => {
           </span>
           {{ getSuggestionText(suggestion) }}
         </div>
+      </div>
+
+      <!-- Add this after the existing suggestions list -->
+      <div v-if="showDateInput" class="date-input-container">
+        <input
+          type="date"
+          v-model="dateValue"
+          class="date-input"
+          @change="handleDateSelect"
+        />
+      </div>
+
+      <div v-if="showDateRangeInput" class="date-range-container">
+        <input
+          type="date"
+          v-model="dateRangeStart"
+          class="date-input"
+          @change="handleDateRangeSelect"
+        />
+        <span class="date-range-separator">and</span>
+        <input
+          type="date"
+          v-model="dateRangeEnd"
+          class="date-input"
+          @change="handleDateRangeSelect"
+        />
       </div>
     </div>
   </div>
@@ -736,5 +932,63 @@ onMounted(() => {
 
 #filter-nav {
   position: relative;
+}
+
+.date-input-container,
+.date-range-container {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  border-top: none;
+  border-radius: 0 0 2px 2px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  padding: 0.5rem;
+}
+
+.date-range-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+  font-family: monospace;
+  padding: 0.25rem;
+  font-size: 14px;
+  outline: none;
+  border-radius: 2px;
+}
+
+.date-range-separator {
+  color: rgba(0, 255, 0, 0.8);
+  font-family: monospace;
+}
+
+.date-input:hover {
+  border-color: rgba(0, 255, 0, 0.4);
+}
+
+.date-input:focus {
+  border-color: rgba(0, 255, 0, 0.6);
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+}
+
+/* Add to your existing cursor tab variants */
+.cursor-tab.suggestions-DatePicker {
+  border-color: rgba(255, 105, 180, 0.4); /* Hot pink for dates */
+  color: rgba(255, 105, 180, 0.8);
+}
+
+.cursor-tab.suggestions-DateRangePicker {
+  border-color: rgba(255, 105, 180, 0.4);
+  color: rgba(255, 105, 180, 0.8);
 }
 </style>

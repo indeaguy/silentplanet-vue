@@ -51,12 +51,44 @@ export const useNavStore = defineStore('nav', {
           id: 'preposition',
           type: 'connector',
           values: [
-            { label: 'in' },
-            { label: 'from' },
-            { label: 'today' },
-            { label: 'this week' },
-            { label: 'added on' },
-            { label: 'added between' }
+            { 
+              label: 'in',
+              showLocation: true,
+              unique: true,
+              addSpaceAfter: true,
+              nextList: 'location'
+            },
+            { 
+              label: 'from',
+              showLocation: true,
+              unique: true,
+              addSpaceAfter: true,
+              nextList: 'location'
+            },
+            { 
+              label: 'today',
+              unique: true,
+              addSpaceAfter: false
+            },
+            { 
+              label: 'this week',
+              unique: true,
+              addSpaceAfter: false
+            },
+            { 
+              label: 'added on',
+              unique: true,
+              requiresDate: true,
+              addSpaceAfter: true,
+              nextList: 'date'
+            },
+            { 
+              label: 'added between',
+              unique: true,
+              requiresDateRange: true,
+              addSpaceAfter: true,
+              nextList: 'dateRange'
+            }
           ],
           customListClass: null,
           addSpaceAfter: true
@@ -72,6 +104,20 @@ export const useNavStore = defineStore('nav', {
           ],
           customListClass: 'Location',
           addSpaceAfter: false
+        },
+        date: {
+          id: 'date',
+          type: 'date',
+          customListClass: 'DatePicker',
+          addSpaceAfter: true,
+          inputType: 'date' // Used to identify this needs a date input
+        },
+        dateRange: {
+          id: 'dateRange',
+          type: 'dateRange',
+          customListClass: 'DateRangePicker',
+          addSpaceAfter: true,
+          inputType: 'dateRange' // Used to identify this needs a date range input
         }
       },
     }

@@ -48,12 +48,22 @@ export const buildFullString = (phrases, newPhrase, options) => {
     fullString = newPhraseText
   }
 
-  // Add trailing space based on the last phrase's list type if it exists, otherwise use current list
-  //fullString += (lastPhraseListType ? lastListAddSpace : shouldAddSpace) ? ' ' : ''
-
-
-  if (currentIndex + 1 > existingPhrasesLength && currentList?.addSpaceAfter) {
-    fullString += ' '
+  // Check for phrase-specific spacing rule
+  if (currentIndex + 1 > existingPhrasesLength) {
+    const currentListType = navStore.wordLists.sequence[currentIndex]
+    const list = navStore.wordLists.lists[currentListType]
+    
+    // Find the selected value to check for specific spacing rule
+    const selectedValue = list.values.find(v => v.label === newPhraseText)
+    
+    // Use phrase-specific rule if it exists, otherwise fall back to list default
+    const shouldAddSpace = selectedValue?.hasOwnProperty('addSpaceAfter') 
+      ? selectedValue.addSpaceAfter 
+      : list?.addSpaceAfter
+      
+    if (shouldAddSpace) {
+      fullString += ' '
+    }
   }
 
   //@TODO bad code smell, jst return fullString

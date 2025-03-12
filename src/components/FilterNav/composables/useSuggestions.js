@@ -227,24 +227,16 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
   /**
    * Select a suggestion and insert it into the overall phrase.
    */
-  const selectSuggestion = async (suggestion, customListType = null) => {
+  const selectSuggestion = async (suggestion, explicitListType = null) => {
     const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
-    const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
-      || navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
 
-    // Add space after if:
-    // 1. This list type has addSpaceAfter = true
-    // 2. We're not editing an existing phrase
-    const listConfig = navStore.wordLists.lists[currentListType]
-    const isEditing = navStore.phraseHistory.phrases[currentWordIndex.value]
-    let finalText = suggestionText
-    // if (listConfig?.addSpaceAfter && !isEditing) {
-    //   finalText += ' '
-    // }
+    // Use explicitListType if provided, otherwise fall back to sequence
+    const currentListType = explicitListType || navStore.wordLists.sequence[currentWordIndex.value]
+      || navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
 
     const { fullString, phraseArray } = buildFullString(
       navStore.phraseHistory.phrases, 
-      finalText,
+      suggestionText,
       {
         currentIndex: currentWordIndex.value,
         navStore,
@@ -252,26 +244,19 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       }
     )
 
-    // Determine if this is a custom phrase by checking if it exists in the current list type's values
-    // If currentListType exists, check if suggestionText matches any value in that list
-    // If no match found or no currentListType, treat as custom phrase
-    // For custom phrases, use provided customListType or fall back to currentListType
-    // some() returns true if any array element matches the condition, false otherwise
-    const isCustom = currentListType 
+    // Only check for custom if we're not using an explicit type
+    const isCustom = !explicitListType && currentListType 
       ? !navStore.wordLists.lists[currentListType].values.some(value => {
           const valueText = typeof value === 'object' ? value.label : value
           return valueText === suggestionText
         })
-      : true
-    if (isCustom) {
-      customListType = customListType || currentListType
-    }
+      : false
 
     await navStore.addPhraseEntry(
       fullString, 
       phraseArray, 
       currentWordIndex.value, 
-      customListType, 
+      isCustom ? currentListType : null,  // Only pass customListType if it's actually custom
       currentListType
     )
 
