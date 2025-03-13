@@ -13,6 +13,8 @@ export const useNavStore = defineStore('nav', {
       historyPosition: -1,
     },
     wordLists: {
+      baseSequence: ['comparative', 'contentTypes', 'preposition'],
+      usedPrepositions: new Set(),
       sequence: ['comparative', 'contentTypes', 'preposition', 'location'],
       lists: {
         comparative: {
@@ -109,14 +111,14 @@ export const useNavStore = defineStore('nav', {
           id: 'date',
           type: 'date',
           customListClass: 'DatePicker',
-          addSpaceAfter: true,
+          addSpaceAfter: false,
           inputType: 'date' // Used to identify this needs a date input
         },
         dateRange: {
           id: 'dateRange',
           type: 'dateRange',
           customListClass: 'DateRangePicker',
-          addSpaceAfter: true,
+          addSpaceAfter: false,
           inputType: 'dateRange' // Used to identify this needs a date range input
         }
       },
@@ -156,6 +158,75 @@ export const useNavStore = defineStore('nav', {
   },
 
   actions: {
+    /**
+     * Determines the next list in the sequence based on current context
+     * @param {number} currentIndex - The current position in the sequence
+     * @returns {string|null} - The ID of the next list or null if no more lists
+     */
+    getNextListInSequence(currentIndex) {
+      const phrases = this.phraseHistory.phrases;
+      
+      // Base sequence: comparative -> contentTypes -> preposition
+      if (currentIndex < this.wordLists.baseSequence.length) {
+        return this.wordLists.baseSequence[currentIndex];
+      }
+      
+      // Get all phrases that are prepositions
+      const prepositionPhrases = Object.values(phrases)
+        .filter(phrase => phrase.listType === 'preposition');
+      
+      // Get all preposition indices in order
+      const prepositionIndices = prepositionPhrases
+        .map(p => parseInt(p.listTypeIndex))
+        .sort((a, b) => a - b);
+      
+      // If we don't have any prepositions yet, we can't continue
+      if (prepositionIndices.length === 0) {
+        return null;
+      }
+      
+      // Check if the current index is immediately after a preposition
+      const isAfterPreposition = prepositionIndices.includes(currentIndex - 1);
+      
+      if (isAfterPreposition) {
+        // Get the preposition that comes right before the current index
+        const prevPreposition = phrases[currentIndex - 1];
+        const prepositionValue = this.wordLists.lists.preposition.values
+          .find(v => v.label === prevPreposition.phrase);
+        
+        // If this preposition has a nextList, use it
+        if (prepositionValue?.nextList) {
+          return prepositionValue.nextList;
+        }
+      }
+      
+      // If we're not after a preposition with a nextList, or we've already processed that nextList,
+      // check if we can add another preposition
+      
+      // Get all prepositions that have been used
+      const usedPrepositionLabels = prepositionPhrases.map(p => p.phrase);
+      
+      // Filter out unique prepositions that have already been used
+      const availablePrepositions = this.wordLists.lists.preposition.values.filter(prep => {
+        // If not unique, it can be used multiple times
+        if (!prep.unique) return true;
+        
+        // If unique and already used, it can't be used again
+        if (usedPrepositionLabels.includes(prep.label)) return false;
+        
+        // Otherwise, it's available
+        return true;
+      });
+      
+      // If we have available prepositions, return 'preposition'
+      if (availablePrepositions.length > 0) {
+        return 'preposition';
+      }
+      
+      // If we get here, there are no more valid options
+      return null;
+    },
+
     /**
      * Add a phrase entry
      * @param {string} fullString - The full input string
@@ -235,6 +306,7 @@ export const useNavStore = defineStore('nav', {
           phrases: updatedPhrases
         })
 
+        return updatedPhrases
       } catch (error) {
         console.error('Error adding phrase entry:', error)
         throw error

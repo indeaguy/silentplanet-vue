@@ -70,23 +70,14 @@ const currentWordIndex = computed(() => {
 })
 
 const currentList = computed(() => {
-  // Get the previous phrase to check for special sequences
-  const prevPhraseIndex = currentWordIndex.value - 1
-  const prevPhrase = navStore.phraseHistory.phrases[prevPhraseIndex]
+  // Use the dynamic sequence function to determine the next list
+  const currentListType = navStore.getNextListInSequence(currentWordIndex.value)
   
-  // If the previous phrase was a preposition, check its nextList property
-  if (prevPhrase?.listType === 'preposition') {
-    const prepositionValue = navStore.wordLists.lists.preposition.values
-      .find(v => v.label === prevPhrase.phrase)
-    
-    // If the preposition defines a nextList, use that instead of the default sequence
-    if (prepositionValue?.nextList) {
-      return navStore.wordLists.lists[prepositionValue.nextList]
-    }
+  // If no next list is available, return empty array
+  if (!currentListType) {
+    return []
   }
   
-  // Default sequence handling
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
   const list = navStore.wordLists.lists[currentListType]
   
   // Location visibility logic
@@ -193,8 +184,14 @@ const getCurrentListLabel = computed(() => {
     return 'date range'
   }
   
-  // Original logic for other types
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  // Use the dynamic sequence function to determine the current list type
+  const currentListType = navStore.getNextListInSequence(currentWordIndex.value)
+  
+  // If no next list is available, return empty string
+  if (!currentListType) {
+    return ''
+  }
+  
   const list = navStore.wordLists.lists[currentListType]
   return list?.id || currentListType
 })
@@ -236,8 +233,14 @@ const getSuggestionsClass = computed(() => {
     return 'suggestions-DateRangePicker'
   }
   
-  // Original logic for other types
-  const currentListType = navStore.wordLists.sequence[currentWordIndex.value]
+  // Use the dynamic sequence function to determine the current list type
+  const currentListType = navStore.getNextListInSequence(currentWordIndex.value)
+  
+  // If no next list is available, return empty string
+  if (!currentListType) {
+    return ''
+  }
+  
   const customListClass = navStore.wordLists.lists[currentListType]?.customListClass
   return customListClass ? `suggestions-${customListClass}` : ''
 })

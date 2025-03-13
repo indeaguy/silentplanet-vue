@@ -50,11 +50,18 @@ export const buildFullString = (phrases, newPhrase, options) => {
 
   // Check for phrase-specific spacing rule
   if (currentIndex + 1 > existingPhrasesLength) {
-    const currentListType = navStore.wordLists.sequence[currentIndex]
+    // Use the dynamic sequence function to determine the current list type
+    const currentListType = navStore.getNextListInSequence(currentIndex)
+    
+    // If no list type is available, skip spacing logic
+    if (!currentListType) {
+      return { fullString, phraseArray }
+    }
+    
     const list = navStore.wordLists.lists[currentListType]
     
     // Find the selected value to check for specific spacing rule
-    const selectedValue = list.values.find(v => v.label === newPhraseText)
+    const selectedValue = list?.values?.find(v => v.label === newPhraseText)
     
     // Use phrase-specific rule if it exists, otherwise fall back to list default
     const shouldAddSpace = selectedValue?.hasOwnProperty('addSpaceAfter') 

@@ -34,7 +34,15 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
 
     // Local references for convenience
     const existingPhrases = navStore.phraseHistory.phrases
-    const listType = navStore.wordLists.sequence[currentWordIndex.value]
+    
+    // Use the dynamic sequence function to determine the current list type
+    const listType = navStore.getNextListInSequence(currentWordIndex.value)
+    
+    // If no next list is available, return empty array
+    if (!listType) {
+      return []
+    }
+    
     const allSuggestions = currentList.value?.values || []
     const selectedPhrase = navStore.selectedPhrase
     const currentInput = navStore.phraseHistory.currentInput
@@ -79,7 +87,9 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     // --------------------------------------------------------------------------
     // 3) If we've already chosen enough phrases to fill the sequence, do not show suggestions
     // --------------------------------------------------------------------------
-    if (Object.keys(existingPhrases).length >= navStore.wordLists.sequence.length) {
+    // This check is no longer needed as getNextListInSequence will return null when no more lists are available
+    // Instead, we'll check if we have a valid listType
+    if (!listType) {
       return []
     }
 
@@ -184,33 +194,41 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     }
     previousSuggestionIndex.value = currentIndex
 
-    // Local references
-    const listType = navStore.wordLists.sequence[currentIndex]
+    // Get the next list type using our dynamic function
+    const listType = navStore.getNextListInSequence(currentIndex)
+    
+    // If there's no next list available, don't show suggestions
+    if (!listType) {
+      showSuggestions.value = false
+      return
+    }
+    
+    // Get the suggestions for this list type
     const allSuggestions = navStore.wordLists.lists[listType]?.values || []
+    
+    // Basic state checks
     const isStartingFresh = Object.keys(existingPhrases).length === 0
-    const isValidPhrase = !navStore.selectedPhrase || allSuggestions.includes(navStore.selectedPhrase.phrase)
-    const isExactMatch = navStore.selectedPhrase && existingPhrases[currentIndex]?.phrase === navStore.selectedPhrase.phrase
+    const isValidPhrase = !navStore.selectedPhrase || allSuggestions.some(s => {
+      const text = typeof s === 'object' ? s.label : s
+      return text === navStore.selectedPhrase.phrase
+    })
+    const isExactMatch = navStore.selectedPhrase && 
+      existingPhrases[currentIndex]?.phrase === navStore.selectedPhrase.phrase
 
-    // Check the characters before the position to see if we have a space
+    // Check if we have a space before the cursor
     const hasLeadingSpace =
       position === 0 ||
       searchQuery.value[position - 1] === ' ' ||
       (navStore.selectedPhrase && position === navStore.selectedPhrase.end + 1)
 
-    // @TODO bad code smell
-    const forceShowSuggestions = navStore.selectedPhrase && navStore.phraseHistory.currentInput !== null
+    // Force showing suggestions if we have a selected phrase and current input
+    const forceShowSuggestions = navStore.selectedPhrase && 
+      navStore.phraseHistory.currentInput !== null
 
+    // Determine if we should show suggestions
     const shouldShowSuggestions = forceShowSuggestions || (
       (isStartingFresh || (hasLeadingSpace && !isExactMatch) || (isValidPhrase && !isExactMatch)) &&
-      (
-        // If we haven't filled out all placeholders
-        Object.keys(existingPhrases).length < navStore.wordLists.sequence.length
-        // Or we have something typed but also a selected phrase
-        || (
-          navStore.phraseHistory.currentInput !== null
-          && navStore.selectedPhrase !== null
-        )
-      )
+      listType !== null // Make sure we have a valid list type
     )
 
     // Update the reactive state
@@ -230,9 +248,13 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
   const selectSuggestion = async (suggestion, explicitListType = null) => {
     const suggestionText = typeof suggestion === 'object' ? suggestion.text : suggestion
 
-    // Use explicitListType if provided, otherwise fall back to sequence
-    const currentListType = explicitListType || navStore.wordLists.sequence[currentWordIndex.value]
-      || navStore.wordLists.sequence[navStore.wordLists.sequence.length - 1]
+    // Use explicitListType if provided, otherwise use dynamic sequence function
+    const currentListType = explicitListType || navStore.getNextListInSequence(currentWordIndex.value)
+    
+    // If no list type is available and no explicit type provided, do nothing
+    if (!currentListType) {
+      return
+    }
 
     const { fullString, phraseArray } = buildFullString(
       navStore.phraseHistory.phrases, 
