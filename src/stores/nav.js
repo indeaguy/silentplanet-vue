@@ -70,26 +70,30 @@ export const useNavStore = defineStore('nav', {
             { 
               label: 'today',
               unique: true,
-              addSpaceAfter: false
+              addSpaceAfter: false,
+              group: 'date'
             },
             { 
               label: 'this week',
               unique: true,
-              addSpaceAfter: false
+              addSpaceAfter: false,
+              group: 'date'
             },
             { 
               label: 'added on',
               unique: true,
               requiresDate: true,
               addSpaceAfter: true,
-              nextList: 'date'
+              nextList: 'date',
+              group: 'date'
             },
             { 
               label: 'added between',
               unique: true,
               requiresDateRange: true,
               addSpaceAfter: true,
-              nextList: 'dateRange'
+              nextList: 'dateRange',
+              group: 'date'
             }
           ],
           customListClass: null,

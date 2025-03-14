@@ -43,9 +43,49 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
       return []
     }
     
-    const allSuggestions = currentList.value?.values || []
+    let allSuggestions = currentList.value?.values || []
     const selectedPhrase = navStore.selectedPhrase
     const currentInput = navStore.phraseHistory.currentInput
+
+    // If this is the preposition list, filter out prepositions that:
+    // 1. Are unique and have already been used
+    // 2. Belong to a group that has already been used
+    if (listType === 'preposition') {
+      // Get all preposition phrases that have been used
+      const prepositionPhrases = Object.values(existingPhrases)
+        .filter(phrase => phrase.listType === 'preposition');
+      
+      // Get all preposition labels that have been used
+      const usedPrepositionLabels = prepositionPhrases.map(p => p.phrase);
+      
+      // Get all groups that have been used
+      const usedGroups = new Set();
+      prepositionPhrases.forEach(phrase => {
+        const prep = navStore.wordLists.lists.preposition.values
+          .find(v => v.label === phrase.phrase);
+        if (prep?.group) {
+          usedGroups.add(prep.group);
+        }
+      });
+      
+      // Filter the suggestions
+      allSuggestions = allSuggestions.filter(prep => {
+        const prepObj = typeof prep === 'object' ? prep : { label: prep };
+        
+        // If it's unique and already used, filter it out
+        if (prepObj.unique && usedPrepositionLabels.includes(prepObj.label)) {
+          return false;
+        }
+        
+        // If it belongs to a group that's already been used, filter it out
+        if (prepObj.group && usedGroups.has(prepObj.group)) {
+          return false;
+        }
+        
+        // Otherwise, keep it
+        return true;
+      });
+    }
 
     // --------------------------------------------------------------------------
     // 1) Show all suggestions if the user requested "show all" and has a phrase selected
@@ -204,7 +244,47 @@ export function useSuggestions(navStore, currentWordIndex, searchQuery, cursorPo
     }
     
     // Get the suggestions for this list type
-    const allSuggestions = navStore.wordLists.lists[listType]?.values || []
+    let allSuggestions = navStore.wordLists.lists[listType]?.values || []
+    
+    // If this is the preposition list, filter out prepositions that:
+    // 1. Are unique and have already been used
+    // 2. Belong to a group that has already been used
+    if (listType === 'preposition') {
+      // Get all preposition phrases that have been used
+      const prepositionPhrases = Object.values(existingPhrases)
+        .filter(phrase => phrase.listType === 'preposition');
+      
+      // Get all preposition labels that have been used
+      const usedPrepositionLabels = prepositionPhrases.map(p => p.phrase);
+      
+      // Get all groups that have been used
+      const usedGroups = new Set();
+      prepositionPhrases.forEach(phrase => {
+        const prep = navStore.wordLists.lists.preposition.values
+          .find(v => v.label === phrase.phrase);
+        if (prep?.group) {
+          usedGroups.add(prep.group);
+        }
+      });
+      
+      // Filter the suggestions
+      allSuggestions = allSuggestions.filter(prep => {
+        const prepObj = typeof prep === 'object' ? prep : { label: prep };
+        
+        // If it's unique and already used, filter it out
+        if (prepObj.unique && usedPrepositionLabels.includes(prepObj.label)) {
+          return false;
+        }
+        
+        // If it belongs to a group that's already been used, filter it out
+        if (prepObj.group && usedGroups.has(prepObj.group)) {
+          return false;
+        }
+        
+        // Otherwise, keep it
+        return true;
+      });
+    }
     
     // Basic state checks
     const isStartingFresh = Object.keys(existingPhrases).length === 0
